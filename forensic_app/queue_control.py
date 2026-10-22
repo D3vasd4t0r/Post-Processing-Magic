@@ -1,0 +1,79 @@
+"""Persistent admission pause, serialized with the worker's atomic claim."""
+
+import json
+import sqlite3
+from contextlib import closing
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel, ConfigDict, Field
+
+from forensic_app.server_control import draining
+
+
+class QueueChange(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    paused: bool = Field(strict=True)
+
+
+class QueueControl:
+    def __init__(self, storage):
+        self.storage = storage
+
+    def initialize(self):
+        with closing(sqlite3.connect(self.storage.database)) as connection, connection:
+            connection.executescript('''
+                CREATE TABLE IF NOT EXISTS queue_control(id INTEGER PRIMARY KEY CHECK(id=1),paused INTEGER NOT NULL CHECK(paused IN (0,1)));
+                INSERT OR IGNORE INTO queue_control VALUES (1,0);
+                CREATE TABLE IF NOT EXISTS queue_control_events(
+                    id INTEGER PRIMARY KEY, paused INTEGER NOT NULL,
+                    occurred_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')));
+            ''')
+
+    def get(self):
+        with closing(sqlite3.connect(self.storage.database)) as connection:
+            connection.execute('BEGIN')
+            paused = bool(connection.execute('SELECT paused FROM queue_control WHERE id=1').fetchone()[0])
+            archives = connection.execute("SELECT count(*) FROM archive_requests WHERE status='queued'").fetchone()[0]
+            archiving = [row[0] for row in connection.execute("SELECT job_id FROM archive_requests WHERE status='running'")]
+            waiting = connection.execute("SELECT count(*) FROM jobs WHERE status='queued'").fetchone()[0]
+            running = [row[0] for row in connection.execute("SELECT id FROM jobs WHERE status='running'")]
+            stopping = draining(connection)
+        return {'paused':paused,'waiting':waiting,'running':running,'archive_waiting':archives,'archiving':archiving,'stopping':stopping}
+
+    def set(self, paused):
+        with closing(sqlite3.connect(self.storage.database)) as connection, connection:
+            connection.execute('BEGIN IMMEDIATE')
+            old = connection.execute('SELECT paused FROM queue_control WHERE id=1').fetchone()[0]
+            connection.execute('UPDATE queue_control SET paused=? WHERE id=1',(int(paused),))
+            if old != int(paused):
+                connection.execute('INSERT INTO queue_control_events(paused) VALUES (?)',(int(paused),))
+        return self.get()
+
+    def claim(self):
+        with closing(sqlite3.connect(self.storage.database)) as connection, connection:
+            connection.execute('BEGIN IMMEDIATE')
+            if draining(connection):
+                return None
+            if connection.execute('SELECT active FROM cleanup_state WHERE id=1').fetchone()[0]:
+                return None
+            if connection.execute('SELECT paused FROM queue_control WHERE id=1').fetchone()[0]:
+                return None
+            row = connection.execute("SELECT id,config_json FROM jobs WHERE status='queued' ORDER BY created_at,id LIMIT 1").fetchone()
+            if row:
+                connection.execute("UPDATE jobs SET status='running',phase='Wird vorbereitet' WHERE id=?",(row[0],))
+                connection.execute("INSERT INTO job_events(job_id,kind,payload) VALUES (?,'status',?)",
+                                   (row[0],json.dumps({'status':'running','phase':'Wird vorbereitet'})))
+            return row
+
+
+def queue_router(control, authorize):
+    router = APIRouter(prefix='/api/queue',dependencies=[Depends(authorize)])
+
+    @router.get('')
+    def status():
+        return control.get()
+
+    @router.put('')
+    def change(value: QueueChange):
+        return control.set(value.paused)
+    return router

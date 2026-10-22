@@ -1,0 +1,260 @@
+"""Versioned configuration exchange, with immutable preview tickets and atomic application."""
+
+import hashlib
+import json
+import secrets
+import sqlite3
+import threading
+import time
+from contextlib import closing
+from datetime import UTC, datetime
+from typing import Literal
+from uuid import uuid4
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from starlette.concurrency import run_in_threadpool
+
+from forensic_app import __version__
+from forensic_app.modes import EFFORTS, ModeDraft
+from forensic_app.processing_settings import ProcessingLimits, read_limits, write_limits
+from forensic_app.storage import Storage
+from forensic_app.tool_settings import ToolLocation, inspect_path
+
+MAX_IMPORT_BYTES = 4 * 1024 * 1024
+TICKET_TTL = 600
+
+
+class ExportTool(ToolLocation):
+    id: str = Field(min_length=1, max_length=80, pattern=r"^[A-Za-z0-9_-]+$")
+
+
+class ExportMode(ModeDraft):
+    id: str = Field(min_length=1, max_length=80, pattern=r"^[A-Za-z0-9_-]+$")
+
+
+class ConfigurationFile(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    format: Literal["post-processing-magic.configuration"]
+    schema_version: Literal[1, 2]
+    app_version: str = Field(min_length=1, max_length=40)
+    exported_at: datetime
+    tools: list[ExportTool] = Field(max_length=1000)
+    modes: list[ExportMode] = Field(max_length=100)
+    limits: ProcessingLimits | None = None
+
+
+class PreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    strategy: Literal["merge", "replace"] = "merge"
+    document: ConfigurationFile
+
+
+class ApplyRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    ticket: str = Field(min_length=1, max_length=100)
+    confirm_replace: bool = False
+
+
+def dump(value) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def snapshot(connection) -> dict:
+    tools = [{"id": row[0], "name": row[1], "path": row[2]} for row in connection.execute(
+        "SELECT id, name, path FROM tool_locations ORDER BY id"
+    )]
+    modes = [{"id": row[0], **json.loads(row[1])} for row in connection.execute(
+        "SELECT id, body_json FROM mode_drafts ORDER BY id"
+    )]
+    return {"tools": tools, "modes": modes, "limits": read_limits(connection)}
+
+
+def document(state: dict) -> dict:
+    return {"format": "post-processing-magic.configuration", "schema_version": 2,
+            "app_version": __version__, "exported_at": datetime.now(UTC).isoformat(), **state}
+
+
+def fingerprint(state: dict) -> str:
+    return hashlib.sha256(dump(state).encode("utf-8")).hexdigest()
+
+
+def validate_state(state: dict) -> list[str]:
+    errors = []
+    for kind in ("tools", "modes"):
+        ids, names = set(), set()
+        for item in state[kind]:
+            if item["id"] in ids:
+                errors.append(f"Doppelte ID in {kind}: {item['id']}")
+            if item["name"].casefold() in names:
+                errors.append(f"Doppelter Name in {kind}: {item['name']}")
+            ids.add(item["id"])
+            names.add(item["name"].casefold())
+    tools = {tool["id"] for tool in state["tools"]}
+    slots = set()
+    for mode in state["modes"]:
+        effort = mode["effort"]
+        if effort not in EFFORTS:
+            errors.append(f"{mode['name']}: unbekannte Aufwandsstufe {effort}.")
+        slot = (mode["evidence_format"], effort)
+        if slot in slots:
+            errors.append(f"{mode['evidence_format']} / {effort} ist mehrfach belegt.")
+        slots.add(slot)
+        for step in mode.get("steps", []):
+            if step.get("tool_id") is not None and step["tool_id"] not in tools:
+                errors.append(f"{mode['name']}: Toolreferenz für '{step['name']}' fehlt.")
+    return list(dict.fromkeys(errors))
+
+
+def changes(before: list[dict], after: list[dict]) -> dict:
+    old, new = {item["id"]: item for item in before}, {item["id"]: item for item in after}
+    return {
+        "added": [new[key]["name"] for key in new.keys() - old.keys()],
+        "updated": [new[key]["name"] for key in new.keys() & old.keys() if dump(new[key]) != dump(old[key])],
+        "removed": [old[key]["name"] for key in old.keys() - new.keys()],
+        "unchanged": sum(dump(new[key]) == dump(old[key]) for key in new.keys() & old.keys()),
+    }
+
+
+class ConfigurationTransfer:
+    def __init__(self, storage: Storage):
+        self.storage = storage
+        self.lock = threading.Lock()
+        self.tickets = {}
+
+    def initialize(self):
+        with closing(sqlite3.connect(self.storage.database)) as connection, connection:
+            connection.execute("""
+                CREATE TABLE IF NOT EXISTS configuration_import_events (
+                    id INTEGER PRIMARY KEY, occurred_at TEXT NOT NULL, strategy TEXT NOT NULL,
+                    before_json TEXT NOT NULL, after_json TEXT NOT NULL, backup_file TEXT NOT NULL
+                )
+            """)
+
+    def current(self) -> dict:
+        with closing(sqlite3.connect(self.storage.database)) as connection, connection:
+            connection.execute("BEGIN")
+            return snapshot(connection)
+
+    def export(self) -> dict:
+        return document(self.current())
+
+    def preview(self, request: PreviewRequest) -> dict:
+        before = self.current()
+        incoming = {"tools": [tool.model_dump() for tool in request.document.tools],
+                    "modes": [mode.model_dump() for mode in request.document.modes]}
+        errors = validate_state(incoming)
+        after = {}
+        for kind in ("tools", "modes"):
+            combined = {item["id"]: item for item in before[kind]} if request.strategy == "merge" else {}
+            combined.update({item["id"]: item for item in incoming[kind]})
+            after[kind] = sorted(combined.values(), key=lambda item: item["id"])
+        after["limits"] = request.document.limits.model_dump() if request.document.limits else before["limits"]
+        errors.extend(validate_state(after))
+        errors = list(dict.fromkeys(errors))
+        summary = {kind: changes(before[kind], after[kind]) for kind in ("tools", "modes")}
+        warnings = []
+        for tool in after["tools"]:
+            status = inspect_path(tool["path"])
+            if status["kind"] in ("missing", "unavailable"):
+                warnings.append(f"{tool['name']}: {status['message']}. Pfad nach Import prüfen.")
+        for mode in after["modes"]:
+            if not mode.get("steps") or any((not step.get("script") if step.get("type") == "powershell" else step.get("tool_id") is None)
+                                          for step in mode.get("steps", [])):
+                warnings.append(f"{mode['name']}: unvollständiger Entwurf; es wird nichts ausgeführt.")
+        result = {"valid": not errors, "errors": errors, "warnings": warnings,
+                  "strategy": request.strategy, "changes": summary,
+                  "total_tools": len(after["tools"]), "total_modes": len(after["modes"])}
+        result["limits"] = {"before": before["limits"], "after": after["limits"], "changed": before["limits"] != after["limits"]}
+        if not errors:
+            with self.lock:
+                now = time.monotonic()
+                self.tickets = {key: value for key, value in self.tickets.items() if value["expires"] > now}
+                if len(self.tickets) >= 32:
+                    raise HTTPException(429, "Zu viele offene Importvorschauen. Bitte später erneut prüfen.")
+                ticket = secrets.token_urlsafe(24)
+                self.tickets[ticket] = {"expires": now + TICKET_TTL, "before": fingerprint(before),
+                                        "after": after, "strategy": request.strategy, "summary": summary}
+                result["ticket"] = ticket
+        return result
+
+    def apply(self, request: ApplyRequest) -> dict:
+        with self.lock:
+            preview = self.tickets.get(request.ticket)
+            if preview is None or preview["expires"] <= time.monotonic():
+                self.tickets.pop(request.ticket, None)
+                raise HTTPException(409, "Importvorschau ist abgelaufen. Bitte erneut prüfen.")
+            if preview["strategy"] == "replace" and not request.confirm_replace:
+                raise HTTPException(422, "Vollständiges Ersetzen muss ausdrücklich bestätigt werden.")
+            with closing(sqlite3.connect(self.storage.database)) as connection, connection:
+                connection.execute("BEGIN IMMEDIATE")
+                before = snapshot(connection)
+                if fingerprint(before) != preview["before"]:
+                    del self.tickets[request.ticket]
+                    raise HTTPException(409, "Konfiguration wurde inzwischen geändert. Bitte Vorschau erneuern.")
+                backup_dir = self.storage.root / "config" / "backups"
+                backup_dir.mkdir(parents=True, exist_ok=True)
+                backup_path = backup_dir / f"before-import-{uuid4()}.json"
+                # Backup only configuration, with no access tokens, certificates or evidence.
+                with backup_path.open("x", encoding="utf-8") as output:
+                    json.dump(document(before), output, ensure_ascii=False, indent=2)
+                after = preview["after"]
+                write_limits(connection, after["limits"])
+                connection.execute("DELETE FROM mode_drafts")
+                connection.execute("DELETE FROM tool_locations")
+                connection.executemany("INSERT INTO tool_locations(id,name,path) VALUES (?,?,?)",
+                                       [(item["id"], item["name"], item["path"]) for item in after["tools"]])
+                connection.executemany("INSERT INTO mode_drafts(id,name,body_json) VALUES (?,?,?)",
+                                       [(item["id"], item["name"], dump({key: value for key, value in item.items() if key != "id"}))
+                                        for item in after["modes"]])
+                connection.execute(
+                    "INSERT INTO configuration_import_events "
+                    "(occurred_at,strategy,before_json,after_json,backup_file) "
+                    "VALUES (strftime('%Y-%m-%dT%H:%M:%fZ','now'),?,?,?,?)",
+                    (preview["strategy"], dump(before), dump(after), backup_path.name),
+                )
+            del self.tickets[request.ticket]
+            return {"imported": True, "backup_file": str(backup_path), "changes": preview["summary"],
+                    "total_tools": len(after["tools"]), "total_modes": len(after["modes"])}
+
+
+async def read_payload(request: Request, model):
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > MAX_IMPORT_BYTES:
+            raise HTTPException(413, "Konfigurationsdatei zu groß. Maximal 4 MiB.")
+    try:
+        return model.model_validate_json(body)
+    except ValidationError as exc:
+        errors = [".".join(str(part) for part in error["loc"])+": "+error["msg"]
+                  for error in exc.errors(include_input=False)[:20]]
+        raise HTTPException(422, "Ungültige Konfiguration: "+"; ".join(errors)) from exc
+
+
+def configuration_router(service: ConfigurationTransfer, authorize) -> APIRouter:
+    router = APIRouter(prefix="/api/settings/configuration", dependencies=[Depends(authorize)])
+
+    @router.get("/export")
+    def export_configuration():
+        return JSONResponse(service.export(), headers={
+            "Content-Disposition": 'attachment; filename="PostProcessingMagic-config.json"'
+        })
+
+    @router.post("/preview")
+    async def preview_import(request: Request):
+        payload = await read_payload(request, PreviewRequest)
+        return await run_in_threadpool(service.preview, payload)
+
+    @router.post("/apply")
+    async def apply_import(request: Request):
+        payload = await read_payload(request, ApplyRequest)
+        try:
+            return await run_in_threadpool(service.apply, payload)
+        except OSError as exc:
+            raise HTTPException(500, "Konfiguration konnte nicht gesichert werden. Import nicht angewendet.") from exc
+        except sqlite3.Error as exc:
+            raise HTTPException(500, "Import fehlgeschlagen. Bisherige Konfiguration bleibt erhalten.") from exc
+
+    return router

@@ -1,0 +1,1734 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Post-Processing-Magic</title>
+  <style>
+    :root{font:16px/1.55 system-ui,sans-serif;color:#e5edf3;background:#101922;color-scheme:dark}
+    *{box-sizing:border-box}body{max-width:1120px;margin:40px auto;padding:0 24px}
+    h1{font-size:clamp(1.8rem,4vw,2.6rem);line-height:1.15;margin:8px 0 16px}
+    h2{font-size:1.2rem;margin:0 0 16px}h3{font-size:1rem;margin:0 0 8px}p{margin:8px 0 16px}
+    .eyebrow{color:#82dec5;letter-spacing:.12em;font-size:.75rem;text-transform:uppercase}
+    .muted,dt{color:#b3c1cc}.panel{background:#192631;border:1px solid #34444f;border-radius:12px;padding:24px;margin:20px 0}
+    .note{border-left:3px solid #e6b876;padding:10px 16px;background:#262b2d;border-radius:4px}
+    nav,.actions,.heading{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    nav{border-bottom:1px solid #34444f;padding:12px 0}.heading{justify-content:space-between}
+    nav button{background:transparent;color:#b3c1cc;margin:0}nav button[aria-current=page]{background:#2c4846;color:#b3f2df}
+    button,input{font:inherit;border-radius:6px;padding:10px 14px}
+    button{background:#82dec5;border:1px solid transparent;color:#10251f;cursor:pointer}
+    button.secondary{background:#253745;color:#e5edf3;border-color:#506475}
+    button.danger{background:transparent;color:#ffb5a9;border-color:#73504d}
+    button:disabled{opacity:.5;cursor:not-allowed}button:focus-visible,input:focus-visible{outline:2px solid #b3f2df;outline-offset:3px}
+    label{display:block;font-weight:600;margin-top:16px}input{display:block;background:#101922;color:#e5edf3;border:1px solid #6d879a;width:100%;margin:8px 0}
+    textarea,select{font:inherit;display:block;background:#101922;color:#e5edf3;border:1px solid #6d879a;border-radius:6px;padding:10px;width:100%;margin:8px 0}
+    textarea{resize:vertical}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#101922;padding:16px;border-radius:6px;font-size:.85rem}
+    .fields{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}.settings-tabs{margin-top:12px}
+    .mode-category{border-top:1px solid #34444f;margin-top:24px;padding-top:20px}
+    .command-step{border:1px solid #506475;border-radius:8px;padding:18px;margin:16px 0;background:#14212b}
+    .command-preview{color:#b3c1cc;font-size:.85rem}.command-step .actions button{font-size:.85rem;padding:8px 10px}
+    .actions{margin-top:16px}.columns{display:grid;grid-template-columns:1fr 1fr;gap:20px}.columns>.panel{margin:0}
+    .path-input{display:flex;gap:8px;align-items:center}.path-input input{min-width:0;flex:1}
+    dialog{background:#192631;color:#e5edf3;border:1px solid #506475;border-radius:12px;width:min(760px,95vw);max-height:90vh;padding:24px}
+    dialog::backdrop{background:#000a}.picker-list{max-height:35vh;overflow:auto;border:1px solid #34444f;border-radius:6px;margin:12px 0}
+    .picker-entry{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid #34444f}
+    .picker-entry:last-child{border-bottom:0}.picker-entry span{overflow-wrap:anywhere;min-width:0}.picker-entry button{flex-shrink:0}
+    #picker-error{color:#ffb5a9}.picker-roots{margin:12px 0}dialog h2{margin:0}
+    dl{display:grid;grid-template-columns:140px 1fr;gap:12px;margin:0}dd{margin:0;overflow-wrap:anywhere}
+    code,.path{overflow-wrap:anywhere;font-size:.9rem}.tool{padding:18px 0;border-top:1px solid #34444f}
+    .tool:first-child{border:0;padding-top:0}.tool:last-child{padding-bottom:0}.tool .actions{margin:12px 0 0}
+    .badge{display:inline-block;background:#2c4846;color:#b3f2df;border-radius:4px;padding:3px 9px;font-size:.8rem}
+    .badge.missing,.badge.unavailable{background:#463a2b;color:#ffe0b3}
+    progress{display:block;width:100%;height:14px;margin:10px 0 18px;accent-color:#82dec5}
+    #run-file-message.error{color:#ffb5a9}.run-status{font-size:.9rem;color:#b3c1cc}
+    .run-placeholder{color:#b3c1cc;font-size:.9rem}.run-placeholder summary{cursor:pointer}
+    .terminal-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#253745;padding:10px 14px;border-radius:8px 8px 0 0;margin-top:16px;font-size:.85rem}
+    .terminal-bar button{font-size:.8rem;padding:5px 10px}
+    .terminal-output{height:360px;max-height:60vh;min-height:160px;overflow:auto;overflow-anchor:none;margin:0;background:#080e14;color:#d6f4e5;border:1px solid #34444f;border-radius:0 0 8px 8px;font:13px/1.5 Consolas,'Cascadia Code',monospace;white-space:pre-wrap;tab-size:4}
+    .terminal-command{max-height:160px;overflow:auto;font-family:Consolas,monospace}
+    #log-job-error{max-height:320px;overflow:auto}
+    #message{min-height:1.6em;color:#b3f2df}#message.error{color:#ffb5a9}
+    #login{max-width:650px;margin:24px auto}.help{font-size:.9rem;color:#b3c1cc}footer{margin:28px 0;color:#a4b5c1;font-size:.85rem}
+    [hidden]{display:none!important}@media(max-width:760px){.columns,.fields{grid-template-columns:1fr}dl{grid-template-columns:1fr;gap:4px}dd{margin-bottom:12px}body{padding:0 16px;margin:24px auto}.panel{padding:20px}}
+    /* Forensic workspace: blue identity, quiet surfaces, decorative shield only. */
+    :root{background:#07111f;color:#e7f0fc;--blue:#78bdff;--edge:#294663;--muted:#a7bbd2}
+    html{min-height:100%;background:radial-gradient(ellipse at 95% 0%,#16395c 0,transparent 50%),#07111f}
+    body{max-width:1200px;margin:36px auto;padding:0 28px;position:relative;isolation:isolate;background:transparent}
+    .workspace-shield{position:fixed;right:-180px;top:18vh;width:min(760px,80vw);height:760px;color:#5eaafa;opacity:.09;z-index:-1;pointer-events:none}
+    header{position:relative;overflow:hidden;padding:34px 36px;margin-bottom:28px;border:1px solid #355b7f;border-radius:22px;
+      background:linear-gradient(115deg,#10223a 0%,#12304f 68%,#17436c 100%);box-shadow:0 20px 70px #0003}
+    .brand{position:relative;z-index:1;display:flex;align-items:center;gap:22px}
+    .brand-icon{display:grid;place-items:center;flex-shrink:0;width:70px;height:78px;border:1px solid #5787b5;border-radius:18px;
+      background:linear-gradient(145deg,#234e78,#112a46);color:#9dd2ff;box-shadow:inset 0 1px #ffffff15,0 8px 24px #0003}
+    .brand-icon svg{width:44px;height:52px}
+    header h1{font-size:clamp(1.65rem,3.3vw,2.45rem);letter-spacing:-.045em;margin:8px 0 10px}
+    header p{margin:0;color:#bdcee1;font-size:.94rem;max-width:580px}
+    .eyebrow{color:#9ccfff;letter-spacing:.18em;font-size:.67rem;font-weight:700}
+    .hero-shield{position:absolute;right:38px;top:-54px;width:290px;height:330px;opacity:.13;color:#b3dcff;pointer-events:none}
+    .scope-label{position:absolute;right:20px;top:16px;display:flex;gap:6px;align-items:center;font-size:.62rem;letter-spacing:.14em;
+      color:#b8dfff;border:1px solid #72b5ee55;padding:4px 9px;border-radius:30px;background:#0a244755}
+    .scope-label svg{width:12px;height:14px}
+    .panel{background:linear-gradient(120deg,#10223aed,#0d1c31f5);border-color:var(--edge);border-radius:18px;padding:28px;
+      box-shadow:0 14px 42px #0002,inset 0 1px #ffffff04}
+    h2{letter-spacing:-.025em;color:#e5f1ff}h3{color:#c5ddf7}
+    .muted,dt,.help,.command-preview,.run-status,.run-placeholder{color:var(--muted)}
+    nav{gap:8px;padding:8px;margin-bottom:22px;background:#0e2034e8;border:1px solid var(--edge);border-radius:14px}
+    nav button{color:#b5c9e0;border-radius:9px;padding:10px 19px;background:transparent}
+    nav button[aria-current=page]{color:#d7ecff;background:#1e4770;border:1px solid #3e73a0;box-shadow:inset 0 1px #ffffff09}
+    .settings-tabs{background:transparent;border:none;padding:0 0 16px;border-bottom:1px solid var(--edge);border-radius:0}
+    button{background:linear-gradient(135deg,#89c9ff,#5da9f2);color:#06203a;border-color:#9dd3ff66;font-weight:600;
+      box-shadow:0 4px 12px #0002;transition:background .15s,border-color .15s,box-shadow .15s}
+    button:hover:not(:disabled){filter:brightness(1.09);box-shadow:0 5px 16px #0004}
+    button.secondary{background:#182f49;color:#d0e2f7;border-color:#3a5776;font-weight:500;box-shadow:none}
+    button.danger{background:#341d29;color:#ffb7b9;border-color:#85505d}
+    nav button:hover:not(:disabled){background:#1b3958}button:disabled{opacity:.46;box-shadow:none}
+    button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #a3d8ff;outline-offset:3px}
+    input,textarea,select{background:#09182a;border-color:#365875;color:#e4effd;border-radius:9px}
+    input::placeholder,textarea::placeholder{color:#7892ad}select option{background:#10233a;color:#e4effd}
+    input[type=file]::file-selector-button{border:1px solid #436c92;border-radius:6px;background:#203f60;color:#dceeff;padding:7px 12px;margin-right:14px;cursor:pointer}
+    .note{background:#122e4a;border-left-color:#72b9f9;color:#c3d9ee;border-radius:0 8px 8px 0}
+    .badge{background:#1c4267;color:#c1e3ff;border:1px solid #3b6d99;border-radius:6px}
+    .badge.missing,.badge.unavailable{background:#463a2b;color:#ffe0b3;border-color:#7c6744}
+    progress{accent-color:#69b5ff;height:10px;border-radius:8px;overflow:hidden;background:#0a1a2d}
+    progress::-webkit-progress-bar{background:#0a1a2d;border-radius:8px}
+    progress::-webkit-progress-value{background:linear-gradient(90deg,#3879c6,#8fd5ff);border-radius:8px}
+    progress::-moz-progress-bar{background:linear-gradient(90deg,#3879c6,#8fd5ff);border-radius:8px}
+    pre,.command-step{background:#0a192c;border-color:#2c4b6a}.mode-category,.tool{border-color:var(--edge)}
+    .terminal-bar{background:#1c3552;color:#b9d5f3;border:1px solid #365572;border-bottom:0}
+    .terminal-output{background:#060f1d;color:#d1e6ff;border-color:#365572;scrollbar-color:#456b91 #0a1728}
+    .terminal-command{border:1px solid #243f5b;color:#c4dbf6}
+    dialog{background:#10223a;border-color:#466c91;border-radius:18px;box-shadow:0 30px 100px #0008}dialog::backdrop{background:#020913cc}
+    .picker-list{border-color:#315477}.picker-entry{border-color:#243f5b}#message{color:#b8dcff}#message.error{color:#ffb5a9}
+    footer{color:#829dbb;border-top:1px solid #28425d;padding-top:18px;font-size:.8rem}
+    @media(max-width:760px){body{padding:0 16px;margin:20px auto}header{padding:34px 22px 26px;border-radius:18px}
+      .brand{gap:14px}.brand-icon{width:48px;height:58px;border-radius:13px}.brand-icon svg{width:31px;height:39px}
+      header h1{font-size:clamp(1.35rem,4.3vw,1.9rem);overflow-wrap:anywhere}header p{font-size:.83rem}.eyebrow{font-size:.56rem;letter-spacing:.1em}
+      .hero-shield{right:-65px;opacity:.10}.scope-label{font-size:.53rem;top:10px;right:12px}.panel{padding:20px;border-radius:14px}
+      nav{gap:4px}nav button{padding:9px 12px;font-size:.9rem}.workspace-shield{right:-180px;width:650px;opacity:.06}}
+    @media(prefers-reduced-motion:reduce){button{transition:none}}
+    .search-results{display:grid;gap:10px;margin:16px 0;max-height:480px;overflow:auto;padding:4px}.result-card{display:flex;align-items:center;justify-content:space-between;gap:16px;
+      border:1px solid #41698f;border-left:4px solid #70baff;padding:16px;background:#122b46;border-radius:10px}
+    .result-card.selected{background:#1a4268;border-color:#a5d9ff;box-shadow:0 0 0 1px #8acbff33}
+    .result-card strong{display:block;overflow-wrap:anywhere}.result-card p{margin:5px 0 0;font-size:.85rem;color:#b9d1ea}
+    #job-search-count{padding:12px 16px;background:#1a3e61;border:1px solid #5285b0;border-radius:8px;font-weight:700;color:#d8efff}
+    label.checkbox-inline{display:flex;align-items:center;gap:10px}
+    label.checkbox-inline input[type=checkbox]{display:inline-block;width:18px;height:18px;flex:0 0 18px;margin:0;padding:0}
+    #admin-status{margin:0 0 16px;padding:10px 16px;font-weight:600}
+  </style>
+</head>
+<body>
+  <svg class="workspace-shield" viewBox="0 0 256 280" fill="none" aria-hidden="true" focusable="false">
+    <path d="M128 12 232 52v82c0 63-45 108-104 134C69 242 24 197 24 134V52Z" stroke="currentColor" stroke-width="1.5"/>
+    <path d="m128 40 80 31v63c0 46-31 82-80 107-49-25-80-61-80-107V71Z" stroke="currentColor"/>
+    <path d="M128 41v199M48 134h160M68 88l120 93M188 88 68 181" stroke="currentColor" stroke-opacity=".4"/>
+    <circle cx="128" cy="132" r="39" stroke="currentColor"/><circle cx="128" cy="132" r="20" stroke="currentColor"/>
+  </svg>
+  <header>
+    <svg class="hero-shield" viewBox="0 0 256 280" fill="none" aria-hidden="true" focusable="false">
+      <path d="M128 12 232 52v82c0 63-45 108-104 134C69 242 24 197 24 134V52Z" stroke="currentColor" stroke-width="2"/>
+      <path d="m128 40 80 31v63c0 46-31 82-80 107-49-25-80-61-80-107V71Z" stroke="currentColor"/>
+      <path d="M128 41v199M48 134h160" stroke="currentColor"/><circle cx="128" cy="132" r="39" stroke="currentColor"/>
+    </svg>
+    <span class="scope-label">FORENSIK</span>
+    <div class="brand">
+      <span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 64 76" fill="none" focusable="false">
+        <path d="m32 5 25 10v22c0 16-11 27-25 34C18 64 7 53 7 37V15Z" stroke="currentColor" stroke-width="2"/>
+        <path d="M32 16v42M17 31h30" stroke="currentColor" stroke-opacity=".45"/><circle cx="32" cy="36" r="11" stroke="currentColor" stroke-width="1.5"/>
+      </svg></span>
+      <div><div class="eyebrow">Digital Forensics · Workspace 0.24</div>
+        <h1>Post-Processing-Magic</h1>
+        <p>Dein Arbeitsbereich für die forensische Nachbearbeitung.</p></div>
+    </div>
+  </header>
+  <section class="panel" id="login">
+    <h2>Mit dem Dienst verbinden</h2>
+    <p>Der Access Token ist dein Zugangsschlüssel. Beim automatischen Browserstart
+      meldet dich die App direkt an.</p>
+    <form id="login-form">
+      <label for="token">Access Token</label>
+      <input id="token" type="password" autocomplete="off" required aria-describedby="token-help">
+      <p class="help" id="token-help">Bei manuell geöffneter Adresse: Token-Datei auf dem
+        Server öffnen und den Inhalt hier einfügen. Der Schlüssel ändert sich nach jedem Serverneustart.</p>
+      <button type="submit">Verbinden</button>
+    </form>
+    <details style="margin-top:20px">
+      <summary>Wo finde ich die Token-Datei?</summary>
+      <p>Im Windows-Explorer auf dem Server diesen Pfad in die Adresszeile einfügen:</p>
+      <p><code>%LOCALAPPDATA%\PostProcessingMagic\config\access-token.txt</code></p>
+      <p class="help">Bei einem eigenen Datenverzeichnis: <code>config\access-token.txt</code>
+        darin öffnen. Den vollständigen Pfad zeigt auch das Serverfenster an.</p>
+    </details>
+  </section>
+  <main id="workspace" hidden>
+    <p id="admin-status" class="badge" role="status">Administratorstatus wird geprüft…</p>
+    <nav aria-label="Hauptnavigation">
+      <button id="nav-overview" aria-current="page">Aufbereitung</button>
+      <button id="nav-settings">Einstellungen</button>
+      <button id="nav-logs">Logs</button>
+      <button id="open-feedback">Feedback</button>
+      <button id="logout" class="secondary" style="margin-left:auto">Abmelden</button>
+    </nav>
+    <div id="overview">
+      <section class="panel">
+        <h2>Evidence aufbereiten</h2>
+        <p id="run-intro" class="note">ZIP/KAPE-Test: Run lädt deine ZIP hoch und führt den ausgewählten
+          KAPE-Befehl aus. Das Original-ZIP bleibt erhalten.</p>
+        <label for="run-source-kind">Quelle</label>
+        <select id="run-source-kind">
+          <option value="upload">Upload</option>
+          <option value="local">Lokale Datei auf dem Server</option>
+        </select>
+        <div id="upload-source">
+        <label for="run-file">1. ZIP-Datei auswählen</label>
+        <input id="run-file" type="file" accept=".zip,application/zip" aria-describedby="run-file-message">
+        <p id="run-file-message" class="help" role="status">Noch keine Datei ausgewählt.</p>
+        </div>
+        <div id="local-source" hidden>
+          <label for="local-zip-path">1. Lokale ZIP-Datei auf dem Server</label>
+          <div class="path-input"><input id="local-zip-path" maxlength="4096" spellcheck="false" placeholder="D:\Sicherungen\KAPE-Target.zip">
+            <button id="browse-evidence" class="secondary">Durchsuchen…</button></div>
+          <p class="help">ZIP direkt referenzieren, auch über 50 GiB. Kein Upload und keine zusätzliche Eingangskopie.
+            Das Original wird ausschließlich gelesen; Entpacken und Ergebnis-ZIP benötigen freien Platz im Datenordner.</p>
+        </div>
+        <div class="fields">
+          <div><label for="run-format">2. Evidence-Format</label>
+            <select id="run-format">
+              <option value="ZIP">ZIP (KAPE-Target)</option>
+              <option value="E01" disabled>E01 — in Planung</option>
+              <option value="VMDK" disabled>VMDK — in Planung</option>
+            </select>
+          </div>
+          <div><label for="run-effort">3. Aufwand</label>
+            <select id="run-effort" disabled><option value="">Modi werden geladen…</option></select>
+          </div>
+        </div>
+        <p id="run-mode-message" class="help" role="status"></p>
+        <div class="actions">
+          <button id="run-start" disabled aria-describedby="run-start-note">Run</button>
+          <button id="preview-run" class="secondary" disabled>Ablauf ansehen</button>
+          <button id="cancel-run" class="danger" hidden>Abbrechen</button>
+        </div>
+        <p id="run-start-note" class="help">Limits werden geladen…</p>
+        <details class="run-placeholder">
+          <summary>Archivoptionen</summary>
+          <label><input id="allow-high-compression" type="checkbox" style="display:inline;width:auto">
+            Hohe Kompression zulassen</label>
+          <p class="help">Für bekannte eigene Sicherungen mit stark komprimierten Dateien (über 1000:1).
+            Das eingestellte Entpacklimit sowie alle Pfad-/Speicherplatzprüfungen bleiben aktiv.</p>
+        </details>
+        <label class="checkbox-inline"><input type="checkbox" id="create-result-zip" checked> Ergebnis-ZIP direkt erstellen</label>
+        <p class="help">Ohne ZIP steht der Ergebnisordner lokal bereit. Ein Archiv kannst du später ausdrücklich erstellen lassen, ohne erneute Analyse.</p>
+        <label id="upload-label" for="upload-progress" hidden>ZIP hochladen</label>
+        <progress id="upload-progress" value="0" max="100" hidden></progress>
+        <details class="run-placeholder" style="margin-top:16px">
+          <summary>Modusauswahl prüfen</summary>
+          <ul id="run-availability"></ul>
+          <div class="actions">
+            <button id="reload-run" class="secondary">Modi aktualisieren</button>
+            <button id="open-settings" class="secondary">Modi einrichten</button>
+          </div>
+        </details>
+        <section id="run-plan" class="mode-category" hidden>
+          <h3>Geplanter Ablauf</h3>
+          <p id="run-plan-summary"></p>
+          <p id="run-plan-folders" class="help"></p>
+          <details><summary>Geplante Kommandozeilen anzeigen</summary><div id="run-plan-commands"></div></details>
+          <p class="help">Dies ist eine Vorschau deiner Konfiguration. Es wurde kein Arbeitsordner
+            angelegt und kein Befehl ausgeführt.</p>
+        </section>
+      </section>
+      <section class="panel">
+        <div class="heading"><h2>Fortschritt</h2><span id="run-status" class="badge">Nicht gestartet</span></div>
+        <label for="run-total-progress" id="run-total-label">Gesamt: 0 Befehle ausgeführt</label>
+        <progress id="run-total-progress" value="0" max="1" aria-describedby="run-progress-note"></progress>
+        <label id="run-command-label" for="run-command-progress">Aktueller Befehl: noch keiner gestartet</label>
+        <progress id="run-command-progress" value="0" max="100"></progress>
+        <p id="run-progress-note" class="run-status" role="status">Noch keine Aufbereitung gestartet.</p>
+        <details id="run-error-panel" hidden>
+          <summary>Fehlerdetails</summary>
+          <pre id="run-error-detail"></pre>
+          <button id="open-job-logs" class="secondary">Diesen Lauf in Logs öffnen</button>
+        </details>
+        <details id="run-terminal" class="run-placeholder"><summary>Kommandozeile anzeigen</summary>
+          <pre id="run-live-command" class="terminal-command">Kein Befehl gestartet.</pre>
+          <div class="terminal-bar"><span>Terminal · Live-Ausgabe</span><button id="follow-output" class="secondary">Live folgen: an</button></div>
+          <pre id="run-live-output" class="terminal-output" aria-label="Live-Ausgabe" tabindex="0">Noch keine Ausgabe.</pre>
+          <p class="help">Nach oben scrollen pausiert das Mitscrollen. „Live folgen“ springt zur neuesten Ausgabe.
+            Der vollständige gespeicherte Log ist im Tab Logs abrufbar.</p>
+        </details>
+        <div class="actions"><button id="download-evidences" disabled>Download Evidences</button>
+          <button id="run-archive" class="secondary" disabled>Ergebnis-ZIP erstellen</button>
+          <button id="run-report" class="secondary" disabled>Abschlussbericht herunterladen</button>
+          <button id="run-explorer" class="secondary" hidden disabled>Show in Explorer</button></div>
+        <p id="run-explorer-note" class="help" role="status"></p>
+        <div class="actions"><button id="new-run" class="secondary" hidden>Neuen Lauf vorbereiten</button></div>
+        <p id="run-download-note" class="help">Der Download wird nach erfolgreicher Verarbeitung verfügbar.</p>
+      </section>
+    </div>
+    <div id="settings" hidden>
+      <nav class="settings-tabs" aria-label="Einstellungen">
+        <button id="settings-tools" aria-current="page">Tools</button>
+        <button id="settings-modes">Modi</button>
+        <button id="settings-processing">Verarbeitung</button>
+        <button id="settings-transfer">Konfiguration</button>
+      </nav>
+      <div id="tool-settings">
+      <section class="panel">
+        <h2>Forensiktools</h2>
+        <p>Hinterlege pro Tool die Programmdatei oder das Installationsverzeichnis.</p>
+        <p class="help">Die Pfade gelten auf dem Rechner, auf dem die EXE läuft.
+          „Pfad prüfen“ kontrolliert die Erreichbarkeit. Es wird dabei kein Programm gestartet.
+          Die Zuordnung zu einer Aufbereitungsart folgt später.</p>
+      </section>
+      <div class="columns">
+        <section class="panel">
+          <h2 id="editor-title">Tool hinzufügen</h2>
+          <form id="tool-form">
+            <label for="tool-name">Toolname</label>
+            <input id="tool-name" maxlength="100" placeholder="Name des Forensiktools" required>
+            <label for="tool-path">Absoluter Pfad auf dem Server</label>
+            <div class="path-input">
+              <input id="tool-path" maxlength="4096" placeholder="C:\Forensiktools\MeinTool\tool.exe" required spellcheck="false">
+              <button type="button" id="browse-tool" class="secondary">Durchsuchen…</button>
+            </div>
+            <p class="help">Ohne Anführungszeichen oder Startparameter. Ein noch nicht vorhandener
+              lokaler Pfad kann bereits gespeichert werden.</p>
+            <div class="actions">
+              <button type="button" id="check-path" class="secondary">Pfad prüfen</button>
+              <button type="submit" id="save-tool">Speichern</button>
+              <button type="button" id="cancel-edit" class="secondary" hidden>Abbrechen</button>
+            </div>
+            <p id="path-result" role="status" class="help"></p>
+          </form>
+        </section>
+        <section class="panel">
+          <div class="heading"><h2>Gespeicherte Tools</h2><button id="reload-tools" class="secondary">Aktualisieren</button></div>
+          <div id="tools-list"></div>
+        </section>
+      </div>
+      <section class="panel">
+        <h2>Zugang zum Dienst</h2>
+        <p>Token-Datei auf dem Server:</p><p><code id="token-file"></code></p>
+        <div class="actions"><button id="show-token" class="secondary">Aktuellen Token anzeigen</button></div>
+        <p><code id="current-token" hidden></code></p>
+        <p class="help">Der angezeigte Token gehört zu dieser Serversitzung und gewährt Zugriff
+          auf die App. Nach einem Serverneustart erneut anmelden.</p>
+      </section>
+      <details class="panel">
+        <summary>Technischer Dienststatus (Startgerüst)</summary>
+        <dl id="details" style="margin-top:20px"></dl>
+        <div class="actions"><button id="refresh" class="secondary">Status aktualisieren</button></div>
+        <p class="help">Dienst beenden unterbricht laufende Aufbereitungen. Sie werden beim Neustart nicht automatisch wiederholt.</p>
+        <button id="stop-server" class="danger">Dienst beenden</button>
+      </details>
+      </div>
+      <div id="mode-settings" hidden>
+        <section class="panel">
+          <h2>Aufbereitungsmodi</h2>
+          <p>Lege fest, wie eine Evidence aufbereitet werden soll. Deine KAPE-Vorlage
+            ist als bearbeitbarer Entwurf vorhanden.</p>
+          <p class="note">Nur Konfiguration: Es wird nichts entpackt, ausgeführt oder gezippt.
+            Jeder spätere Lauf arbeitet in einem eigenen lokalen Ordner.</p>
+        </section>
+        <section class="panel">
+          <div class="heading"><h2 id="mode-list-title" tabindex="-1">Gespeicherte Modi</h2><div class="actions" style="margin:0">
+            <button id="new-mode">Neuer Modus</button>
+            <button id="reload-modes" class="secondary">Modi aktualisieren</button>
+          </div></div>
+          <p id="modes-message" role="status" aria-live="polite"></p>
+          <p id="mode-availability" class="help"></p>
+          <div id="modes-list"></div>
+        </section>
+        <section id="mode-editor" class="panel" hidden>
+          <h2 id="mode-editor-title">Modus hinzufügen</h2>
+          <form id="mode-form">
+            <label for="mode-name">Modusname</label>
+            <input id="mode-name" maxlength="120" required>
+            <label for="mode-description">Beschreibung</label>
+            <textarea id="mode-description" maxlength="4000" rows="3"></textarea>
+            <label for="mode-effort">Aufwand</label>
+            <select id="mode-effort" required>
+              <option value="schnell">schnell</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="langsam">langsam</option>
+            </select>
+            <p id="mode-effort-note" class="help"></p>
+            <section class="mode-category" aria-labelledby="mode-import-title">
+              <h3 id="mode-import-title">Import</h3>
+              <label for="mode-format">Evidence-Format</label>
+                <select id="mode-format"><option value="ZIP">ZIP (KAPE-Target)</option>
+                  <option value="E01" disabled>E01 — in Planung</option>
+                  <option value="VMDK" disabled>VMDK — in Planung</option></select>
+              <label for="mode-source">ZIP entpacken in</label><input id="mode-source" maxlength="240" required>
+              <p class="help">Relativ zum eigenen Arbeitsordner dieser Evidence.
+                Beispiel: Entpacken in Targets; ein im ZIP enthaltener Ordner C liegt danach unter Targets\C.
+                Dateien und Ordner im ZIP behalten ihre Namen.</p>
+            </section>
+            <section class="mode-category" aria-labelledby="mode-processing-title">
+            <h3 id="mode-processing-title">Verarbeitung</h3>
+            <p>Befehle in dieser Reihenfolge</p>
+            <p class="help">Tool aus den Einstellungen auswählen und nur die Parameter eintragen.
+              Der Programmpfad wird automatisch ergänzt. Ausgabeziele stehen in deinen Parametern.</p>
+            <div id="mode-steps"></div>
+            <button type="button" id="add-mode-step" class="secondary">+ Befehl hinzufügen</button>
+            <details id="mode-original-reference" style="margin-top:20px" hidden>
+              <summary>Ursprünglichen Beispielbefehl anzeigen</summary>
+              <textarea id="mode-command" rows="5" readonly aria-label="Ursprünglicher Beispielbefehl"></textarea>
+            </details>
+            </section>
+            <section class="mode-category" aria-labelledby="mode-export-title">
+              <h3 id="mode-export-title">Export</h3>
+              <label for="mode-output">Diesen Ergebnisordner am Ende zippen</label>
+              <input id="mode-output" maxlength="240" required>
+              <p class="help">Relativ zum Arbeitsordner dieser Evidence. Dieser Ordner wird nach
+                Abschluss aller Befehle als Ergebnis-ZIP zum Download bereitgestellt.</p>
+            </section>
+            <section class="mode-category" aria-labelledby="mode-preview-title">
+            <h3 id="mode-preview-title">Vorgesehener lokaler Ablauf</h3>
+            <pre id="mode-workspace-preview"></pre>
+            <p class="help">Vorschau: Diese Ordner werden jetzt noch nicht angelegt. Das Original
+              bleibt separat erhalten. Der spätere Runner verwendet je Lauf eine eindeutige ID.</p>
+            </section>
+            <div class="actions"><button type="submit" id="save-mode">Modus speichern</button>
+              <button type="button" id="cancel-mode" class="secondary">Bearbeitung abbrechen</button></div>
+            <p id="mode-message" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+      </div>
+      <div id="processing-settings" hidden>
+        <section class="panel">
+          <h2>Warteschlange</h2>
+          <p id="queue-status" role="status"></p>
+          <div class="actions"><button id="pause-queue">Warteschlange pausieren</button>
+            <button id="refresh-queue" class="secondary">Status aktualisieren</button></div>
+          <p class="help">Die Pause verhindert die Übernahme des nächsten Auftrags. Ein bereits übernommener
+            Auftrag läuft vollständig weiter. Neue Läufe können währenddessen in die Warteschlange gestellt werden.
+            Die Pause bleibt nach einem Neustart erhalten; unterbrochene Aufträge werden weiterhin nicht automatisch wiederholt.</p>
+        </section>
+        <section class="panel">
+          <h2>Technisches Diagnosepaket</h2>
+          <p>Version, Server-/Workerstatus und bereinigte technische Ereignisse als ZIP exportieren.
+            Die Vorschau zeigt alle enthaltenen Dateien und Inhalte. Kein automatischer Versand.</p>
+          <p class="help">Keine Tokens, Evidenzen, Ergebnisse, Befehlsausgaben oder Feedbacktexte.
+            Unbekannte Logmeldungen und freie Fehlerdetails werden ausgelassen. Auch im Serverfenster verfügbar.</p>
+          <button id="preview-diagnostics">Diagnosepaket vorbereiten</button>
+        </section>
+        <section class="panel">
+          <div class="heading"><h2>Speicherübersicht</h2><button id="measure-storage" class="secondary">Speicher messen</button></div>
+          <p id="storage-volume" role="status">Speicherplatz wird geladen…</p>
+          <p id="storage-path" class="help"></p>
+          <div id="storage-areas"></div>
+          <p id="storage-measurement" class="help" role="status"></p>
+          <p class="help">Gemessen werden Dateigrößen in den App-Ordnern; Dateiinhalte werden nicht gelesen.
+            Lokal referenzierte Originaldateien außerhalb dieser Ordner sind nicht enthalten.
+            Logische Dateigrößen können vom belegten Platz auf dem Datenträger abweichen.
+            Während laufender Aufbereitungen ändern sich die Werte. Eine Messung ist auf 10 Sekunden
+            und 500.000 Einträge begrenzt; Teilmessungen werden ausdrücklich gekennzeichnet.</p>
+        </section>
+        <section class="panel">
+          <h2>Daten bereinigen</h2>
+          <p>Nur Daten bekannter, abgeschlossener Aufträge im App-Datenordner entfernen.
+            Historie und Einstellungen bleiben erhalten. Offene Aufträge sperren die Bereinigung.</p>
+          <label for="cleanup-scope">Umfang der Bereinigung</label>
+          <select id="cleanup-scope"><option value="">Alle abgeschlossenen Aufträge</option></select>
+          <div class="actions">
+            <button data-cleanup="cache" class="secondary">Cache leeren</button>
+            <button data-cleanup="evidence" class="secondary">Evidences leeren</button>
+            <button data-cleanup="results" class="secondary">Results leeren</button>
+          </div>
+          <p class="help">Cache: entpackte Eingänge, Arbeitsreste und vollständige Command-Logs.
+            Evidences: hochgeladene Eingangskopien. Results: Ergebnisordner, Ergebnis-ZIPs und Abschlussberichte.
+            Lokal referenzierte Originaldateien werden in allen Kategorien geschützt.</p>
+          <p id="cleanup-message" role="status"></p>
+        </section>
+        <section class="panel">
+          <h2>Arbeitslaufwerk / Zielordner</h2>
+          <p>Für neue Aufträge einen vorhandenen Ordner auf einer lokalen SSD/Festplatte wählen.
+            Die App erstellt darunter einen eigenen gekennzeichneten Datenordner. Bestehende Aufträge bleiben an ihrem bisherigen Ort.</p>
+          <label for="workspace-folder">Übergeordneter Ordner auf dem Server</label>
+          <div class="path-input"><input id="workspace-folder" placeholder="D:\Aufbereitungen"><button id="browse-workspace" class="secondary">Ordner auswählen…</button></div>
+          <div class="actions"><button id="save-workspace">Arbeitsziel speichern</button><button id="reset-workspace" class="secondary">Standard verwenden</button></div>
+          <p id="workspace-message" role="status"></p>
+          <p class="help">Diese Server-Einstellung wird nicht exportiert und verschiebt keine Daten. Frühere registrierte Ziele bleiben für Downloads, Berichte und Bereinigung bekannt.</p>
+        </section>
+        <section class="panel">
+          <h2>Verarbeitungslimits</h2>
+          <form id="limits-form">
+            <label for="upload-limit-gib">Uploadlimit (GiB)</label>
+            <input id="upload-limit-gib" type="number" min="0.000000001" step="any" required>
+            <label for="extract-limit-tb">Entpacklimit (TB, dezimal)</label>
+            <input id="extract-limit-tb" type="number" min="0.000000000001" step="any" required>
+            <p class="help">Standard: 50 GiB Upload und 2 TB entpackte Daten (2.000 GB).
+              Lokale ZIPs benötigen keinen Upload. Der Ergebnisordner verwendet dasselbe Größenlimit wie die entpackten Daten.
+              Neue Werte gelten nur für neu gestartete Läufe; freier Speicherplatz wird zusätzlich geprüft.</p>
+            <button id="save-limits" type="submit">Limits speichern</button>
+            <p id="limits-message" role="status"></p>
+          </form>
+        </section>
+      </div>
+      <div id="transfer-settings" hidden>
+        <section class="panel">
+          <h2>Konfiguration exportieren</h2>
+          <p>Tools und Modi einschließlich aller Befehle, Parameter und Reihenfolgen
+            gemeinsam als JSON-Datei sichern oder auf einen anderen Rechner übertragen.</p>
+          <p class="help">Enthalten sind Tool-Pfade und Konfigurationen. Zugangstokens,
+            Zertifikate, Evidence-Dateien und die Programme selbst sind nicht enthalten.</p>
+          <button id="export-config">Konfiguration exportieren</button>
+        </section>
+        <section class="panel">
+          <h2>Konfiguration importieren</h2>
+          <p>Wähle eine exportierte JSON-Datei und prüfe zuerst die Vorschau.
+            Es werden keine Tools ausgeführt. Vor dem Anwenden wird die bisherige Konfiguration gesichert.</p>
+          <label for="config-file">JSON-Konfigurationsdatei</label>
+          <input id="config-file" type="file" accept=".json,application/json" aria-describedby="config-file-help">
+          <p id="config-file-help" class="help">Maximal 4 MiB. Tool-Pfade beziehen sich auf den Server;
+            auf einem anderen Rechner müssen sie gegebenenfalls angepasst werden.</p>
+          <label for="import-strategy">Importart</label>
+          <select id="import-strategy">
+            <option value="merge">Zusammenführen — vorhandene Einträge behalten, gleiche IDs aktualisieren</option>
+            <option value="replace">Ersetzen — gesamte Tool- und Moduskonfiguration aus der Datei übernehmen</option>
+          </select>
+          <div class="actions"><button id="preview-config" class="secondary">Import prüfen</button></div>
+          <div id="config-preview" hidden>
+            <h3 style="margin-top:24px">Importvorschau</h3>
+            <p id="config-preview-summary"></p>
+            <div id="config-preview-changes"></div>
+            <ul id="config-preview-errors"></ul>
+            <ul id="config-preview-warnings" class="help"></ul>
+            <label id="replace-confirm-label" hidden>
+              <input id="replace-confirm" type="checkbox" style="width:auto;display:inline;margin-right:8px">
+              Ich möchte die bisherige Tool- und Moduskonfiguration vollständig ersetzen.
+            </label>
+            <div class="actions"><button id="apply-config" disabled>Import anwenden</button></div>
+          </div>
+          <p id="config-message" role="status" aria-live="polite"></p>
+        </section>
+      </div>
+    </div>
+    <div id="logs" hidden>
+      <section class="panel">
+        <div class="heading"><h2>Logs und Fehlerdiagnose</h2><button id="reload-job-logs" class="secondary">Aktualisieren</button></div>
+        <form id="job-search">
+          <label for="job-query">Dateiname oder Modus suchen</label>
+          <input id="job-query" type="search" maxlength="200" placeholder="Zum Beispiel C-low.zip">
+          <div class="fields">
+            <div><label for="job-status-filter">Status</label><select id="job-status-filter">
+              <option value="">Alle Status</option><option value="succeeded">Abgeschlossen</option>
+              <option value="failed">Fehlgeschlagen</option><option value="cancelled">Abgebrochen</option>
+              <option value="interrupted">Unterbrochen</option><option value="queued">Warteschlange</option>
+              <option value="running">Läuft</option><option value="uploading">Upload</option>
+              <option value="validating">Validierung</option></select></div>
+            <div><label for="job-mode-filter">Modus</label><select id="job-mode-filter"><option value="">Alle Modi</option></select></div>
+            <div><label for="job-date-from">Von (UTC-Datum)</label><input id="job-date-from" type="date"></div>
+            <div><label for="job-date-to">Bis (UTC-Datum, einschließlich)</label><input id="job-date-to" type="date"></div>
+          </div>
+          <div class="actions"><button type="submit">Suchen</button><button id="clear-job-search" type="button" class="secondary">Filter zurücksetzen</button></div>
+        </form>
+        <p id="job-search-count" role="status"></p>
+        <div id="job-results" class="search-results" aria-label="Suchtreffer"></div>
+        <div class="actions"><button id="jobs-prev" class="secondary" disabled>Vorherige Seite</button><button id="jobs-next" class="secondary" disabled>Nächste Seite</button></div>
+        <label for="log-job">Aufbereitung auswählen (50 je Seite)</label>
+        <select id="log-job"></select>
+        <p id="log-job-status" role="status"></p>
+        <pre id="log-job-error" hidden></pre>
+        <h3>Kommandozeile</h3><pre id="log-job-command" class="terminal-command"></pre>
+        <div class="terminal-bar"><span>Terminal · gespeicherte Ausgabe</span></div>
+        <pre id="log-job-output" class="terminal-output" tabindex="0"></pre>
+        <div class="actions"><button id="download-diagnostics" class="secondary" disabled>Diagnose als TXT herunterladen</button>
+          <button id="download-job-log" class="secondary" disabled>KAPE-Log herunterladen</button>
+          <button id="log-download" class="secondary" disabled>Download Evidences</button>
+          <button id="log-archive" class="secondary" disabled>Ergebnis-ZIP erstellen</button>
+          <button id="log-report" class="secondary" disabled>Abschlussbericht herunterladen</button>
+          <button id="log-cleanup" class="secondary" disabled>Diesen Auftrag bereinigen</button>
+          <button id="log-cancel-archive" class="secondary" hidden>Archivierung abbrechen</button>
+          <button id="log-report-json" class="secondary" disabled>Bericht als JSON</button>
+          <button id="log-explorer" class="secondary" hidden disabled>Show in Explorer</button></div>
+        <p id="log-artifacts-note" class="help" role="status"></p>
+        <p id="log-explorer-note" class="help" role="status"></p>
+      </section>
+    </div>
+  </main>
+  <dialog id="feedback-dialog" aria-labelledby="feedback-title">
+    <div class="heading"><h2 id="feedback-title">Feedback, Bugs und Wünsche</h2><button id="close-feedback" class="secondary">Schließen</button></div>
+    <p class="help">Wird lokal auf dem Server gespeichert. Kein Versand und keine automatischen Loganhänge.
+      Beim Export werden deine eingegebenen Texte unverändert übernommen.</p>
+    <form id="feedback-form">
+      <label for="feedback-category">Kategorie</label><select id="feedback-category"><option value="bug">Bug / Fehler</option><option value="wish">Wunsch</option><option value="feedback">Allgemeines Feedback</option></select>
+      <label for="feedback-subject">Titel</label><input id="feedback-subject" maxlength="160" required>
+      <label for="feedback-text">Beschreibung</label><textarea id="feedback-text" rows="5" maxlength="8000" required></textarea>
+      <button id="save-feedback" type="submit">Lokal speichern</button>
+      <p id="feedback-message" role="status"></p>
+    </form>
+    <div class="heading" style="margin-top:24px"><h3>Letzte 100 lokale Einträge</h3><button id="export-feedback" class="secondary">Feedback exportieren</button></div>
+    <div id="feedback-list" style="max-height:260px;overflow:auto"></div>
+  </dialog>
+  <dialog id="diagnostics-dialog" aria-labelledby="diagnostics-title">
+    <div class="heading"><h2 id="diagnostics-title">Diagnosepaket – Vorschau</h2><button id="close-diagnostics" class="secondary">Schließen</button></div>
+    <p id="diagnostics-message"></p><div id="diagnostics-files"></div>
+    <div class="actions"><button id="export-diagnostics">ZIP herunterladen</button></div>
+  </dialog>
+  <dialog id="cleanup-dialog" aria-labelledby="cleanup-title">
+    <h2 id="cleanup-title">Löschvorschau</h2>
+    <p id="cleanup-summary"></p><p id="cleanup-warning"></p>
+    <p id="cleanup-root" class="help"></p>
+    <label><input type="checkbox" id="cleanup-confirm"> Ich möchte diese Daten dauerhaft löschen.</label>
+    <div class="actions"><button id="cleanup-cancel" class="secondary">Abbrechen</button>
+      <button id="cleanup-apply" disabled>Endgültig löschen</button></div>
+    <p id="cleanup-progress" role="status"></p>
+  </dialog>
+  <dialog id="path-picker" aria-labelledby="picker-title">
+    <div class="heading"><h2 id="picker-title">Tool oder Ordner auswählen</h2><button id="picker-close" class="secondary" autofocus>Schließen</button></div>
+    <p class="help">Du wählst auf dem Serverrechner aus. Dateien werden nicht hochgeladen oder gestartet.</p>
+    <div class="actions picker-roots" id="picker-roots"></div>
+    <form id="picker-address-form">
+      <label for="picker-address">Ordner oder vollständiger Dateipfad</label>
+      <div class="path-input"><input id="picker-address" spellcheck="false" maxlength="4096"><button type="submit" class="secondary">Öffnen</button></div>
+    </form>
+    <div class="actions"><button id="picker-up" class="secondary">Eine Ebene höher</button><button id="picker-home" class="secondary">Startordner</button></div>
+    <label for="picker-search">In diesem Ordner suchen</label>
+    <input id="picker-search" type="search" maxlength="100" placeholder="Datei- oder Ordnername">
+    <p id="picker-error" role="alert"></p>
+    <p id="picker-notice" class="help" role="status"></p>
+    <div id="picker-list" class="picker-list" aria-label="Ordnerinhalt"></div>
+    <div class="actions">
+      <button id="picker-select-file" hidden>Datei übernehmen</button>
+      <button id="picker-select-folder" disabled>Diesen Ordner verwenden</button>
+      <button id="picker-cancel" class="secondary">Abbrechen</button>
+    </div>
+  </dialog>
+  <p id="message" role="status" aria-live="polite"></p>
+  <footer>Das Schließen dieses Tabs beendet den Server nicht. Beenden unter Einstellungen → Tools → Technischer Dienststatus.</footer>
+  <script>
+    const byId = id => document.getElementById(id);
+    const fragment = new URLSearchParams(location.hash.slice(1));
+    let token = fragment.get('token') || sessionStorage.getItem('ppm-token') || '';
+    let editingId = null;
+    let pickerFolder = null, pickerParent = null, pickerFile = null, pickerRequest = 0, searchTimer;
+    let lastToolFolder = sessionStorage.getItem('ppm-last-tool-folder') || null;
+    let pickerPurpose = 'tool', lastEvidenceFolder = sessionStorage.getItem('ppm-last-evidence-folder') || null;
+    let logsRequest = 0;
+    let followOutput = true;
+    let editingModeId = null, modeWorkspacePattern = '', modesRequest = 0;
+    let modeSteps = [], modeTools = [];
+    let savedModes = [];
+    let importTicket = null, importGeneration = 0;
+    let preparationModes = [], preparationTools = [], preparationRequest = 0;
+    let processingAvailable = false, runBusy = false, activeJobId = null;
+    let uploadRequest = null, eventController = null, eventRefreshTimer = null, eventGeneration = 0;
+    if (location.hash) history.replaceState(null, '', location.pathname);
+    function message(text, error=false) {
+      byId('message').textContent = text;
+      byId('message').classList.toggle('error', error);
+    }
+    function hideWorkspace() {
+      for (const id of ['feedback-dialog','diagnostics-dialog']) byId(id).close();
+      byId('feedback-list').replaceChildren(); byId('diagnostics-files').replaceChildren();
+      byId('feedback-form').reset(); diagnosticsTicket = null;
+      resetExplorer('run'); resetExplorer('log');
+      closePicker();
+      byId('workspace').hidden = true; byId('login').hidden = false;
+      byId('details').replaceChildren(); byId('tools-list').replaceChildren();
+      byId('token-file').textContent = ''; byId('current-token').textContent = '';
+      byId('current-token').hidden = true;
+      byId('show-token').textContent = 'Aktuellen Token anzeigen';
+      resetEditor();
+      modesRequest++; resetModeEditor(); byId('modes-list').replaceChildren();
+      savedModes = []; byId('modes-message').textContent = ''; byId('mode-availability').textContent = '';
+      invalidateImport(); byId('config-file').value = ''; byId('config-message').textContent = '';
+      preparationRequest++; preparationModes = []; preparationTools = [];
+      eventGeneration++; eventController?.abort(); uploadRequest?.abort(); clearTimeout(eventRefreshTimer);
+      processingAvailable = false; activeJobId = null; runBusy = false;
+      byId('run-live-command').textContent = 'Kein Befehl gestartet.'; byId('run-live-output').textContent = 'Noch keine Ausgabe.';
+      byId('run-status').textContent = 'Nicht gestartet'; byId('run-progress-note').textContent = 'Noch keine Aufbereitung gestartet.';
+      byId('run-total-progress').value = 0; byId('run-command-progress').value = 0;
+      byId('cancel-run').hidden = true; byId('download-evidences').disabled = true;
+      byId('upload-label').hidden = true; byId('upload-progress').hidden = true;
+      byId('run-file').value = ''; byId('run-effort').replaceChildren();
+      byId('local-zip-path').value = ''; byId('run-error-panel').hidden = true;
+      logsRequest++; byId('log-job').replaceChildren();
+      for (const id of ['log-job-error','log-job-output','log-job-command','log-job-status']) byId(id).textContent = '';
+      byId('run-effort').disabled = true; byId('run-availability').replaceChildren();
+      byId('run-mode-message').textContent = ''; updatePreparation();
+    }
+    async function api(path, method='GET', payload) {
+      const response = await fetch(path, {method, headers:{Authorization:'Bearer '+token,
+        ...(payload ? {'Content-Type':'application/json'} : {})},
+        ...(payload ? {body:JSON.stringify(payload)} : {})});
+      if (!response.ok) {
+        if (response.status === 401) {
+          token = ''; sessionStorage.removeItem('ppm-token'); hideWorkspace();
+          throw new Error('Token fehlt oder ist abgelaufen. Bitte neu anmelden.');
+        }
+        const data = await response.json().catch(() => ({}));
+        const detail = typeof data.detail === 'string' ? data.detail : data.detail?.message ||
+          (Array.isArray(data.detail) ? data.detail.map(item => item.msg).join(' ') : 'Anfrage fehlgeschlagen.');
+        throw new Error(detail);
+      }
+      return response.status === 204 ? null : response.json();
+    }
+    async function connect() {
+      const data = await api('/api/system');
+      sessionStorage.setItem('ppm-token', token); byId('token').value = '';
+      byId('login').hidden = true; byId('workspace').hidden = false;
+      byId('details').replaceChildren(); byId('token-file').textContent = data.token_file;
+      for (const [label,value] of [['Version',data.version],['Betrieb',data.mode],
+        ['Rechte',data.administrator ? 'Administrator' : 'Nicht erhöht'],
+        ['Datenordner',data.storage],['Datenbank',data.database],['Analyseprofile','Noch keine freigegeben']]) {
+        const dt = document.createElement('dt'), dd = document.createElement('dd');
+        dt.textContent = label; dd.textContent = value; byId('details').append(dt,dd);
+      }
+    }
+    async function navigate(page) {
+      byId('overview').hidden = page !== 'overview'; byId('settings').hidden = page !== 'settings';
+      byId('logs').hidden = page !== 'logs';
+      for (const name of ['overview','settings','logs']) {
+        if (name === page) byId('nav-'+name).setAttribute('aria-current','page');
+        else byId('nav-'+name).removeAttribute('aria-current');
+      }
+      if (page === 'settings') {preparationRequest++; await showSettings('tools');}
+      else if (page === 'logs') {preparationRequest++; await loadJobLogs();}
+      else await loadPreparation();
+    }
+    function clearPreparationPlan() {
+      byId('run-plan').hidden = true;
+      byId('run-plan-summary').textContent = ''; byId('run-plan-folders').textContent = '';
+      byId('run-plan-commands').replaceChildren();
+      if (!activeJobId && !runBusy) {
+        byId('run-total-label').textContent = 'Gesamt: 0 Befehle ausgeführt';
+        byId('run-total-progress').max = 1;
+      }
+    }
+    function selectedPreparationMode() {
+      return preparationModes.find(mode => mode.id === byId('run-effort').value);
+    }
+    function updatePreparation() {
+      clearPreparationPlan();
+      const file = byId('run-file').files[0];
+      const local = byId('run-source-kind').value === 'local';
+      byId('run-intro').textContent = local ? 'Run referenziert deine lokale ZIP direkt und führt den ausgewählten KAPE-Befehl aus. Das Original bleibt unverändert.' :
+        'Run lädt deine ZIP hoch und führt den ausgewählten KAPE-Befehl aus. Das Original-ZIP bleibt erhalten.';
+      byId('upload-source').hidden = local; byId('local-source').hidden = !local;
+      const validFile = local ? /\.zip$/i.test(byId('local-zip-path').value.trim()) : Boolean(file && /\.zip$/i.test(file.name) && file.size > 0);
+      byId('run-file-message').textContent = !file ? 'Noch keine Datei ausgewählt.' :
+        !/\.zip$/i.test(file.name) ? 'Bitte eine ZIP-Datei auswählen. Andere Evidence-Formate folgen später.' :
+        !file.size ? 'Die gewählte Datei ist leer. Bitte eine ZIP-Datei mit Inhalt auswählen.' :
+        file.name+' · '+new Intl.NumberFormat('de-DE').format(file.size)+' Bytes · bereit für Upload mit Run.';
+      byId('run-file-message').classList.toggle('error', Boolean(file && !validFile));
+      const mode = selectedPreparationMode();
+      byId('preview-run').disabled = runBusy || !validFile || !mode || byId('run-format').value !== 'ZIP';
+      byId('run-start').disabled = byId('preview-run').disabled || !processingAvailable;
+      for (const id of ['run-file','run-format','run-effort','run-source-kind','local-zip-path','browse-evidence','allow-high-compression','create-result-zip']) byId(id).disabled = runBusy;
+    }
+    async function loadPreparation() {
+      const previous = byId('run-effort').value, request = ++preparationRequest;
+      preparationModes = []; preparationTools = [];
+      byId('run-effort').replaceChildren(new Option('Modi werden geladen…',''));
+      byId('run-effort').disabled = true; byId('run-mode-message').textContent = 'Konfiguration wird geprüft…';
+      byId('run-availability').replaceChildren(); updatePreparation();
+      try {
+        const [data,tools,catalog] = await Promise.all([api('/api/settings/modes'),api('/api/settings/tools'),api('/api/jobs/catalog')]);
+        if (request !== preparationRequest || byId('workspace').hidden) return;
+        preparationTools = tools.tools;
+        processingAvailable = catalog.worker;
+        byId('run-start-note').textContent = 'Limits für neue Läufe: '+
+          new Intl.NumberFormat('de-DE',{maximumFractionDigits:3}).format(catalog.limits.max_upload_bytes/1024**3)+' GiB Upload · '+
+          new Intl.NumberFormat('de-DE',{maximumFractionDigits:3}).format(catalog.limits.max_extract_bytes/1e12)+' TB entpackt. PowerShell-Blöcke laufen mit Administratorrechten.';
+        byId('admin-status').textContent = catalog.administrator ? 'Administratorrechte aktiv — KAPE erbt diese Rechte.' :
+          catalog.test_no_admin ? 'Synthetischer Entwicklertest ohne Administratorrechte.' : 'Administratorrechte fehlen. App neu starten und Windows-UAC bestätigen.';
+        byId('admin-status').classList.toggle('unavailable', !catalog.administrator);
+        byId('run-effort').replaceChildren(new Option('Aufwand auswählen…',''));
+        const labels = {missing:'kein Modus hinterlegt',conflict:'mehrfach belegt',
+          incomplete:'Befehle, Toolzuordnung oder Programmdatei fehlen',configured:'Konfiguration hinterlegt'};
+        for (const slot of data.availability) {
+          const mode = data.modes.find(mode => mode.id === slot.mode_ids[0]);
+          const profile = catalog.modes.find(item => item.id === mode?.id);
+          const complete = profile?.ready && slot.state === 'configured' && mode && mode.evidence_format === 'ZIP' && mode.steps.length;
+          const reason = profile?.reason || labels[slot.state];
+          const option = new Option(slot.effort+(complete ? '' : ' — '+reason),complete ? mode.id : 'unavailable-'+slot.effort);
+          option.disabled = !complete;
+          byId('run-effort').append(option);
+          if (complete) preparationModes.push(mode);
+          const item = document.createElement('li');
+          item.textContent = slot.effort+': '+(complete ? mode.name+' ('+mode.steps.length+' Befehle)' : reason);
+          byId('run-availability').append(item);
+        }
+        byId('run-effort').disabled = false;
+        if (preparationModes.some(mode => mode.id === previous)) byId('run-effort').value = previous;
+        byId('run-mode-message').textContent = !processingAvailable ? 'Ausführungsprozess nicht verfügbar. Server neu starten.' : preparationModes.length ?
+          'Wähle den Aufwand. Mit Run gibst du den hinterlegten KAPE-Befehl für diesen Lauf frei.' :
+          'Noch kein vollständiger Modus verfügbar. Unter Einstellungen → Modi die Befehle und Tools zuordnen.';
+        updatePreparation();
+        if (!activeJobId && !runBusy) {
+          const previousJob = sessionStorage.getItem('ppm-job-id');
+          if (previousJob) {activeJobId = previousJob; await refreshJob(); watchJob();}
+        }
+      } catch (error) {
+        if (request !== preparationRequest || byId('workspace').hidden) return;
+        byId('run-effort').replaceChildren(new Option('Konfiguration nicht verfügbar',''));
+        byId('run-mode-message').textContent = error.message; throw error;
+      }
+    }
+    function previewPreparation() {
+      updatePreparation(); if (byId('preview-run').disabled) return;
+      const mode = selectedPreparationMode(), file = byId('run-file').files[0];
+      const inputName = byId('run-source-kind').value === 'local' ? byId('local-zip-path').value.trim() : file.name;
+      byId('run-plan-summary').textContent = inputName+' · '+mode.effort+' · '+mode.name+' · '+mode.steps.length+' Befehle';
+      byId('run-plan-folders').textContent = 'Je Evidence eigener Arbeitsordner. Entpacken nach '+mode.extract_folder+
+        '; ein einzelner abweichender Laufwerksordner (z. B. G statt C) wird erkannt. Nach Abschluss aller Befehle '+mode.output_folder+' als Ergebnis-ZIP bereitstellen.';
+      mode.steps.forEach((step,index) => {
+        const title = document.createElement('p'); title.textContent = (index+1)+'. '+step.name;
+        const command = document.createElement('pre'), tool = preparationTools.find(tool => tool.id === step.tool_id);
+        command.textContent = (step.type === 'powershell' ? 'PowerShell\n'+step.script : '"'+tool.path+'"'+(step.parameters ? ' '+step.parameters : ''))+
+          '\nArbeitsordner: '+(step.working_directory || '.');
+        byId('run-plan-commands').append(title,command);
+      });
+      if (!activeJobId) {
+        byId('run-total-label').textContent = 'Gesamt: 0 von '+mode.steps.length+' Befehlen ausgeführt';
+        byId('run-total-progress').max = mode.steps.length;
+      }
+      byId('run-plan').hidden = false;
+    }
+    async function showSettings(section) {
+      byId('tool-settings').hidden = section !== 'tools';
+      byId('mode-settings').hidden = section !== 'modes';
+      byId('transfer-settings').hidden = section !== 'transfer';
+      byId('processing-settings').hidden = section !== 'processing';
+      for (const name of ['tools','modes','transfer','processing']) {
+        if (name === section) byId('settings-'+name).setAttribute('aria-current','page');
+        else byId('settings-'+name).removeAttribute('aria-current');
+      }
+      if (section === 'modes') await loadModes(); else if (section === 'tools') await loadTools();
+      else if (section === 'processing') {
+        const limits = await api('/api/settings/processing');
+        byId('upload-limit-gib').value = limits.max_upload_bytes/1024**3;
+        byId('extract-limit-tb').value = limits.max_extract_bytes/1e12;
+        await loadStorage();
+        await loadWorkspaces();
+        await loadCleanupScope();
+        await loadQueue();
+      }
+    }
+    function storageSize(value) {
+      const units = ['Bytes','KiB','MiB','GiB','TiB'];
+      const index = value > 0 ? Math.min(Math.floor(Math.log(value)/Math.log(1024)),units.length-1) : 0;
+      return new Intl.NumberFormat('de-DE',{maximumFractionDigits:2}).format(value/1024**index)+' '+units[index];
+    }
+    async function loadWorkspaces() {
+      try {const data = await api('/api/settings/workspace');
+        byId('workspace-folder').value = data.folder;
+        byId('workspace-folder').placeholder = 'Standard: '+data.default_path;
+        byId('workspace-message').textContent = (data.custom ? 'Eigenes Arbeitsziel: ' : 'Standard aktiv: ')+data.path+' · '+storageSize(data.free_bytes)+' frei. '+data.note;
+      } catch (error) {byId('workspace-message').textContent = error.message+' Mit „Standard verwenden“ zurücksetzen.';}
+    }
+    byId('save-workspace').addEventListener('click',() => run(async () => {
+      await api('/api/settings/workspace','PUT',{folder:byId('workspace-folder').value.trim()}); await loadWorkspaces(); await loadStorage();
+    },byId('save-workspace')));
+    byId('reset-workspace').addEventListener('click',() => run(async () => {
+      await api('/api/settings/workspace','PUT',{folder:null}); await loadWorkspaces(); await loadStorage();
+    },byId('reset-workspace')));
+    async function loadCleanupScope() {
+      const previous = byId('cleanup-scope').value;
+      const jobs = await api('/api/jobs?limit=100');
+      byId('cleanup-scope').replaceChildren(new Option('Alle abgeschlossenen Aufträge',''));
+      for (const job of jobs.jobs) if (['succeeded','failed','cancelled','interrupted'].includes(job.status)) {
+        byId('cleanup-scope').append(new Option(job.filename+' · '+job.created_at+' · '+job.id.slice(0,8),job.id));
+      }
+      if ([...byId('cleanup-scope').options].some(option => option.value===previous)) byId('cleanup-scope').value = previous;
+    }
+    let cleanupTicket = null, cleanupBusy = false;
+    for (const button of document.querySelectorAll('[data-cleanup]')) button.addEventListener('click',() => run(async () => {
+      byId('cleanup-message').textContent = 'Löschvorschau wird ermittelt…';
+      try {
+        const preview = await api('/api/settings/cleanup/preview','POST',{category:button.dataset.cleanup,job_id:byId('cleanup-scope').value || null});
+        cleanupTicket = preview.ticket;
+        byId('cleanup-title').textContent = preview.label+' – Vorschau ('+(byId('cleanup-scope').value ? byId('cleanup-scope').selectedOptions[0].textContent : 'alle abgeschlossenen Aufträge')+')';
+        byId('cleanup-summary').textContent = preview.files+' Dateien · '+storageSize(preview.bytes)+' · '+preview.skipped_links+' Verknüpfungen übersprungen';
+        byId('cleanup-warning').textContent = preview.note;
+        byId('cleanup-root').textContent = 'Datenordner: '+preview.root;
+        byId('cleanup-confirm').checked = false; byId('cleanup-apply').disabled = true;
+        byId('cleanup-progress').textContent = ''; byId('cleanup-message').textContent = '';
+        byId('cleanup-dialog').showModal();
+      } catch (error) {byId('cleanup-message').textContent = error.message;}
+    },button));
+    byId('cleanup-confirm').addEventListener('change',() => {byId('cleanup-apply').disabled = !byId('cleanup-confirm').checked;});
+    byId('cleanup-cancel').addEventListener('click',() => {cleanupTicket = null; byId('cleanup-dialog').close();});
+    byId('cleanup-dialog').addEventListener('cancel',event => {if (cleanupBusy) event.preventDefault(); else cleanupTicket = null;});
+    byId('cleanup-apply').addEventListener('click',() => run(async () => {
+      if (!cleanupTicket || !byId('cleanup-confirm').checked) return;
+      cleanupBusy = true; byId('cleanup-cancel').disabled = true; byId('cleanup-confirm').disabled = true;
+      byId('cleanup-progress').textContent = 'Bereinigung läuft…';
+      try {
+        const result = await api('/api/settings/cleanup/apply','POST',{ticket:cleanupTicket,confirmed:true});
+        byId('cleanup-message').textContent = result.deleted_files+' Dateien gelöscht · '+storageSize(result.bytes)+
+          (result.errors.length ? ' · Nicht vollständig entfernt: '+result.errors.join(' | ') : ' · Bereinigung abgeschlossen.');
+        byId('cleanup-dialog').close(); await loadStorage(); await refreshJob();
+      } catch (error) {byId('cleanup-progress').textContent = error.message+' Bitte schließen und neue Vorschau anfordern.';}
+      finally {cleanupBusy = false; cleanupTicket = null; byId('cleanup-cancel').disabled = false; byId('cleanup-confirm').disabled = false;}
+    },byId('cleanup-apply')));
+    let queuePaused = false;
+    async function loadQueue() {
+      const state = await api('/api/queue');
+      queuePaused = state.paused;
+      byId('queue-status').textContent = (state.paused ? 'Pausiert – keine neuen Aufträge werden übernommen.' : 'Aktiv – wartende Aufträge werden nacheinander gestartet.')+
+        ' Wartend: '+state.waiting+' · In Bearbeitung: '+state.running.length+' · ZIPs wartend: '+state.archive_waiting+' · ZIPs in Bearbeitung: '+state.archiving.length;
+      byId('pause-queue').textContent = state.paused ? 'Warteschlange fortsetzen' : 'Warteschlange pausieren';
+    }
+    byId('refresh-queue').addEventListener('click',() => run(loadQueue));
+    byId('pause-queue').addEventListener('click',() => run(async () => {
+      await api('/api/queue','PUT',{paused:!queuePaused}); await loadQueue();
+    },byId('pause-queue')));
+    function renderStorage(data) {
+      byId('storage-volume').textContent = storageSize(data.volume.free_bytes)+' frei von '+storageSize(data.volume.total_bytes)+
+        ' · '+storageSize(data.volume.used_bytes)+' auf dem Datenträger belegt';
+      byId('storage-path').textContent = 'Datenordner auf dem Server: '+data.path+' · Bekannte Arbeitsziele: '+(data.locations || []).map(item => item.path+(item.error ? ' (nicht erreichbar: '+item.error+')' : ' · '+storageSize(item.free_bytes)+' frei')).join(' | ');
+      const target = byId('storage-areas'); target.replaceChildren();
+      if (!data.scan) {
+        byId('storage-measurement').textContent = 'App-Ordner noch nicht gemessen. „Speicher messen“ liest ausschließlich Dateimetadaten.';
+        return;
+      }
+      const list = document.createElement('dl');
+      for (const area of data.scan.areas) {
+        const label = document.createElement('dt'), value = document.createElement('dd');
+        label.textContent = area.label;
+        value.textContent = storageSize(area.bytes)+' · '+area.files+' Dateien · '+area.directories+' Unterordner'+
+          (area.complete ? '' : ' · Teilmessung');
+        list.append(label,value);
+      }
+      target.append(list);
+      byId('storage-measurement').textContent = (data.scan.complete ? 'Messung abgeschlossen' : 'Teilmessung – Werte sind Untergrenzen')+
+        ' · '+new Date(data.scan.measured_at).toLocaleString('de-DE')+' · Summe der gemessenen Dateigrößen: '+storageSize(data.scan.bytes)+
+        ' · '+data.scan.skipped_links+' Verknüpfungen übersprungen · '+data.scan.errors+' nicht lesbare Einträge/Ordner';
+    }
+    async function loadStorage() {
+      try { renderStorage(await api('/api/settings/storage')); }
+      catch (error) { byId('storage-volume').textContent = error.message; }
+    }
+    byId('measure-storage').addEventListener('click', () => run(async () => {
+      byId('storage-measurement').textContent = 'Dateimetadaten werden gemessen…';
+      try { renderStorage(await api('/api/settings/storage/scan','POST')); }
+      catch (error) { byId('storage-measurement').textContent = error.message; }
+    },byId('measure-storage')));
+    function resetModeEditor() {
+      editingModeId = null; byId('mode-form').reset(); byId('mode-editor').hidden = true;
+      byId('mode-message').textContent = ''; byId('mode-workspace-preview').textContent = '';
+      modeSteps = []; byId('mode-steps').replaceChildren();
+    }
+    function modePreview() {
+      const root = modeWorkspacePattern || 'work\\{Aufbereitungs-ID}';
+      const source = byId('mode-source').value, output = byId('mode-output').value;
+      byId('mode-workspace-preview').textContent =
+        'Eigener Arbeitsordner je Evidence-Aufbereitung:\n'+root+'\n\n'+
+        '1. '+(byId('mode-format').value === 'ZIP' ? 'ZIP entpacken' : 'Evidence bereitstellen')+'\n   Ziel: '+root+'\\'+source+'\n'+
+        '2. '+modeSteps.length+' konfigurierte Befehle nacheinander\n   Standardarbeitsordner: '+root+'\n   Abweichende Arbeitsordner stehen im jeweiligen Block.\n'+
+        '3. Nach Abschluss aller Befehle und Prüfung:\n   '+root+'\\'+output+'\n   als Ergebnis-ZIP zum Download bereitstellen';
+    }
+    function stepCommand(step) {
+      if (step.type === 'powershell') return 'PowerShell\n'+(step.script || '');
+      const tool = modeTools.find(tool => tool.id === step.tool_id);
+      return (tool ? '"'+tool.path+'"' : '['+(step.tool_hint || 'Tool auswählen')+']')+
+        (step.parameters ? ' '+step.parameters : '');
+    }
+    function newModeStep(index=modeSteps.length) {
+      if (modeSteps.length >= 50) {message('Maximal 50 Befehle pro Modus.',true); return;}
+      modeSteps.splice(index,0,{id:crypto.randomUUID(),name:'Tool-Aufruf',type:'tool',script:'',working_directory:'.',tool_id:null,tool_hint:'',parameters:''});
+      renderModeSteps(); modePreview();
+    }
+    function renderModeSteps() {
+      const list = byId('mode-steps'); list.replaceChildren();
+      if (!modeSteps.length) {
+        const note = document.createElement('p'); note.className = 'muted'; note.textContent = 'Noch keine Befehle. Über den Button unten hinzufügen.'; list.append(note);
+      }
+      modeSteps.forEach((step,index) => {
+        const card = document.createElement('article'); card.className = 'command-step';
+        const heading = document.createElement('h3'); heading.textContent = 'Befehl '+(index+1);
+        const typeLabel = document.createElement('label'), typeSelect = document.createElement('select');
+        typeSelect.id = 'step-type-'+step.id; typeLabel.htmlFor = typeSelect.id; typeLabel.textContent = 'Blocktyp für Befehl '+(index+1);
+        typeSelect.append(new Option('Tool-Aufruf','tool'),new Option('Freier PowerShell-Befehl','powershell'));
+        typeSelect.value = step.type || 'tool';
+        typeSelect.addEventListener('change', () => {
+          step.type = typeSelect.value;
+          if (step.type === 'powershell') {step.tool_id = null; step.tool_hint = ''; step.parameters = '';}
+          renderModeSteps(); modePreview();
+        });
+        const nameLabel = document.createElement('label'), name = document.createElement('input');
+        name.id = 'step-name-'+step.id; nameLabel.htmlFor = name.id; nameLabel.textContent = 'Bezeichnung';
+        name.value = step.name; name.maxLength = 120; name.required = true;
+        name.addEventListener('input', () => {step.name = name.value;});
+        const toolLabel = document.createElement('label'), select = document.createElement('select');
+        select.id = 'step-tool-'+step.id; toolLabel.htmlFor = select.id; toolLabel.textContent = 'Tool für Befehl '+(index+1);
+        const empty = document.createElement('option'); empty.value = ''; empty.textContent = step.tool_hint ? step.tool_hint+' — bitte Tool zuordnen' : 'Tool auswählen (Entwurf darf offen bleiben)'; select.append(empty);
+        for (const tool of modeTools) {
+          const option = document.createElement('option'); option.value = tool.id; option.textContent = tool.name; select.append(option);
+        }
+        if (step.tool_id && !modeTools.some(tool => tool.id === step.tool_id)) {
+          const missing = document.createElement('option'); missing.value = step.tool_id; missing.textContent = 'Tool nicht mehr vorhanden'; select.append(missing);
+        }
+        select.value = step.tool_id || '';
+        const parametersLabel = document.createElement('label'), parameters = document.createElement('textarea');
+        parameters.id = 'step-parameters-'+step.id; parametersLabel.htmlFor = parameters.id;
+        parametersLabel.textContent = 'Parameter für Befehl '+(index+1)+' (ohne Programmname)';
+        parameters.value = step.parameters; parameters.rows = 4; parameters.maxLength = 16000; parameters.spellcheck = false;
+        const scriptLabel = document.createElement('label'), script = document.createElement('textarea');
+        script.id = 'step-script-'+step.id; scriptLabel.htmlFor = script.id; scriptLabel.textContent = 'PowerShell-Code für Befehl '+(index+1);
+        script.value = step.script || ''; script.rows = 7; script.maxLength = 8000; script.spellcheck = false;
+        script.addEventListener('input', () => {step.script = script.value; updateCommand();});
+        const cwdLabel = document.createElement('label'), cwd = document.createElement('input');
+        cwd.id = 'step-cwd-'+step.id; cwdLabel.htmlFor = cwd.id; cwdLabel.textContent = 'Arbeitsordner für Befehl '+(index+1)+' (relativ zur Aufbereitung)';
+        cwd.value = step.working_directory || '.'; cwd.maxLength = 240;
+        cwd.addEventListener('input', () => {step.working_directory = cwd.value;});
+        const powershell = step.type === 'powershell';
+        for (const node of [toolLabel,select,parametersLabel,parameters]) node.hidden = powershell;
+        for (const node of [scriptLabel,script]) node.hidden = !powershell;
+        const preview = document.createElement('pre'); preview.className = 'command-preview'; preview.textContent = stepCommand(step);
+        const warning = document.createElement('p'); warning.className = 'help';
+        function updateCommand() {
+          preview.textContent = stepCommand(step);
+          const tool = modeTools.find(tool => tool.id === step.tool_id);
+          warning.textContent = step.type === 'powershell' ?
+            'Freier Code mit Administratorrechten. Keine Toolzuordnung erforderlich. cd gilt nur in diesem Block; für nachfolgende Blöcke deren Arbeitsordner setzen. Der Ordner muss bei Ausführung existieren. KAPE verwendet Arbeitsordner „.“.' :
+            !tool ? 'Noch kein Tool zugeordnet. Entwurf kann gespeichert werden.' :
+            tool.kind === 'directory' ? 'Tool verweist auf einen Ordner. Vor der späteren Ausführung muss die Programmdatei festgelegt werden.' :
+            'Vorschau mit aktuellem Toolpfad — keine Ausführung.';
+        }
+        select.addEventListener('change', () => {
+          step.tool_id = select.value || null;
+          const tool = modeTools.find(tool => tool.id === step.tool_id);
+          if (tool) step.tool_hint = tool.name;
+          updateCommand();
+        });
+        parameters.addEventListener('input', () => {step.parameters = parameters.value; updateCommand();});
+        updateCommand();
+        const actions = document.createElement('div'); actions.className = 'actions';
+        const up = action('Nach oben', async () => {
+          [modeSteps[index-1],modeSteps[index]] = [modeSteps[index],modeSteps[index-1]]; renderModeSteps(); modePreview();
+        }); up.disabled = index === 0;
+        const down = action('Nach unten', async () => {
+          [modeSteps[index+1],modeSteps[index]] = [modeSteps[index],modeSteps[index+1]]; renderModeSteps(); modePreview();
+        }); down.disabled = index === modeSteps.length-1;
+        actions.append(up,down,action('Davor einfügen',async () => newModeStep(index)),
+          action('Danach einfügen',async () => newModeStep(index+1)),
+          action('Befehl entfernen',async () => {modeSteps.splice(index,1); renderModeSteps(); modePreview();},'danger'));
+        card.append(heading,typeLabel,typeSelect,nameLabel,name,toolLabel,select,parametersLabel,parameters,scriptLabel,script,cwdLabel,cwd,warning,preview,actions); list.append(card);
+      });
+    }
+    function editMode(mode, copy=false) {
+      resetModeEditor(); editingModeId = mode && !copy ? mode.id : null;
+      byId('modes-message').textContent = '';
+      byId('mode-editor-title').textContent = editingModeId ? 'Modus bearbeiten' : 'Modus hinzufügen';
+      byId('mode-name').value = mode ? (copy ? mode.name.slice(0,112)+' (Kopie)' : mode.name) : '';
+      byId('mode-description').value = mode?.description || '';
+      byId('mode-format').value = mode?.evidence_format || 'ZIP';
+      byId('mode-effort').querySelectorAll('option[data-legacy]').forEach(option => option.remove());
+      byId('mode-effort').value = mode?.effort || 'Medium';
+      if (!byId('mode-effort').value && mode?.effort) {
+        const legacy = document.createElement('option'); legacy.value = mode.effort;
+        legacy.textContent = mode.effort+' (bisheriger Wert)'; legacy.dataset.legacy = 'true';
+        legacy.disabled = true; legacy.selected = true; byId('mode-effort').append(legacy);
+      }
+      updateEffortOptions();
+      byId('mode-source').value = mode?.extract_folder || 'Targets';
+      byId('mode-output').value = mode?.output_folder || 'PostMortem';
+      byId('mode-command').value = mode?.command_reference || '';
+      byId('mode-original-reference').hidden = !byId('mode-command').value;
+      modeSteps = (mode?.steps || []).map(step => ({...step,id:copy ? crypto.randomUUID() : step.id}));
+      renderModeSteps(); byId('mode-editor').hidden = false; modePreview();
+      byId('mode-name').focus();
+    }
+    async function loadModes() {
+      const request = ++modesRequest;
+      const [data,tools] = await Promise.all([api('/api/settings/modes'),api('/api/settings/tools')]);
+      if (request !== modesRequest || byId('workspace').hidden) return;
+      modeWorkspacePattern = data.workspace_pattern;
+      modeTools = tools.tools;
+      savedModes = data.modes;
+      byId('mode-availability').textContent = data.availability.map(slot =>
+        slot.effort+': '+({missing:'noch kein Modus',conflict:'mehrfach belegt — bitte auflösen',
+          incomplete:'Befehle oder Toolzuordnung unvollständig',configured:'Befehlssammlung hinterlegt'})[slot.state]
+      ).join(' · ');
+      const list = byId('modes-list'); list.replaceChildren();
+      if (!data.modes.length) {
+        const empty = document.createElement('p'); empty.textContent = 'Noch keine Modi angelegt.'; list.append(empty);
+      }
+      for (const mode of data.modes) {
+        const row = document.createElement('article'); row.className = 'tool';
+        const name = document.createElement('h3'); name.textContent = mode.name;
+        const info = document.createElement('p'); info.textContent = mode.evidence_format+' · '+mode.effort+' · '+mode.steps.length+' Befehle · Entwurf — keine Ausführung';
+        if (mode.slot_conflict) info.textContent += ' · Konflikt: Aufwandsstufe mehrfach belegt';
+        const description = document.createElement('p'); description.className = 'muted'; description.textContent = mode.description;
+        const actions = document.createElement('div'); actions.className = 'actions';
+        actions.append(action('Modus bearbeiten', async () => editMode(mode)),
+          action('Modus kopieren', async () => editMode(mode,true)),
+          action('Modus entfernen', async () => {
+            await api('/api/settings/modes/'+mode.id,'DELETE');
+            if (editingModeId === mode.id) resetModeEditor();
+            await loadModes(); message('Modus entfernt. Es wurden keine Evidence-Dateien verändert.');
+          },'danger'));
+        row.append(name,info,description,actions); list.append(row);
+      }
+      if (!byId('mode-editor').hidden) updateEffortOptions();
+    }
+    function updateEffortOptions() {
+      const select = byId('mode-effort'), current = select.value, format = byId('mode-format').value;
+      const own = savedModes.find(mode => mode.id === editingModeId);
+      for (const option of select.options) {
+        if (option.dataset.legacy) continue;
+        const taken = savedModes.some(mode => mode.id !== editingModeId &&
+          mode.evidence_format === format && mode.effort === option.value);
+        const keepOwn = own && own.evidence_format === format && own.effort === option.value;
+        option.disabled = taken && !keepOwn;
+        option.textContent = option.value+(taken && !keepOwn ? ' — bereits belegt' : '');
+      }
+      const selected = [...select.options].find(option => option.value === current);
+      if (!selected || selected.disabled && !selected.dataset.legacy) {
+        select.value = [...select.options].find(option => !option.disabled)?.value || '';
+      }
+      const free = [...select.options].some(option => !option.disabled);
+      byId('save-mode').disabled = !free && !own;
+      byId('mode-effort-note').textContent = !free && !own
+        ? 'Alle Aufwandsstufen sind bereits belegt. Bitte einen bestehenden Modus bearbeiten.'
+        : own?.slot_conflict ? 'Bestehender Konflikt: Diese Stufe ist mehrfach belegt. Wähle für einen der Modi eine freie Stufe oder entferne eine nicht benötigte Testkopie.'
+        : 'Jede Aufwandsstufe kann pro Format genau einmal angelegt werden.';
+    }
+    function resetEditor() {
+      editingId = null; byId('tool-form').reset(); byId('path-result').textContent = '';
+      byId('editor-title').textContent = 'Tool hinzufügen'; byId('cancel-edit').hidden = true;
+    }
+    function closePicker() {
+      clearTimeout(searchTimer); pickerRequest++;
+      byId('path-picker').close();
+    }
+    function selectPath(path, name) {
+      if (pickerPurpose === 'workspace') {byId('workspace-folder').value = path; closePicker(); return;}
+      if (pickerPurpose === 'local') {
+        if (!/\.zip$/i.test(path)) {byId('picker-error').textContent = 'Bitte eine ZIP-Datei auswählen.'; return;}
+        lastEvidenceFolder = pickerFolder;
+        if (lastEvidenceFolder) sessionStorage.setItem('ppm-last-evidence-folder',lastEvidenceFolder);
+        byId('local-zip-path').value = path; closePicker(); updatePreparation(); return;
+      }
+      lastToolFolder = pickerFolder;
+      if (lastToolFolder) sessionStorage.setItem('ppm-last-tool-folder',lastToolFolder);
+      byId('tool-path').value = path;
+      if (!byId('tool-name').value.trim()) byId('tool-name').value = name.replace(/\.(exe|com|cmd|bat|py|ps1)$/i, '').slice(0,100);
+      byId('path-result').textContent = 'Pfad übernommen. Zum Hinterlegen auf Speichern klicken.';
+      closePicker(); byId('tool-path').focus();
+    }
+    async function browsePath(path, query='') {
+      const request = ++pickerRequest;
+      byId('picker-error').textContent = ''; byId('picker-notice').textContent = 'Ordner wird geladen…';
+      byId('picker-list').replaceChildren();
+      byId('picker-select-folder').disabled = true; byId('picker-select-file').hidden = true;
+      byId('picker-up').disabled = true; pickerFile = null;
+      try {
+        const data = await api(pickerPurpose === 'local' ? '/api/jobs/browse' : '/api/settings/tools/browse','POST',{path:path || null,query});
+        if (request !== pickerRequest || !byId('path-picker').open) return;
+        pickerFolder = data.path; pickerParent = data.parent; pickerFile = data.selected_file;
+        byId('picker-address').value = data.path;
+        byId('picker-select-folder').disabled = pickerPurpose === 'local';
+        byId('picker-select-file').hidden = !pickerFile || pickerPurpose === 'workspace';
+        byId('picker-up').disabled = !data.parent;
+        byId('picker-roots').replaceChildren(...data.roots.map(root => action(root, () => navigatePicker(root))));
+        const list = byId('picker-list');
+        for (const entry of data.entries) {
+          if (pickerPurpose === 'workspace' && entry.kind !== 'directory') continue;
+          const row = document.createElement('div'); row.className = 'picker-entry';
+          const label = document.createElement('span'); label.textContent = entry.name;
+          const button = action(entry.kind === 'directory' ? 'Ordner öffnen' : 'Datei auswählen', async () => {
+            if (entry.kind === 'directory') await navigatePicker(entry.path);
+            else selectPath(entry.path,entry.name);
+          });
+          button.setAttribute('aria-label', (entry.kind === 'directory' ? 'Ordner öffnen: ' : 'Datei auswählen: ') + entry.name);
+          row.append(label,button); list.append(row);
+        }
+        byId('picker-notice').textContent = data.limited
+          ? 'Großer Ordner: Anzeige begrenzt. Suche eingrenzen oder vollständigen Pfad oben eingeben.'
+          : data.entries.length ? data.entries.length+' Einträge' : 'Keine passenden Dateien oder Ordner gefunden.';
+      } catch (error) {
+        if (request !== pickerRequest || !byId('path-picker').open) return;
+        byId('picker-error').textContent = error.message; byId('picker-notice').textContent = '';
+      }
+    }
+    function navigatePicker(path) {
+      clearTimeout(searchTimer); byId('picker-search').value = ''; return browsePath(path);
+    }
+    function toolPayload() {
+      if (!byId('tool-form').reportValidity()) return null;
+      return {name:byId('tool-name').value.trim(),path:byId('tool-path').value.trim()};
+    }
+    function action(label, callback, className='secondary') {
+      const button = document.createElement('button'); button.textContent = label;
+      button.type = 'button';
+      button.className = className; button.addEventListener('click', () => run(callback, button));
+      return button;
+    }
+    async function loadTools() {
+      const data = await api('/api/settings/tools'); const list = byId('tools-list'); list.replaceChildren();
+      if (!data.tools.length) {
+        const empty = document.createElement('p'); empty.className = 'muted';
+        empty.textContent = 'Noch keine Tools hinterlegt. Füge links dein erstes Tool hinzu.';
+        list.append(empty);
+      }
+      for (const tool of data.tools) {
+        const row = document.createElement('article'); row.className = 'tool';
+        const name = document.createElement('h3'); name.textContent = tool.name;
+        const path = document.createElement('p'); path.className = 'path'; path.textContent = tool.path;
+        const badge = document.createElement('span'); badge.className = 'badge '+tool.kind; badge.textContent = tool.message;
+        const usage = document.createElement('p'); usage.className = 'help';
+        usage.textContent = tool.used_by?.length ? 'Eingebunden in: '+tool.used_by.map(mode => mode.name).join(', ') : 'In keinem Modus eingebunden.';
+        const warning = document.createElement('p'); warning.setAttribute('role','alert'); warning.hidden = true; warning.style.color = '#ffb5a9';
+        const actions = document.createElement('div'); actions.className = 'actions';
+        actions.append(action('Bearbeiten', async () => {
+          editingId = tool.id; byId('tool-name').value = tool.name; byId('tool-path').value = tool.path;
+          byId('editor-title').textContent = 'Tool bearbeiten'; byId('cancel-edit').hidden = false;
+          byId('path-result').textContent = ''; byId('tool-name').focus();
+        }), action('Entfernen', async () => {
+          if (tool.used_by?.length) {
+            warning.textContent = 'Dieses Tool ist bereits eingebunden: '+tool.used_by.map(mode => mode.name).join(', ')+
+              '. Es wurde nichts gelöscht. Alle Verknüpfungen bleiben erhalten.';
+            warning.hidden = false; warning.scrollIntoView({block:'nearest'}); return;
+          }
+          try {await api('/api/settings/tools/'+tool.id,'DELETE');}
+          catch (error) {warning.textContent = error.message; warning.hidden = false; throw error;}
+          if (editingId === tool.id) resetEditor();
+          await loadTools(); message('Tool-Eintrag entfernt. Die Programmdatei bleibt erhalten.');
+        }, 'danger'));
+        row.append(name,path,badge,usage,actions,warning); list.append(row);
+      }
+    }
+    async function run(callback, button) {
+      message(''); if (button) button.disabled = true;
+      try { await callback(); } catch (error) { message(error.message, true); }
+      finally { if (button) button.disabled = false; }
+    }
+    byId('login-form').addEventListener('submit', event => {
+      event.preventDefault(); token = byId('token').value.trim(); run(async () => {
+        await connect(); await navigate('overview');
+      }, event.submitter);
+    });
+    byId('nav-overview').addEventListener('click', () => run(() => navigate('overview')));
+    byId('nav-settings').addEventListener('click', () => run(() => navigate('settings')));
+    byId('open-settings').addEventListener('click', () => run(async () => {await navigate('settings'); await showSettings('modes');}));
+    byId('reload-run').addEventListener('click', () => run(loadPreparation,byId('reload-run')));
+    for (const id of ['run-file','run-format','run-effort','run-source-kind']) byId(id).addEventListener('change',updatePreparation);
+    byId('local-zip-path').addEventListener('input',updatePreparation);
+    byId('preview-run').addEventListener('click',previewPreparation);
+    function setRunBusy(busy) {
+      runBusy = busy; byId('cancel-run').hidden = !busy;
+      updatePreparation();
+    }
+    async function refreshJob() {
+      if (!activeJobId || byId('workspace').hidden) return;
+      const ident = activeJobId, state = await api('/api/jobs/'+ident);
+      if (ident !== activeJobId) return;
+      const terminal = ['succeeded','failed','cancelled','interrupted'].includes(state.status);
+      byId('new-run').hidden = !terminal;
+      const archiving = ['queued','running'].includes(state.archive_status);
+      byId('new-run').disabled = archiving;
+      setRunBusy(!terminal || archiving);
+      byId('run-status').textContent = archiving ? 'Ergebnis-ZIP '+(state.archive_status === 'queued' ? 'wartet' : 'wird erstellt') : state.phase;
+      byId('run-total-label').textContent = 'Gesamt: '+state.completed+' von '+state.total+' Befehlen ausgeführt';
+      byId('run-total-progress').max = state.total; byId('run-total-progress').value = state.completed;
+      byId('run-command-label').textContent = state.completed === state.total ? 'Alle Befehle beendet (letzter Exitcode '+state.exit_code+')' :
+        state.phase.endsWith('läuft') ? 'Befehl '+(state.current_step+1)+'/'+state.total+': '+state.current_name+' — Fortschritt unbekannt' : 'Aktueller Befehl: noch nicht abgeschlossen';
+      if (state.phase.endsWith('läuft') && !terminal) byId('run-command-progress').removeAttribute('value');
+      else byId('run-command-progress').value = state.completed === state.total ? 100 : 0;
+      byId('run-progress-note').textContent = state.error_detail?.message || state.error || (state.phase+' · '+state.filename+' · '+state.mode_name);
+      if (state.status === 'queued') {
+        const queue = await api('/api/queue');
+        if (ident !== activeJobId) return;
+        if (queue.paused) byId('run-progress-note').textContent = 'Warteschlange pausiert. Unter Einstellungen → Verarbeitung fortsetzen. Dieser Auftrag wurde noch nicht gestartet.';
+      }
+      byId('run-error-panel').hidden = !state.error_detail;
+      if (state.error_detail) {
+        byId('run-error-panel').open = true;
+        byId('run-error-detail').textContent = 'Phase: '+state.error_detail.phase+'\nGrund: '+state.error_detail.message+
+          '\nHinweis: '+state.error_detail.recommendation+(state.exit_code !== null ? '\nExitcode: '+state.exit_code : '')+'\nAufbereitung: '+state.id;
+      }
+      byId('run-live-command').textContent = state.command;
+      const terminalOutput = byId('run-live-output'), oldPosition = terminalOutput.scrollTop;
+      if (terminalOutput.textContent !== (state.log_tail || 'Noch keine Ausgabe.')) {
+        terminalOutput.textContent = state.log_tail || 'Noch keine Ausgabe.';
+        terminalOutput.scrollTop = followOutput ? terminalOutput.scrollHeight : oldPosition;
+      }
+      byId('download-evidences').disabled = !state.result_available;
+      renderArtifacts(state,'run');
+      byId('run-download-note').textContent = state.status === 'succeeded' && !state.result_available ? (state.create_zip ? 'Ergebnisarchiv nicht vorhanden oder bereinigt.' : 'Ohne Ergebnis-ZIP abgeschlossen. Ordner verwenden oder ZIP ausdrücklich erstellen.') : state.status === 'succeeded' ?
+        'Ergebnis-ZIP bereit. KAPE-Ausgaben und Aufbereitungsprotokoll enthalten. Fachliche Ergebnisse bitte prüfen.' :
+        'Ergebnisdownload nach erfolgreichem KAPE-Ende und Prüfung des Ergebnisordners.';
+      if (state.status === 'succeeded') await refreshExplorer(ident,'run', () => activeJobId === ident && !byId('workspace').hidden);
+      else resetExplorer('run');
+    }
+    async function watchJob() {
+      eventController?.abort(); const generation = ++eventGeneration, ident = activeJobId;
+      let cursor = 0;
+      while (ident && ident === activeJobId && generation === eventGeneration && !byId('workspace').hidden) {
+        eventController = new AbortController();
+        try {
+          const response = await fetch('/api/jobs/'+ident+'/events?after='+cursor,{
+            headers:{Authorization:'Bearer '+token},signal:eventController.signal});
+          if (!response.ok) throw new Error('Live-Verbindung unterbrochen.');
+          const reader = response.body.getReader(), decoder = new TextDecoder(); let pending = '';
+          while (true) {
+            const {value,done} = await reader.read(); if (done) break;
+            pending += decoder.decode(value,{stream:true});
+            let boundary;
+            while ((boundary = pending.indexOf('\n\n')) >= 0) {
+              const block = pending.slice(0,boundary); pending = pending.slice(boundary+2);
+              const line = block.split('\n').find(line => line.startsWith('data: '));
+              if (line) {
+                cursor = JSON.parse(line.slice(6)).id;
+                if (!eventRefreshTimer) eventRefreshTimer = setTimeout(() => {
+                  eventRefreshTimer = null; run(refreshJob);
+                },300);
+              }
+            }
+          }
+          await refreshJob(); if (!runBusy) return;
+        } catch (error) {
+          if (generation !== eventGeneration || error.name === 'AbortError') return;
+          byId('run-progress-note').textContent = 'Live-Verbindung unterbrochen. Verbindung wird wiederhergestellt…';
+        }
+        await new Promise(resolve => setTimeout(resolve,1000));
+      }
+    }
+    byId('run-start').addEventListener('click', () => run(async () => {
+      const mode = selectedPreparationMode(), file = byId('run-file').files[0];
+      const local = byId('run-source-kind').value === 'local';
+      if (!mode || (!local && !file) || runBusy || !processingAvailable) return;
+      const allowCompression = byId('allow-high-compression').checked;
+      eventGeneration++; eventController?.abort(); activeJobId = null;
+      sessionStorage.removeItem('ppm-job-id'); setRunBusy(true);
+      followOutput = true; updateFollowButton();
+      byId('run-error-panel').hidden = true;
+      byId('download-evidences').disabled = true; byId('run-status').textContent = local ? 'Lokale ZIP' : 'Upload';
+      byId('run-progress-note').textContent = local ? 'Lokale ZIP wird referenziert…' : 'ZIP wird hochgeladen…';
+      byId('upload-label').hidden = local; byId('upload-progress').hidden = local; byId('upload-progress').value = 0;
+      try {
+        const result = local ? await api('/api/jobs/local','POST',{mode_id:mode.id,path:byId('local-zip-path').value.trim(),allow_high_compression:allowCompression,create_zip:byId('create-result-zip').checked}) : await new Promise((resolve,reject) => {
+          const xhr = new XMLHttpRequest(); uploadRequest = xhr;
+          xhr.open('POST','/api/jobs?mode_id='+encodeURIComponent(mode.id)+'&filename='+encodeURIComponent(file.name)+'&allow_high_compression='+allowCompression+'&create_zip='+byId('create-result-zip').checked);
+          xhr.setRequestHeader('Authorization','Bearer '+token); xhr.setRequestHeader('Content-Type','application/zip');
+          xhr.upload.onprogress = event => {if (event.lengthComputable) byId('upload-progress').value = 100*event.loaded/event.total;};
+          xhr.onerror = () => reject(new Error('Upload-Verbindung fehlgeschlagen.'));
+          xhr.onabort = () => reject(new Error('Upload abgebrochen.'));
+          xhr.onload = () => {
+            let data; try {data = JSON.parse(xhr.responseText);} catch {reject(new Error('Ungültige Serverantwort.')); return;}
+            if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+            else {
+              const error = new Error(typeof data.detail === 'string' ? data.detail : data.detail?.message || 'Upload fehlgeschlagen.');
+              error.jobId = data.detail?.job_id; reject(error);
+            }
+          };
+          xhr.send(file);
+        });
+        activeJobId = result.id; sessionStorage.setItem('ppm-job-id',activeJobId);
+        await refreshJob(); watchJob();
+      } catch (error) {
+        setRunBusy(false); byId('run-status').textContent = local ? 'Lokale Datei fehlgeschlagen' : 'Upload fehlgeschlagen';
+        if (error.jobId) {activeJobId = error.jobId; sessionStorage.setItem('ppm-job-id',activeJobId); await refreshJob();}
+        byId('run-progress-note').textContent = error.message; throw error;
+      } finally {uploadRequest = null; byId('upload-label').hidden = true; byId('upload-progress').hidden = true;}
+    }));
+    byId('cancel-run').addEventListener('click', () => run(async () => {
+      if (uploadRequest) uploadRequest.abort();
+      else if (activeJobId) {await api('/api/jobs/'+activeJobId+'/cancel','POST'); byId('run-progress-note').textContent = 'Abbruch angefordert…';}
+    }));
+    byId('new-run').addEventListener('click', () => {
+      resetExplorer('run');
+      eventGeneration++; eventController?.abort(); clearTimeout(eventRefreshTimer); eventRefreshTimer = null;
+      activeJobId = null; sessionStorage.removeItem('ppm-job-id'); setRunBusy(false);
+      byId('run-error-panel').hidden = true; byId('new-run').hidden = true;
+      byId('run-status').textContent = 'Nicht gestartet'; byId('run-progress-note').textContent = 'Bereit für einen neuen Lauf. Frühere Läufe bleiben im Tab Logs erhalten.';
+      byId('run-total-progress').value = 0; byId('run-command-progress').value = 0;
+      byId('run-command-label').textContent = 'Aktueller Befehl: noch keiner gestartet';
+      byId('run-live-command').textContent = 'Kein Befehl gestartet.'; byId('run-live-output').textContent = 'Noch keine Ausgabe.';
+      byId('download-evidences').disabled = true; byId('run-archive').disabled = true; byId('run-report').disabled = true;
+    });
+    byId('download-evidences').addEventListener('click', () => run(async () => {
+      if (!activeJobId) return;
+      const ticket = await api('/api/jobs/'+activeJobId+'/download-ticket','POST');
+      const link = document.createElement('a');
+      link.href = ticket.url; link.download = 'PostMortem-'+activeJobId+'.zip'; document.body.append(link); link.click(); link.remove();
+    },byId('download-evidences')));
+    byId('refresh').addEventListener('click', () => run(async () => {await connect(); message('Status aktualisiert.');}));
+    byId('stop-server').addEventListener('click', () => run(async () => {
+      await api('/api/system/stop','POST'); token = ''; sessionStorage.removeItem('ppm-token'); hideWorkspace();
+      message('Dienst wird beendet. Für einen neuen Start die EXE öffnen und Windows-UAC bestätigen.');
+    }));
+    function resetExplorer(prefix) {
+      byId(prefix+'-explorer').hidden = true;
+      byId(prefix+'-explorer').disabled = true;
+      byId(prefix+'-explorer-note').textContent = '';
+    }
+    async function refreshExplorer(ident, prefix, isCurrent) {
+      const info = await api('/api/jobs/'+ident+'/explorer');
+      if (!isCurrent()) return;
+      byId(prefix+'-explorer').hidden = !info.local;
+      byId(prefix+'-explorer').disabled = !info.available;
+      byId(prefix+'-explorer-note').textContent = info.local ? info.reason : '';
+    }
+    for (const prefix of ['run','log']) byId(prefix+'-explorer').addEventListener('click', () => run(async () => {
+      const ident = prefix === 'run' ? activeJobId : byId('log-job').value;
+      if (!ident) return;
+      const result = await api('/api/jobs/'+ident+'/explorer','POST');
+      const current = prefix === 'run' ? activeJobId : byId('log-job').value;
+      if (current === ident) byId(prefix+'-explorer-note').textContent = result.message+' '+result.path;
+    },byId(prefix+'-explorer')));
+    function renderArtifacts(state,prefix) {
+      const busy = ['queued','running'].includes(state.archive_status);
+      byId(prefix+'-archive').disabled = !state.output_available || state.result_available || busy || !!state.storage_error;
+      byId(prefix+'-archive').textContent = busy ? 'Archivierung '+(state.archive_status === 'queued' ? 'wartet' : 'läuft…') : 'Ergebnis-ZIP erstellen';
+      byId(prefix+'-report').disabled = !state.report_available;
+      if (prefix === 'log') {
+        byId('log-download').disabled = !state.result_available;
+        byId('log-report-json').disabled = !state.report_available;
+        byId('log-cancel-archive').hidden = !busy;
+        byId('log-cleanup').disabled = !['succeeded','failed','cancelled','interrupted'].includes(state.status) || busy;
+        byId('log-artifacts-note').textContent = 'Arbeitsziel: '+state.data_root+(state.result_available ? ' · ZIP vorhanden' : ' · Kein ZIP vorhanden')+
+          (state.archive_error ? ' · Archivierung: '+state.archive_error : '')+(state.storage_error ? ' · '+state.storage_error : '');
+      } else if (state.archive_error) byId('run-progress-note').textContent = state.archive_error;
+    }
+    for (const prefix of ['run','log']) {
+      const selectedJob = () => prefix === 'run' ? activeJobId : byId('log-job').value;
+      byId(prefix+'-archive').addEventListener('click',() => run(async () => {
+        const ident = selectedJob(); if (!ident) return;
+        await api('/api/jobs/'+ident+'/archive','POST');
+        do {
+          if (selectedJob() !== ident || byId('workspace').hidden) return;
+          if (prefix === 'run') await refreshJob(); else await loadSelectedLog();
+          const state = await api('/api/jobs/'+ident);
+          if (!['queued','running'].includes(state.archive_status)) break;
+          await new Promise(resolve => setTimeout(resolve,1500));
+        } while (true);
+        if (prefix === 'run') await refreshJob(); else await loadSelectedLog();
+      },byId(prefix+'-archive')).finally(() => run(prefix === 'run' ? refreshJob : loadSelectedLog)));
+      byId(prefix+'-report').addEventListener('click',() => run(() => downloadLogFile('/api/jobs/'+selectedJob()+'/report','Abschlussbericht-'+selectedJob()+'.html')));
+    }
+    byId('log-cancel-archive').addEventListener('click',() => run(async () => {
+      await api('/api/jobs/'+byId('log-job').value+'/cancel','POST'); await loadSelectedLog();
+    }));
+    byId('log-cleanup').addEventListener('click',() => run(async () => {
+      const ident = byId('log-job').value, state = await api('/api/jobs/'+ident);
+      await navigate('settings'); await showSettings('processing');
+      if (![...byId('cleanup-scope').options].some(option => option.value === ident)) byId('cleanup-scope').append(new Option(state.filename+' · '+state.created_at,ident));
+      byId('cleanup-scope').value = ident; byId('cleanup-scope').scrollIntoView({block:'center'});
+    }));
+    byId('log-download').addEventListener('click',() => run(async () => {
+      const ident = byId('log-job').value; if (!ident) return;
+      const ticket = await api('/api/jobs/'+ident+'/download-ticket','POST');
+      const link = document.createElement('a'); link.href = ticket.url; link.download = 'PostMortem-'+ident+'.zip';
+      document.body.append(link); link.click(); link.remove();
+    }));
+    byId('log-report-json').addEventListener('click',() => run(() => downloadLogFile('/api/jobs/'+byId('log-job').value+'/report?format=json','Abschlussbericht.json')));
+    function renderLogState(state) {
+      byId('log-job-status').textContent = state.phase+' · '+state.created_at+' · '+state.filename+' · '+state.id;
+      byId('log-job-error').hidden = !state.error_detail;
+      byId('log-job-error').textContent = state.error_detail ? JSON.stringify(state.error_detail,null,2) : '';
+      byId('log-job-command').textContent = state.command;
+      byId('log-job-output').textContent = state.log_tail || 'Noch keine Toolausgabe.';
+      byId('download-diagnostics').disabled = false; byId('download-job-log').disabled = false;
+    }
+    async function loadSelectedLog() {
+      const id = byId('log-job').value, generation = ++logsRequest;
+      for (const card of byId('job-results').children) card.classList.toggle('selected',card.dataset.job === id);
+      resetExplorer('log');
+      if (!id) return;
+      const state = await api('/api/jobs/'+id);
+      if (generation === logsRequest) {
+        renderLogState(state); renderArtifacts(state,'log');
+        if (state.status === 'succeeded') await refreshExplorer(id,'log', () => generation === logsRequest && !byId('workspace').hidden);
+      }
+    }
+    let jobsOffset = 0, jobsSearchRequest = 0;
+    async function loadJobLogs(preferredId) {
+      const generation = ++jobsSearchRequest;
+      const previous = preferredId || byId('log-job').value || activeJobId;
+      const params = new URLSearchParams({limit:'50',offset:String(jobsOffset)});
+      for (const [key,id] of [['q','job-query'],['status','job-status-filter'],['mode_id','job-mode-filter'],['date_from','job-date-from'],['date_to','job-date-to']]) {
+        if (byId(id).value) params.set(key,byId(id).value);
+      }
+      const data = await api('/api/jobs?'+params);
+      if (generation !== jobsSearchRequest || byId('workspace').hidden) return;
+      jobsOffset = data.offset;
+      logsRequest++; resetExplorer('log');
+      const selectedMode = byId('job-mode-filter').value;
+      byId('job-mode-filter').replaceChildren(new Option('Alle Modi',''));
+      for (const mode of data.modes) byId('job-mode-filter').append(new Option(mode.name,mode.id));
+      byId('job-mode-filter').value = selectedMode;
+      byId('job-search-count').textContent = data.total ? (data.offset+1)+'–'+Math.min(data.offset+data.jobs.length,data.total)+' von '+data.total+' Treffern' : 'Keine Treffer';
+      byId('jobs-prev').disabled = data.offset === 0;
+      byId('jobs-next').disabled = data.offset+data.jobs.length >= data.total;
+      byId('log-job').replaceChildren();
+      byId('job-results').replaceChildren();
+      for (const state of data.jobs) {
+        byId('log-job').append(new Option(state.created_at+' · '+state.filename+' · '+state.phase,state.id));
+        const card = document.createElement('div'); card.className = 'result-card'; card.dataset.job = state.id;
+        const info = document.createElement('div'), title = document.createElement('strong'), details = document.createElement('p');
+        title.textContent = state.filename; details.textContent = state.phase+' · '+state.mode_name+' · '+state.created_at;
+        info.append(title,details);
+        const button = document.createElement('button'); button.className = 'secondary'; button.textContent = 'Anzeigen';
+        button.addEventListener('click',() => run(async () => {byId('log-job').value = state.id; await loadSelectedLog(); byId('log-job-status').scrollIntoView({block:'center'});}));
+        card.append(info,button); byId('job-results').append(card);
+      }
+      if (data.jobs.some(state => state.id === previous)) byId('log-job').value = previous;
+      if (!data.jobs.length) {
+        resetExplorer('log');
+        byId('log-job-status').textContent = 'Keine Aufbereitungen für diese Filter gefunden.';
+        for (const id of ['log-job-error','log-job-command','log-job-output']) byId(id).textContent = '';
+        byId('log-job-error').hidden = true;
+        byId('download-diagnostics').disabled = true; byId('download-job-log').disabled = true;
+        for (const id of ['log-report','log-report-json','log-archive','log-cleanup','log-download']) byId(id).disabled = true; byId('log-cancel-archive').hidden = true;
+        return;
+      }
+      await loadSelectedLog();
+    }
+    async function downloadLogFile(path, name) {
+      const response = await fetch(path,{headers:{Authorization:'Bearer '+token}});
+      if (!response.ok) throw new Error('Diagnosedownload fehlgeschlagen.');
+      const url = URL.createObjectURL(await response.blob()), link = document.createElement('a');
+      link.href = url; link.download = name; document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url),1000);
+    }
+    let diagnosticsTicket = null;
+    async function loadFeedback() {
+      const requestToken = token, data = await api('/api/feedback');
+      if (requestToken !== token || byId('workspace').hidden) return;
+      byId('feedback-list').replaceChildren();
+      const labels = {bug:'Bug',wish:'Wunsch',feedback:'Feedback'};
+      for (const item of data.items) {
+        const article = document.createElement('article'); article.className = 'tool';
+        const title = document.createElement('strong'), meta = document.createElement('p'), text = document.createElement('pre');
+        title.textContent = item.title; meta.textContent = labels[item.category]+' · '+item.created_at+' · Version '+item.app_version;
+        text.textContent = item.text; article.append(title,meta,text); byId('feedback-list').append(article);
+      }
+      if (!data.items.length) byId('feedback-list').textContent = 'Noch kein Feedback gespeichert.';
+    }
+    byId('open-feedback').addEventListener('click',() => run(async () => {
+      byId('feedback-message').textContent = ''; byId('feedback-dialog').showModal(); await loadFeedback();
+    }));
+    byId('close-feedback').addEventListener('click',() => byId('feedback-dialog').close());
+    byId('feedback-form').addEventListener('submit',event => {
+      event.preventDefault(); run(async () => {
+        try {
+          await api('/api/feedback','POST',{category:byId('feedback-category').value,title:byId('feedback-subject').value,text:byId('feedback-text').value});
+          byId('feedback-form').reset(); byId('feedback-message').textContent = 'Lokal gespeichert. Es wurde nichts versendet.'; await loadFeedback();
+        } catch (error) {byId('feedback-message').textContent = error.message;}
+      },byId('save-feedback'));
+    });
+    byId('export-feedback').addEventListener('click',() => run(() => downloadLogFile('/api/feedback/export','Feedback.json')));
+    byId('preview-diagnostics').addEventListener('click',() => run(async () => {
+      const requestToken = token, preview = await api('/api/diagnostics/preview','POST');
+      if (requestToken !== token || byId('workspace').hidden) return;
+      diagnosticsTicket = preview.ticket; byId('diagnostics-files').replaceChildren();
+      byId('diagnostics-message').textContent = preview.message;
+      for (const file of preview.files) {
+        const details = document.createElement('details'), summary = document.createElement('summary'), pre = document.createElement('pre');
+        summary.textContent = file.name+' · '+file.bytes+' Bytes'; pre.textContent = file.text; pre.style.maxHeight = '32vh'; pre.style.overflow = 'auto';
+        details.append(summary,pre); byId('diagnostics-files').append(details);
+      }
+      byId('export-diagnostics').disabled = false; byId('diagnostics-dialog').showModal();
+    },byId('preview-diagnostics')));
+    byId('close-diagnostics').addEventListener('click',() => byId('diagnostics-dialog').close());
+    byId('export-diagnostics').addEventListener('click',() => run(async () => {
+      try {
+        const response = await fetch('/api/diagnostics/export',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({ticket:diagnosticsTicket})});
+        if (!response.ok) {const error = await response.json(); throw new Error(error.detail || 'Diagnoseexport fehlgeschlagen.');}
+        const url = URL.createObjectURL(await response.blob()), link = document.createElement('a');
+        link.href = url; link.download = 'Diagnosepaket.zip'; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url),1000);
+        diagnosticsTicket = null; byId('diagnostics-message').textContent = 'Exportiert. Für einen weiteren Export bitte eine neue Vorschau erstellen.';
+      } catch (error) {diagnosticsTicket = null; byId('diagnostics-message').textContent = error.message;}
+    },byId('export-diagnostics')).finally(() => {byId('export-diagnostics').disabled = !diagnosticsTicket;}));
+    byId('nav-logs').addEventListener('click', () => run(() => navigate('logs')));
+    byId('job-search').addEventListener('submit',event => {event.preventDefault(); jobsOffset = 0; run(() => loadJobLogs());});
+    byId('clear-job-search').addEventListener('click',() => {byId('job-search').reset(); jobsOffset = 0; run(() => loadJobLogs());});
+    byId('jobs-prev').addEventListener('click',() => {jobsOffset = Math.max(0,jobsOffset-50); run(() => loadJobLogs());});
+    byId('jobs-next').addEventListener('click',() => {jobsOffset += 50; run(() => loadJobLogs());});
+    byId('log-job').addEventListener('change', () => run(loadSelectedLog));
+    byId('reload-job-logs').addEventListener('click', () => run(() => loadJobLogs()));
+    byId('open-job-logs').addEventListener('click', () => run(async () => {
+      byId('job-search').reset(); jobsOffset = 0;
+      await navigate('logs'); await loadJobLogs(activeJobId);
+    }));
+    byId('download-diagnostics').addEventListener('click', () => run(() => downloadLogFile('/api/jobs/'+byId('log-job').value+'/diagnostics','Diagnose-'+byId('log-job').value+'.txt')));
+    byId('download-job-log').addEventListener('click', () => run(() => downloadLogFile('/api/jobs/'+byId('log-job').value+'/log','KAPE-'+byId('log-job').value+'.log')));
+    byId('reload-tools').addEventListener('click', () => run(loadTools));
+    byId('cancel-edit').addEventListener('click', resetEditor);
+    for (const section of ['tools','modes','transfer','processing']) byId('settings-'+section).addEventListener('click', () => run(() => showSettings(section)));
+    byId('limits-form').addEventListener('submit', event => {
+      event.preventDefault(); run(async () => {
+        const result = await api('/api/settings/processing','PUT',{
+          max_upload_bytes:Math.round(Number(byId('upload-limit-gib').value)*1024**3),
+          max_extract_bytes:Math.round(Number(byId('extract-limit-tb').value)*1e12)});
+        byId('limits-message').textContent = 'Gespeichert. Gilt für neue Läufe; laufende Aufbereitungen behalten ihre Limits.';
+        byId('upload-limit-gib').value = result.max_upload_bytes/1024**3;
+        byId('extract-limit-tb').value = result.max_extract_bytes/1e12;
+      },byId('save-limits'));
+    });
+    function updateFollowButton() {byId('follow-output').textContent = followOutput ? 'Live folgen: an' : 'Zur neuesten Ausgabe';}
+    byId('run-live-output').addEventListener('scroll', () => {
+      const output = byId('run-live-output'); followOutput = output.scrollHeight-output.scrollTop-output.clientHeight < 32;
+      updateFollowButton();
+    });
+    byId('follow-output').addEventListener('click', () => {followOutput = true; byId('run-live-output').scrollTop = byId('run-live-output').scrollHeight; updateFollowButton();});
+    byId('run-terminal').addEventListener('toggle', () => {
+      if (byId('run-terminal').open && followOutput) byId('run-live-output').scrollTop = byId('run-live-output').scrollHeight;
+    });
+    byId('new-mode').addEventListener('click', () => editMode(null));
+    byId('reload-modes').addEventListener('click', () => run(loadModes));
+    byId('cancel-mode').addEventListener('click',resetModeEditor);
+    byId('add-mode-step').addEventListener('click', () => newModeStep());
+    for (const id of ['mode-source','mode-output','mode-format']) byId(id).addEventListener('input',modePreview);
+    byId('mode-format').addEventListener('change',updateEffortOptions);
+    byId('mode-form').addEventListener('submit', event => {
+      event.preventDefault(); run(async () => {
+        byId('mode-message').textContent = '';
+        const payload = {name:byId('mode-name').value,description:byId('mode-description').value,
+          evidence_format:byId('mode-format').value,effort:byId('mode-effort').value,
+          source_folder:byId('mode-source').value,extract_folder:byId('mode-source').value,
+          output_folder:byId('mode-output').value,command_reference:byId('mode-command').value,
+          steps:modeSteps};
+        try {
+          await api('/api/settings/modes'+(editingModeId ? '/'+editingModeId : ''),
+            editingModeId ? 'PUT' : 'POST',payload);
+          resetModeEditor(); await loadModes();
+          byId('modes-message').textContent = 'Modus gespeichert. Es wurde nichts ausgeführt.';
+          byId('mode-list-title').focus({preventScroll:true});
+          byId('mode-list-title').scrollIntoView({block:'start',behavior:'smooth'});
+        } catch (error) {byId('mode-message').textContent = error.message; throw error;}
+      },byId('save-mode'));
+    });
+    byId('browse-tool').addEventListener('click', () => {
+      pickerPurpose = 'tool'; byId('picker-title').textContent = 'Tool oder Ordner auswählen'; byId('picker-select-folder').hidden = false;
+      const startPath = byId('tool-path').value.trim() || lastToolFolder;
+      byId('path-picker').showModal(); byId('picker-address').value = startPath || '';
+      byId('picker-roots').replaceChildren(); pickerFolder = null;
+      navigatePicker(startPath);
+    });
+    byId('browse-workspace').addEventListener('click',() => {
+      pickerPurpose = 'workspace'; byId('picker-title').textContent = 'Arbeitslaufwerk / Zielordner auswählen';
+      byId('picker-select-folder').hidden = false; byId('path-picker').showModal();
+      pickerFolder = null; byId('picker-roots').replaceChildren(); navigatePicker(byId('workspace-folder').value.trim() || null);
+    });
+    byId('browse-evidence').addEventListener('click', () => {
+      pickerPurpose = 'local'; byId('picker-title').textContent = 'Lokale ZIP-Datei auswählen'; byId('picker-select-folder').hidden = true;
+      const startPath = byId('local-zip-path').value.trim() || lastEvidenceFolder;
+      byId('path-picker').showModal(); byId('picker-address').value = startPath || '';
+      byId('picker-roots').replaceChildren(); pickerFolder = null; navigatePicker(startPath);
+    });
+    byId('picker-address-form').addEventListener('submit', event => {
+      event.preventDefault(); navigatePicker(byId('picker-address').value.trim());
+    });
+    byId('picker-up').addEventListener('click', () => navigatePicker(pickerParent));
+    byId('picker-home').addEventListener('click', () => navigatePicker(null));
+    byId('picker-search').addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      const query = byId('picker-search').value;
+      // Invalidate in-flight responses immediately; a slower older search cannot replace new results.
+      pickerRequest++;
+      searchTimer = setTimeout(() => browsePath(pickerFolder,query),250);
+    });
+    byId('picker-select-folder').addEventListener('click', () => {
+      if (pickerFolder) selectPath(pickerFolder,pickerFolder.split(/[\\/]/).filter(Boolean).pop() || pickerFolder);
+    });
+    byId('picker-select-file').addEventListener('click', () => {
+      if (pickerFile) selectPath(pickerFile,pickerFile.split(/[\\/]/).pop());
+    });
+    for (const id of ['picker-close','picker-cancel']) byId(id).addEventListener('click',closePicker);
+    byId('path-picker').addEventListener('cancel',closePicker);
+    for (const id of ['tool-name','tool-path']) byId(id).addEventListener('input', () => {byId('path-result').textContent = '';});
+    byId('check-path').addEventListener('click', () => run(async () => {
+      const payload = toolPayload(); if (!payload) return;
+      const result = await api('/api/settings/tools/check','POST',payload);
+      byId('path-result').textContent = result.message + '. Es wurde kein Tool ausgeführt.';
+    }, byId('check-path')));
+    byId('tool-form').addEventListener('submit', event => {
+      event.preventDefault(); run(async () => {
+        const payload = toolPayload(); if (!payload) return;
+        const result = await api('/api/settings/tools'+(editingId ? '/'+editingId : ''),editingId ? 'PUT' : 'POST',payload);
+        resetEditor(); await loadTools(); message('Tool gespeichert. '+result.message+'.');
+      }, byId('save-tool'));
+    });
+    byId('show-token').addEventListener('click', () => {
+      const show = byId('current-token').hidden; byId('current-token').hidden = !show;
+      byId('current-token').textContent = show ? token : '';
+      byId('show-token').textContent = show ? 'Token ausblenden' : 'Aktuellen Token anzeigen';
+    });
+    function invalidateImport() {
+      importTicket = null; importGeneration++;
+      byId('config-preview').hidden = true; byId('apply-config').disabled = true;
+      byId('replace-confirm').checked = false;
+      for (const id of ['config-preview-changes','config-preview-errors','config-preview-warnings']) byId(id).replaceChildren();
+    }
+    function updateImportButton() {
+      byId('apply-config').disabled = !importTicket ||
+        byId('import-strategy').value === 'replace' && !byId('replace-confirm').checked;
+    }
+    byId('config-file').addEventListener('change', () => {invalidateImport(); byId('config-message').textContent = '';});
+    byId('import-strategy').addEventListener('change',invalidateImport);
+    byId('replace-confirm').addEventListener('change',updateImportButton);
+    byId('export-config').addEventListener('click', () => run(async () => {
+      const data = await api('/api/settings/configuration/export');
+      const url = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'}));
+      const link = document.createElement('a'); link.href = url;
+      link.download = 'PostProcessingMagic-config-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
+      document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url),1000);
+      byId('config-message').textContent = 'Konfiguration exportiert: '+data.tools.length+' Tools, '+data.modes.length+' Modi.';
+    },byId('export-config')));
+    byId('preview-config').addEventListener('click', () => run(async () => {
+      invalidateImport(); const generation = importGeneration;
+      const file = byId('config-file').files[0];
+      if (!file) throw new Error('Bitte eine JSON-Konfigurationsdatei auswählen.');
+      if (file.size > 4*1024*1024) throw new Error('Konfigurationsdatei zu groß. Maximal 4 MiB.');
+      let data;
+      try {data = JSON.parse(await file.text());} catch {throw new Error('Die Datei enthält kein gültiges JSON.');}
+      if (generation !== importGeneration) return;
+      const result = await api('/api/settings/configuration/preview','POST',{
+        strategy:byId('import-strategy').value,document:data});
+      if (generation !== importGeneration || byId('workspace').hidden) return;
+      byId('config-preview').hidden = false;
+      byId('config-preview-summary').textContent = (result.valid ? 'Prüfung erfolgreich. ' : 'Import gesperrt. ')+
+        'Nach dem Import: '+result.total_tools+' Tools, '+result.total_modes+' Modi.';
+      if (result.limits) {
+        const limits = document.createElement('p'); limits.className = 'help';
+        limits.textContent = 'Verarbeitungslimits '+(result.limits.changed ? 'werden geändert: ' : 'bleiben unverändert: ')+
+          result.limits.after.max_upload_bytes+' Bytes Upload, '+result.limits.after.max_extract_bytes+' Bytes entpackt.';
+        byId('config-preview-changes').append(limits);
+      }
+      for (const [kind,title] of [['tools','Tools'],['modes','Modi']]) {
+        const change = result.changes[kind], paragraph = document.createElement('p');
+        paragraph.textContent = title+': '+change.added.length+' neu, '+change.updated.length+' geändert, '+
+          change.removed.length+' entfallen, '+change.unchanged+' unverändert.';
+        byId('config-preview-changes').append(paragraph);
+        for (const [key,label] of [['added','Neu'],['updated','Geändert'],['removed','Entfällt']]) {
+          if (!change[key].length) continue;
+          const names = document.createElement('p'); names.className = 'help';
+          names.textContent = label+': '+change[key].join(', '); byId('config-preview-changes').append(names);
+        }
+      }
+      for (const [id,items] of [['config-preview-errors',result.errors],['config-preview-warnings',result.warnings]]) {
+        for (const item of items) {const li = document.createElement('li'); li.textContent = item; byId(id).append(li);}
+      }
+      importTicket = result.ticket || null;
+      byId('replace-confirm-label').hidden = result.strategy !== 'replace';
+      updateImportButton(); byId('config-message').textContent = 'Vorschau geprüft. Noch nichts importiert.';
+    },byId('preview-config')));
+    byId('apply-config').addEventListener('click', () => {
+      run(async () => {
+        if (!importTicket) throw new Error('Bitte zuerst den Import prüfen.');
+        try {
+          const result = await api('/api/settings/configuration/apply','POST',{
+            ticket:importTicket,confirm_replace:byId('replace-confirm').checked});
+          invalidateImport(); resetEditor(); resetModeEditor(); savedModes = [];
+          byId('config-message').textContent = 'Import abgeschlossen: '+result.total_tools+' Tools, '+
+            result.total_modes+' Modi. Kein Tool wurde ausgeführt. Vorherige Konfiguration gesichert unter: '+result.backup_file;
+        } catch (error) {
+          invalidateImport(); byId('config-message').textContent = error.message; throw error;
+        }
+      },byId('apply-config')).finally(updateImportButton);
+    });
+    byId('logout').addEventListener('click', () => {
+      token = ''; sessionStorage.removeItem('ppm-token'); hideWorkspace(); message('Abgemeldet.');
+    });
+    if (token) run(async () => {await connect(); await navigate('overview');});
+  </script>
+</body>
+</html>

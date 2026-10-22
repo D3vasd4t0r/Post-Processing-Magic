@@ -218,3 +218,28 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local runtime and confidential state
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+tmp/
+.local-data/
+*.spec
+*.egg-info/
+*.lnk
+
+
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+access-token.txt
+.env
+.env.*
+*.key
+*.crt
+*.pem

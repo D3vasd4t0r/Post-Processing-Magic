@@ -1,0 +1,51 @@
+name: Windows release
+on:
+  push:
+    branches: [main]
+    paths: [pyproject.toml, 'docs/releases/**', '.github/workflows/release.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: windows-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m venv .venv
+      - run: .\.venv\Scripts\python.exe -m pip install -e '.[dev]'
+      - name: Tests, Ruff and Windows EXE
+        run: .\build.ps1 -OutputDirectory dist/release
+      - name: EXE startup test
+        run: .\.venv\Scripts\python.exe tests/smoke_startup.py --exe dist/release/PostProcessingMagic.exe
+      - name: EXE workflow and result test
+        run: .\.venv\Scripts\python.exe tests/smoke_batch.py --exe dist/release/PostProcessingMagic.exe
+      - name: EXE stop and force-shutdown test
+        run: .\.venv\Scripts\python.exe tests/smoke_control.py --exe dist/release/PostProcessingMagic.exe
+      - name: EXE maintenance and TLS test
+        run: .\.venv\Scripts\python.exe tests/smoke_maintenance.py --exe dist/release/PostProcessingMagic.exe
+      - name: Package executable and checksums
+        run: .\.venv\Scripts\python.exe tools/package_release.py --exe dist/release/PostProcessingMagic.exe --output release-files
+      - name: Publish versioned prerelease with Windows build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: |
+          $releaseVersion = (& .\.venv\Scripts\python.exe -c 'from forensic_app import __version__; print(__version__)').Trim()
+          if ($LASTEXITCODE -ne 0 -or $releaseVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid release version' }
+          gh release view "v$releaseVersion" --json tagName 2>$null
+          if ($LASTEXITCODE -eq 0) { Write-Output 'Release already exists; no replacement.'; exit 0 }
+          gh release create "v$releaseVersion" "release-files/PostProcessingMagic-$releaseVersion-Windows.zip" "release-files/PostProcessingMagic-$releaseVersion-Windows.sha256.txt" "dist/release/build-environment.txt" --target $env:RELEASE_COMMIT --title "Post-Processing-Magic $releaseVersion" --notes-file "docs/releases/$releaseVersion.md" --prerelease
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

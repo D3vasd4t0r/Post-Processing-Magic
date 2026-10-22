@@ -1,0 +1,10 @@
+"""PyInstaller entry point. Keep process startup behind the main guard."""
+
+from multiprocessing import freeze_support
+
+from forensic_app.launcher import main
+
+if __name__ == "__main__":
+    freeze_support()
+    raise SystemExit(main())
+

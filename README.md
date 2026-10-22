@@ -1,2 +1,71 @@
 # Post-Processing-Magic
-AI Driven Project for DFIR Evidence Post Processing (Scripts are reviewed by me before publishing)
+
+KI-gestütztes Entwicklungsprojekt für die lokale Nachbearbeitung von DFIR-Evidencen unter Windows.
+
+**Aktueller Stand: 0.24.0, Vorabversion vor V1.** Der Sammeltest von 0.24 erfolgt gemeinsam mit dem Nutzer. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
+
+[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.24.0](docs/releases/0.24.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
+
+## Neu in 0.24.0
+
+- **Diagnosepaket mit Vorschau:** im Serverfenster und unter Einstellungen → Verarbeitung. App-/Systemversion, Server-/Workerstatus, Auftragszähler und bereinigte technische Ereignisse. Alle enthaltenen Texte vor dem ZIP-Export prüfen. Keine Tokens, Evidenzen, Ergebnisse, Toolbefehle/-ausgaben oder Feedbacktexte. Unbekannte Logdetails werden ausgelassen; Export entspricht exakt der Vorschau. Kein automatischer Versand.
+- **Lokales Feedback:** Button oben in der Web-Leiste für Bugs, Wünsche und allgemeines Feedback. Lokal speichern, letzte 100 Einträge ansehen, bis zu 1.000 Einträge als JSON exportieren. Eingegebene Texte bleiben unverändert; keine automatischen Anhänge oder Übermittlung.
+- **Servereinstellungen im Desktopfenster:** Port und lokalen/LAN-Zugriff speichern. Änderungen nach bewusstem Server-Stopp und erneutem Start. LAN verwendet Anmeldung und automatisch erzeugtes selbstsigniertes HTTPS; keine automatische Firewalländerung.
+- **Technische Logrotation:** Größe pro Datei 0,1–100 MB und 1–20 ältere Dateien einstellen. Wirksam nach Serverneustart; ausschließlich technische Serverlogs. Auftragslogs, Audit und Evidencen bleiben getrennt.
+
+## Windows starten
+
+1. Windows-ZIP aus einem Release vollständig entpacken.
+2. `PostProcessingMagic.exe` doppelklicken und Windows-UAC bestätigen.
+3. Der Server startet automatisch im blauen Forensik-Fenster. **Browser öffnen** startet die angemeldete Weboberfläche.
+
+Auf dem Zielrechner kein Python, Node, Docker, Redis oder Internet nötig. Externe Forensiktools müssen separat vorhanden und passend lizenziert sein. Standardadresse: `http://127.0.0.1:8765/`, sofern kein anderer Port gespeichert oder ausdrücklich beim Start angegeben wurde.
+
+Das Fenster zeigt Server-/Workerstatus und Live-Serverlogs; Adresse und Access Token lassen sich kopieren. **X** minimiert in den Windows-Infobereich, Klick auf das Schild stellt es wieder her. **Server stoppen** sperrt neue Aufträge und wartet die laufende Arbeit ab. **Force Shutdown** fragt nach Bestätigung und beendet den eigenen Server-/Worker-/Toolbaum. Unterbrochene Aufträge werden gekennzeichnet und nicht automatisch wiederholt. **Beenden…** stoppt geordnet und schließt das Fenster.
+
+Nach jedem Serverstart neuer Access Token; **Browser öffnen** verwendet automatisch den aktuellen Schlüssel. Daten standardmäßig unter `%LOCALAPPDATA%/PostProcessingMagic`, außerhalb des EXE-Entpackverzeichnisses.
+
+## Evidence-Aufbereitung
+
+Version 1 konzentriert sich auf **ZIP-Dateien mit KAPE-Targets**. E01/VMDK erscheinen höchstens deaktiviert als geplant. Eigene ZIP wählen oder eine lokale ZIP auf dem Server referenzieren, Aufwand auswählen und **Run** klicken. Nur vollständig konfigurierte Modi sind auswählbar.
+
+- Toolnamen und absolute Serverpfade im Browser verwalten, mit Datei-/Ordner-Picker und Pfadprüfung. Eingebundene Tools lassen sich nicht versehentlich löschen.
+- Modi in **Import, Verarbeitung und Export** konfigurieren: relatives Entpackziel, geordnete Befehlsblöcke, Ergebnisordner. Schritte einfügen, verschieben und entfernen. Kein PS1-Editieren erforderlich.
+- Runner derzeit: höchstens ein KAPE-Modulbefehl plus freie PowerShell-Blöcke oder reine PowerShell-Workflows. Weitere generische Toolrunner später. Eine bearbeitbare KAPE-Vorlage Medium/ohne Timeline ist vorhanden, ohne automatische Toolzuordnung.
+- Jeder Auftrag hat einen eigenen Arbeitsordner und unveränderlichen Konfigurationssnapshot einschließlich Toolhash/-version. Originaldateien werden nicht verändert. ZIP-Prüfungen vor Extraktion, Größen-/Speicherlimits und lokaler Leseschutz.
+- Persistente SQLite-Queue und separater serieller Worker. Live-Ausgabe, Befehlsfortschritt ohne erfundene Prozentwerte, Abbruch und geschützte Downloads.
+- Ergebnis-ZIP optional direkt oder später erstellen. Lokal **Show in Explorer** als Alternative. HTML-/JSON-Abschlussbericht mit Eingangs-/Ausgabe-SHA-1/SHA-256, Befehlen, Zeiten, Fehlern und Unterordnern.
+- Auftragssuche, Queue-Pause, Speicherübersicht, Arbeitslaufwerk für neue Aufträge und gezielte Bereinigung mit Vorschau. Referenzierte Originale bleiben erhalten.
+- Upload standardmäßig 50 GiB, Entpacklimit 2 TB dezimal; im Browser einstellbar und pro Auftrag eingefroren.
+- Tools/Modi/Befehle/Verarbeitungslimits gemeinsam als versionierte JSON-Konfiguration mit Importvorschau und Konfliktbehandlung übertragen. Keine Tokens, Evidencen oder Toolprogramme im Export. Serverlokale Port-/LAN-/Logeinstellungen und Arbeitslaufwerk sind separat.
+
+Fachliche Vollständigkeit der Toolergebnisse muss der Nutzer prüfen. PowerShell/Tools laufen auf ausdrücklichen Nutzerwunsch mit Administratorrechten; dies ist keine Sandbox. Remotezugriff ist für vertrauenswürdige lokale Netze vorgesehen, nicht für öffentliches Internet-Hosting. Bei selbstsigniertem HTTPS muss auf dem verwendeten Gerät dem Zertifikat vertraut werden; die App ändert keinen Trust Store.
+
+## Entwicklung und Build
+
+Python 3.12+ unter Windows, PowerShell im Projektordner:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e '.[dev]'
+.\.venv\Scripts\python.exe -m pytest
+.\.venv\Scripts\python.exe -m ruff check .
+.\build.ps1 -OutputDirectory dist/release
+.\.venv\Scripts\python.exe tools/package_release.py --exe dist/release/PostProcessingMagic.exe --output release-files
+```
+
+Das Buildskript prüft pytest/Ruff und bündelt Python, Tcl/Tk und Weboberfläche per PyInstaller. EXE-Prüfungen verwenden ausschließlich selbst erzeugte Testprogramme/-archive:
+
+```powershell
+.\.venv\Scripts\python.exe tests/smoke_startup.py --exe dist/release/PostProcessingMagic.exe
+.\.venv\Scripts\python.exe tests/smoke_batch.py --exe dist/release/PostProcessingMagic.exe
+.\.venv\Scripts\python.exe tests/smoke_control.py --exe dist/release/PostProcessingMagic.exe
+```
+
+`--headless` bzw. der kompatible Schalter `--no-browser` starten ohne Desktopfenster. `--data-dir`, `--port`, `--local` und `--lan` sind explizite Startoptionen. Explizite Port-/Netzwerkoptionen gehen beim Programmstart gespeicherten Werten vor. Die Desktop-Start/Stop-Steuerung übernimmt anschließend bewusst neu gespeicherte Einstellungen.
+
+## Releases
+
+Pro Version README und `docs/releases/<Version>.md` aktualisieren sowie Versionsnummer in `pyproject.toml` und `forensic_app/__init__.py` angleichen. Der Windows-Workflow baut und prüft bei einem entsprechenden Push auf `main` den Stand und erstellt einen versionierten GitHub-Vorabrelease mit Windows-ZIP, SHA-256-Prüfsumme und Build-Paketinventar. Vorhandene Releases werden nicht überschrieben. Google Drive bleibt ein zusätzlicher Downloadkanal in Versionsordnern. Testanleitungen und aktueller Instanztoken werden direkt im Chat bereitgestellt, niemals ins Repository geschrieben.
+
+Siehe [AGENTS.md](AGENTS.md) für Entwicklungsgrenzen und [VALIDATION.md](docs/VALIDATION.md) für die tatsächlichen Prüfungen. [MIT-Lizenz](LICENSE).

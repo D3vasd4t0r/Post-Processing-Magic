@@ -1,0 +1,220 @@
+"""Previewed removal of app-owned job files. Never follow filesystem links."""
+
+import hashlib
+import json
+import secrets
+import sqlite3
+import stat
+import threading
+import time
+from contextlib import closing
+from pathlib import Path, PureWindowsPath
+from typing import Literal
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, ConfigDict, StrictBool, field_validator
+
+from forensic_app.modes import ModeDraft
+from forensic_app.workspaces import job_root, registered_root
+
+KINDS = {'cache':'Cache leeren','evidence':'Evidences leeren','results':'Results leeren'}
+TERMINAL = ('succeeded','failed','cancelled','interrupted')
+
+
+class Preview(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    category: Literal['cache','evidence','results']
+    job_id: str | None = None
+
+
+class Apply(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    ticket: str
+    confirmed: StrictBool
+
+    @field_validator('confirmed')
+    @classmethod
+    def must_confirm(cls, value):
+        if not value:
+            raise ValueError('Löschung muss ausdrücklich bestätigt werden.')
+        return value
+
+
+class Cleanup:
+    def __init__(self, storage, overview):
+        self.storage, self.overview = storage, overview
+        self.lock = threading.Lock()
+        self.tickets = {}
+
+    def initialize(self):
+        with closing(sqlite3.connect(self.storage.database)) as c, c:
+            c.execute("UPDATE cleanup_events SET status='interrupted' WHERE status='running'")
+            c.execute('UPDATE cleanup_state SET active=0 WHERE id=1')
+
+    def idle(self, c):
+        from forensic_app.server_control import accepting
+        accepting(c)
+        if c.execute('SELECT active FROM cleanup_state WHERE id=1').fetchone()[0]:
+            raise HTTPException(409,'Eine Bereinigung läuft bereits.')
+        if c.execute("SELECT count(*) FROM archive_requests WHERE status IN ('queued','running')").fetchone()[0]:
+            raise HTTPException(409,'Erst offene Archivierungen abschließen oder abbrechen.')
+        if c.execute('SELECT count(*) FROM jobs WHERE status NOT IN (?,?,?,?)',TERMINAL).fetchone()[0]:
+            raise HTTPException(409,'Erst alle offenen Aufträge abschließen oder abbrechen. Währenddessen ist Bereinigen gesperrt.')
+
+    def checked(self, path, root=None):
+        root = Path(root) if root is not None else self.storage.root.resolve()
+        if not path.is_absolute() or not path.is_relative_to(root):
+            raise ValueError('Pfad außerhalb des Datenordners.')
+        current = root
+        for part in path.relative_to(root).parts:
+            current /= part
+            info = current.lstat()
+            if stat.S_ISLNK(info.st_mode) or getattr(info,'st_file_attributes',0) & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                raise ValueError('Verknüpfung/umgeleiteter Pfad wird nicht gelöscht.')
+        if not path.resolve().is_relative_to(root):
+            raise ValueError('Aufgelöster Pfad außerhalb des Datenordners.')
+        return path.lstat()
+
+    def manifest(self, category, job_id=None):
+        root = self.storage.root.resolve()
+        with closing(sqlite3.connect(self.storage.database)) as c:
+            rows = c.execute('SELECT id,config_json FROM jobs').fetchall()
+        protected, targets = [], []
+        for ident, body in rows:
+            if str(UUID(ident)) != ident:
+                raise HTTPException(409,'Ungültige Auftrags-ID in der Datenbank; keine Bereinigung.')
+            plan = json.loads(body)
+            if plan.get('source_kind') == 'local':
+                protected.append(Path(plan['local_input']['path']).resolve())
+            if job_id and ident != job_id:
+                continue
+            relative = PureWindowsPath(ModeDraft.job_relative_folder(plan['mode'].get('output_folder','PostMortem')))
+            root = job_root(self.storage,plan)
+            work = root/'work'/ident
+            output = work.joinpath(*relative.parts)
+            if category == 'cache':
+                protected.append(output)
+                targets.append((work,root))
+            elif category == 'evidence':
+                targets.append((root/'evidence'/ident,root))
+            else:
+                targets.extend((p,root) for p in (output,root/'results'/(ident+'.zip'),root/'results'/(ident+'.part'),root/'results'/ident))
+        records, skipped = [], 0
+        start = time.monotonic()
+
+        def walk(path, root, parent_checked=False):
+            nonlocal skipped
+            if len(records) >= 200_000 or time.monotonic()-start > 60:
+                raise HTTPException(422,'Umfang der Löschvorschau zu groß. Es wurde nichts gelöscht.')
+            if any(path == p or path.is_relative_to(p) for p in protected):
+                return
+            try:
+                # Descendants inherit a checked parent; reparse points themselves
+                # are always skipped. Application rechecks every complete path.
+                info = path.lstat() if parent_checked else self.checked(path,root)
+                if stat.S_ISLNK(info.st_mode) or getattr(info,'st_file_attributes',0) & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                    raise ValueError('Verknüpfung wird übersprungen.')
+            except FileNotFoundError:
+                return
+            except ValueError:
+                skipped += 1
+                return
+            except OSError as exc:
+                raise HTTPException(409,'Löschvorschau nicht vollständig lesbar; keine Löschung: '+str(exc)) from exc
+            directory = stat.S_ISDIR(info.st_mode)
+            if directory:
+                for child in sorted(path.iterdir()):
+                    walk(child, root, True)
+                if any(p.is_relative_to(path) for p in protected):
+                    return
+            elif not stat.S_ISREG(info.st_mode):
+                skipped += 1
+                return
+            records.append({'root':str(root),'path':str(path.relative_to(root)), 'directory':directory,
+                            'size':0 if directory else info.st_size,'mtime':info.st_mtime_ns,'inode':info.st_ino})
+
+        for path,root in targets:
+            walk(path,root)
+        digest = hashlib.sha256(json.dumps(records,sort_keys=True).encode()).hexdigest()
+        return records, digest, skipped
+
+    def preview(self, category, job_id=None):
+        if job_id:
+            from forensic_app.jobs import JobStore
+            JobStore(self.storage).get(job_id)
+        with closing(sqlite3.connect(self.storage.database)) as c:
+            self.idle(c)
+        records, digest, skipped = self.manifest(category,job_id)
+        ticket = secrets.token_urlsafe(24)
+        with self.lock:
+            now = time.monotonic()
+            self.tickets = {key:value for key,value in self.tickets.items() if value[0] > now}
+            if len(self.tickets) >= 16:
+                raise HTTPException(429,'Zu viele offene Löschvorschauen.')
+            self.tickets[ticket] = (now+600,category,digest,job_id)
+        return {'ticket':ticket,'category':category,'label':KINDS[category],
+                'files':sum(not r['directory'] for r in records),'bytes':sum(r['size'] for r in records),
+                'skipped_links':skipped,'root':'Registrierte App-Datenordner (nur dieser Auftrag)' if job_id else 'Alle registrierten App-Datenordner',
+                'note': 'Dauerhaft löschen. Historie, Einstellungen und lokal referenzierte Originale bleiben erhalten. '+
+                    ('Ergebnisordner bleiben erhalten; entpackte Eingänge, Arbeitsreste und vollständige Command-Logs werden entfernt.' if category == 'cache' else
+                     'Nur hochgeladene Eingangskopien werden entfernt.' if category == 'evidence' else
+                     'Ergebnisordner, Ergebnis-ZIPs UND Abschlussberichte werden entfernt; Explorer/Download stehen danach dafür nicht mehr bereit.')}
+
+    def apply(self, ticket):
+        with self.lock:
+            value = self.tickets.pop(ticket,None)
+        if not value or value[0] < time.monotonic():
+            raise HTTPException(409,'Löschvorschau abgelaufen oder bereits verwendet. Neu anzeigen lassen.')
+        _, category, digest, job_id = value
+        with closing(sqlite3.connect(self.storage.database)) as c, c:
+            c.execute('BEGIN IMMEDIATE')
+            self.idle(c)
+            c.execute('UPDATE cleanup_state SET active=1 WHERE id=1')
+        event = None
+        try:
+            records, current, _ = self.manifest(category,job_id)
+            if current != digest:
+                raise HTTPException(409,'Dateibestand seit Vorschau geändert. Nichts gelöscht; neue Vorschau nötig.')
+            with closing(sqlite3.connect(self.storage.database)) as c, c:
+                event = c.execute("INSERT INTO cleanup_events(category,status,detail) VALUES (?,'running',?)",(category,json.dumps({"actor":"authenticated-user"}))).lastrowid
+            deleted, removed_bytes, errors = 0, 0, []
+            for item in records:
+                root = registered_root(self.storage,item['root'])
+                path = root/item['path']
+                try:
+                    info = self.checked(path,root)
+                    if not item['directory'] and (info.st_size,info.st_mtime_ns,info.st_ino) != (item['size'],item['mtime'],item['inode']):
+                        raise ValueError('Datei seit Vorschau verändert.')
+                    if item['directory']:
+                        path.rmdir()
+                    else:
+                        path.unlink()
+                        deleted += 1
+                        removed_bytes += item['size']
+                except (OSError,ValueError) as exc:
+                    if len(errors) < 20:
+                        errors.append(item['path']+': '+str(exc))
+            result = {'deleted_files':deleted,'bytes':removed_bytes,'errors':errors,'category':category,'actor':'authenticated-user'}
+            with closing(sqlite3.connect(self.storage.database)) as c, c:
+                c.execute('UPDATE cleanup_events SET status=?,detail=? WHERE id=?',
+                          ('partial' if errors else 'done',json.dumps(result,ensure_ascii=False),event))
+            self.overview.last_scan = None
+            return result
+        finally:
+            with closing(sqlite3.connect(self.storage.database)) as c, c:
+                c.execute("UPDATE cleanup_events SET status='interrupted' WHERE id=? AND status='running'",(event,))
+                c.execute('UPDATE cleanup_state SET active=0 WHERE id=1')
+
+
+def cleanup_router(cleaner, authorize):
+    router = APIRouter(prefix='/api/settings/cleanup',dependencies=[Depends(authorize)])
+
+    @router.post('/preview')
+    def preview(value: Preview):
+        return cleaner.preview(value.category,value.job_id)
+
+    @router.post('/apply')
+    def apply(value: Apply):
+        return cleaner.apply(value.ticket)
+    return router
