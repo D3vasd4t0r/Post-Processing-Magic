@@ -8,6 +8,8 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from zipfile import ZipFile
 
+from smoke_support import wait_ready
+
 from forensic_app import __version__
 from forensic_app.desktop_session import DesktopSession
 from forensic_app.diagnostics import Diagnostics
@@ -40,7 +42,7 @@ def main():
         with urlopen(req,context=session.context(),timeout=5) as response:
             return response.read() if raw else json.load(response)
     try:
-        session.start(); wait(lambda:session.poll()['ready'])
+        session.start(); wait_ready(session)
         first_token = session.token
         api('/api/feedback','POST',{'category':'bug','title':'OWN_PRIVATE_FEEDBACK','text':'Synthetic text only'})
         preview = api('/api/diagnostics/preview','POST')
@@ -53,7 +55,7 @@ def main():
         assert session.poll()['restart_required']
         assert session.url == 'http://127.0.0.1:'+str(first_port)
         session.stop(); wait(lambda:not session.poll()['alive'])
-        session.start(); wait(lambda:session.poll()['ready'])
+        session.start(); wait_ready(session)
         assert session.url == 'https://127.0.0.1:'+str(second_port)
         assert session.token != first_token
         system = api('/api/system')
@@ -68,7 +70,7 @@ def main():
         offline = Diagnostics(Storage(root)).preview()
         assert json.loads(offline['files'][0]['text'])['server_running'] is False
         session.configure(ServerPreferences(port=first_port,lan=False,log_max_bytes=100000,log_backups=1))
-        session.start(); wait(lambda:session.poll()['ready'])
+        session.start(); wait_ready(session)
         assert session.url == 'http://127.0.0.1:'+str(first_port)
         assert api('/api/system')['runtime']['lan'] is False
         session.stop(); wait(lambda:not session.poll()['alive'])

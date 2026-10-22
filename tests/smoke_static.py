@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from zipfile import ZipFile
 
+from smoke_support import wait_ready
 from test_static_analysis import fixture_bytes, mode_document
 
 from forensic_app import __version__
@@ -49,7 +50,7 @@ def main():
             return response.read() if raw else json.load(response)
 
     try:
-        session.start();wait(lambda:session.poll()['ready'])
+        session.start();wait_ready(session)
         assert api('/api/system')['version']==__version__
         assert len(api('/api/jobs/catalog?workspace=malware')['modes'])==3
         for kind in ('PDF','OFFICE','EXE'):
@@ -77,7 +78,7 @@ def main():
         exported=api('/api/settings/configuration/export')
         assert exported['schema_version']==3 and len(exported['malware_modes'])==3
         session.stop();wait(lambda:not session.poll()['alive'])
-        session.start();wait(lambda:session.poll()['ready'])
+        session.start();wait_ready(session)
         assert api('/api/jobs?workspace=malware')['total']==3
         assert len(api('/api/settings/malware')['modes'])==3
         session.stop();wait(lambda:not session.poll()['alive'])

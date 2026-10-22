@@ -7,6 +7,8 @@ from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+from smoke_support import wait_ready
+
 from forensic_app import __version__
 from forensic_app.desktop_session import DesktopSession
 from forensic_app.launcher import parser
@@ -36,7 +38,7 @@ def main():
             return json.load(response)
 
     try:
-        session.start();wait(lambda:session.poll()['ready'])
+        session.start();wait_ready(session)
         original=api('/api/settings/configuration/export')
         assert original['schema_version']==3 and original['malware_modes']==[] and original['modes']
         saved=api('/api/settings/malware',{'name':'Own unified PDF draft','evidence_format':'PDF','effort':'Medium',
@@ -55,7 +57,7 @@ def main():
         api('/api/settings/configuration/apply',{'ticket':preview['ticket']})
         assert api('/api/jobs')['total']==0
         session.stop();wait(lambda:not session.poll()['alive'])
-        session.start();wait(lambda:session.poll()['ready'])
+        session.start();wait_ready(session)
         after=api('/api/settings/configuration/export')
         assert after['modes']==document['modes'] and after['malware_modes']==document['malware_modes']
         assert api('/api/jobs')['total']==0

@@ -10,6 +10,8 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 from zipfile import ZipFile
 
+from smoke_support import wait_ready
+
 from forensic_app import __version__
 from forensic_app.desktop_session import DesktopSession
 from forensic_app.launcher import parser
@@ -78,7 +80,7 @@ def main():
 
     try:
         session.start()
-        wait(lambda: session.poll()['ready'])
+        wait_ready(session)
         first_token = session.token
         first = submit()
         started = storage.root/'work'/first/'PostMortem/started.txt'
@@ -92,7 +94,7 @@ def main():
         assert store.get(first)['status'] == 'succeeded' and store.get(first)['result_available']
         assert store.get(second)['status'] == 'queued'
         session.start()
-        wait(lambda: session.poll()['ready'])
+        wait_ready(session)
         assert session.token != first_token
         assert store.get(second)['status'] == 'interrupted'
         script = "New-Item -ItemType Directory PostMortem -Force | Out-Null; $p=Start-Process powershell.exe -ArgumentList '-NoProfile','-Command','Start-Sleep -Seconds 120' -PassThru -WindowStyle Hidden; Set-Content PostMortem/child.txt $p.Id; Start-Sleep -Seconds 120"
@@ -110,7 +112,7 @@ def main():
         assert hashlib.sha256(original.read_bytes()).hexdigest() == digest
         assert store.get(first)['result_available']
         session.start()
-        wait(lambda:session.poll()['ready'])
+        wait_ready(session)
         assert store.get(forced)['status'] == 'interrupted'
         session.stop()
         wait(lambda:not session.poll()['alive'])
