@@ -2,17 +2,23 @@
 
 KI-gestütztes Entwicklungsprojekt für die lokale Nachbearbeitung von DFIR-Evidencen unter Windows.
 
-**Dieser Entwicklungszweig: 0.25.0, experimentelle statische Malware-Analyse.** Die getrennte Version 0.24.0 bleibt für den laufenden Wartungstest verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
+**Dieser Entwicklungszweig: 0.25.1, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
 
-[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.25.0](docs/releases/0.25.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
+[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.25.1](docs/releases/0.25.1.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
 
-## Neu in 0.25.0 – separater Entwicklungsstand
+## Neu in 0.25.1 – zentrale Einstellungen und eine Konfigurationsdatei
+
+- Einstellungen gelten unabhängig vom aktiven Arbeitsbereich: **Tools**, **Allgemein** und **Konfiguration** gemeinsam; **Forensik-Modi** und **Malware-Module** in eigenen, jederzeit erreichbaren Kategorien.
+- Nur auf der Hauptseite zwischen blauem Forensik- und rotem Malware-Bereich wechseln. Die Einstellungen zeigen immer dieselbe gemeinsame Ansicht und merken die zuletzt gewählte Kategorie.
+- Ein Export enthält immer Tools, gemeinsame Verarbeitungslimits, Forensik-Modi und Malware-Module als Schema 3, auch bei leeren Bereichen. Import mit Vorschau, Bereichszählern und atomarem Anwenden; ältere Dateien bleiben lesbar.
+
+## Statische Analyse aus 0.25.0
 
 - Bereichswechsel: blaue Forensik mit Schild und rote statische Analyse mit Totenkopf. Eigene Formulare, Module und Auftragshistorien, gemeinsame Toolverwaltung und serieller Worker.
 - Einzeldateien PDF, Office (Legacy OLE und OOXML) sowie Windows PE. Upload oder lokale Dateireferenz mit Picker, maximal 256 MiB. Signaturprüfung und neutrale Arbeitskopie, Original unverändert.
 - Bearbeitbarer Malware-Baukasten mit geordneten internen Prüfungen: Metadaten/SHA-1/SHA-256, begrenzte Entropie-/Strings-Suche, PDF-Schlüsselwörter, Office-Verzeichnis ohne Entpacken und PE-Header/Sektionstabelle. Leerer Start; passende Vorschläge erscheinen erst beim Anlegen eines Moduls.
 - Persistente Queue, echte abgeschlossene Schritte, SSE-Terminal, Abbruch, HTML-/JSON-Berichte und optionales Ergebnis-ZIP ohne Sample. Lokale Ergebnisanzeige und spätere Archivierung.
-- Schema 3 für Konfigurationen mit Malware-Modulen; alte Forensik-Dateien bleiben importierbar. Externe Toolreferenzen samt Parametern können als Entwurf gespeichert werden und sperren Run. PDFID-/oleid-Adapter folgen nach Abstimmung.
+- Ein gemeinsames Schema 3 für beide Modulbereiche; alte Forensik-Dateien bleiben importierbar. Externe Toolreferenzen samt Parametern können als Entwurf gespeichert werden und sperren Run. PDFID-/oleid-Adapter folgen nach Abstimmung.
 
 **Grenze:** begrenzte statische Triage, keine Malware-Erkennung oder Isolation. Keine Ausführung von Eingangsdateien, Makros, Skripten oder eingebetteten Inhalten. Kein automatischer Internetzugriff. Der bestehende Administratorstart ist keine Sandbox; externe Tools und freie PowerShell werden im Malware-Runner dieser Version nicht gestartet. [Architektur und Grenzen 0.25](docs/MALWARE_025.md).
 

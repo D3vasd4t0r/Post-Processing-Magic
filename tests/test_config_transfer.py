@@ -35,6 +35,46 @@ def preview(client, document, strategy="merge"):
     return response.json()
 
 
+def test_unified_document_keeps_both_empty_workflow_categories(setup):
+    client,_=setup
+    for mode in exported(client)['modes']:
+        assert client.delete('/api/settings/modes/'+mode['id']).status_code==204
+    document=exported(client)
+    assert document['schema_version']==3
+    assert document['modes']==document['malware_modes']==[]
+    assert 'tools' in document and 'limits' in document
+    result=preview(client,document,'replace')
+    assert result['valid'] and result['total_modes']==result['total_malware_modes']==0
+    assert client.post(BASE+'/apply',json={'ticket':result['ticket'],'confirm_replace':True}).status_code==200
+    assert exported(client)['malware_modes']==[]
+
+
+def test_incomplete_unified_document_is_rejected_instead_of_clearing_a_category(setup):
+    client,_=setup
+    document=exported(client)
+    document.pop('malware_modes')
+    response=client.post(BASE+'/preview',json={'document':document,'strategy':'replace'})
+    assert response.status_code==422 and 'Schema 3' in response.text
+    assert exported(client)['modes']
+
+
+def test_one_document_roundtrips_shared_tool_and_both_categories(setup,tmp_path):
+    client,_=setup
+    tool=client.post('/api/settings/tools',json={'name':'Shared synthetic tool','path':str(tmp_path/'only-a-draft.exe')}).json()
+    document=exported(client)
+    document['modes'][0]['steps'][0]['tool_id']=tool['id']
+    document['malware_modes']=[{'id':'malware-draft','name':'Static external draft','evidence_format':'PDF','effort':'Medium',
+                              'steps':[{'name':'Never execute','type':'external','tool_id':tool['id'],'parameters':'--example'}]}]
+    result=preview(client,document,'replace')
+    assert result['valid'],result
+    assert result['total_tools']==result['total_modes']==result['total_malware_modes']==1
+    assert client.post(BASE+'/apply',json={'ticket':result['ticket'],'confirm_replace':True}).status_code==200
+    after=exported(client)
+    assert after['modes'][0]['steps'][0]['tool_id']==after['malware_modes'][0]['steps'][0]['tool_id']==tool['id']
+    assert client.delete('/api/settings/tools/'+tool['id']).status_code==409
+    assert client.get('/api/jobs').json()['total']==0
+
+
 def test_authenticated_roundtrip_preserves_steps_references_and_backups(setup, tmp_path):
     client, storage = setup
     path = tmp_path / "only-a-synthetic-tool.exe"
@@ -60,7 +100,7 @@ def test_authenticated_roundtrip_preserves_steps_references_and_backups(setup, t
     backup = json.loads(Path(response.json()["backup_file"]).read_text(encoding="utf-8"))
     assert backup["modes"] == before["modes"]
     assert "transfer-secret" not in json.dumps(after)
-    assert set(after) == {"format", "schema_version", "app_version", "exported_at", "tools", "modes", "limits"}
+    assert set(after) == {"format", "schema_version", "app_version", "exported_at", "tools", "modes", "malware_modes", "limits"}
     assert client.post(BASE + "/apply", json={"ticket": result["ticket"]}).status_code == 409
     same = preview(client, after)
     assert same["valid"] and same["changes"]["modes"]["unchanged"] == 1

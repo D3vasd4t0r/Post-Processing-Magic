@@ -114,6 +114,7 @@
     label.checkbox-inline{display:flex;align-items:center;gap:10px}
     label.checkbox-inline input[type=checkbox]{display:inline-block;width:18px;height:18px;flex:0 0 18px;margin:0;padding:0}
     #admin-status{margin:0 0 16px;padding:10px 16px;font-weight:600}
+    .settings-category-label{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;padding:8px}.settings-intro{margin-top:0}body.settings-view .area-switch{display:none}
     .area-switch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 18px}.area-switch button[aria-pressed=true]{outline:2px solid currentColor;outline-offset:2px}
     body.malware{--edge:#613342;--muted:#d3b4be;color:#f8e8ed}html:has(body.malware){background:radial-gradient(ellipse at 95% 0%,#592234 0,transparent 50%),#170b12}
     body.malware header{background:linear-gradient(115deg,#2d1320,#4b1d2d 68%,#6e293c);border-color:#98445c}body.malware .brand-icon{background:#4e2031;border-color:#b25a72;color:#ffb2c5}
@@ -145,7 +146,7 @@
         <path d="m32 5 25 10v22c0 16-11 27-25 34C18 64 7 53 7 37V15Z" stroke="currentColor" stroke-width="2"/>
         <path d="M32 16v42M17 31h30" stroke="currentColor" stroke-opacity=".45"/><circle cx="32" cy="36" r="11" stroke="currentColor" stroke-width="1.5"/>
       </svg></span>
-      <div><div class="eyebrow">Digital Forensics · Workspace 0.25 · Entwicklung</div>
+      <div><div class="eyebrow">Digital Forensics · Workspace 0.25.1 · Entwicklung</div>
         <h1>Post-Processing-Magic</h1>
         <p>Dein Arbeitsbereich für die forensische Nachbearbeitung.</p></div>
     </div>
@@ -304,11 +305,17 @@
       </section>
     </div>
     <div id="settings" hidden>
-      <nav class="settings-tabs" aria-label="Einstellungen">
+      <section class="panel settings-intro"><h2>Zentrale Einstellungen</h2>
+        <p>Eine gemeinsame Konfiguration für Forensik und Malware-Analyse. Beide Modulbereiche sind hier jederzeit erreichbar, unabhängig von der Auswahl auf der Hauptseite.</p>
+      </section>
+      <nav class="settings-tabs" aria-label="Zentrale Einstellungskategorien">
+        <span class="settings-category-label">Gemeinsam</span>
         <button id="settings-tools" aria-current="page">Tools</button>
-        <button id="settings-modes">Modi</button>
-        <button id="settings-processing">Verarbeitung</button>
+        <button id="settings-processing">Allgemein</button>
         <button id="settings-transfer">Konfiguration</button>
+        <span class="settings-category-label">Bereichsspezifisch</span>
+        <button id="settings-modes">Forensik-Modi</button>
+        <button id="settings-malware">Malware-Module</button>
       </nav>
       <div id="malware-settings" hidden>
       <section class="panel"><div class="heading"><div><div class="eyebrow">MALWARE-MODULE</div><h2>Statische Abläufe</h2></div><button id="static-new-module">Modul hinzufügen</button></div>
@@ -520,8 +527,7 @@
       <div id="transfer-settings" hidden>
         <section class="panel">
           <h2>Konfiguration exportieren</h2>
-          <p>Tools und Modi einschließlich aller Befehle, Parameter und Reihenfolgen
-            gemeinsam als JSON-Datei sichern oder auf einen anderen Rechner übertragen.</p>
+          <p>Gemeinsame Tools und Limits sowie Forensik-Modi und Malware-Module einschließlich aller Befehle, Parameter und Reihenfolgen in einer einzigen JSON-Datei sichern oder übertragen. Beide Bereiche sind immer enthalten, auch wenn einer leer ist.</p>
           <p class="help">Enthalten sind Tool-Pfade und Konfigurationen. Zugangstokens,
             Zertifikate, Evidence-Dateien und die Programme selbst sind nicht enthalten.</p>
           <button id="export-config">Konfiguration exportieren</button>
@@ -654,7 +660,7 @@
     const fragment = new URLSearchParams(location.hash.slice(1));
     let token = fragment.get('token') || sessionStorage.getItem('ppm-token') || '';
     let editingId = null;
-    let workspaceArea = 'forensics';
+    let workspaceArea = 'forensics', currentPage = 'overview', currentSettingsSection = 'tools';
     let pickerFolder = null, pickerParent = null, pickerFile = null, pickerRequest = 0, searchTimer;
     let lastToolFolder = sessionStorage.getItem('ppm-last-tool-folder') || null;
     let pickerPurpose = 'tool', lastEvidenceFolder = sessionStorage.getItem('ppm-last-evidence-folder') || null;
@@ -732,6 +738,8 @@
       }
     }
     async function navigate(page) {
+      currentPage=page;
+      if (typeof updateWorkspacePresentation === 'function') updateWorkspacePresentation();
       byId('malware-overview').hidden = workspaceArea !== 'malware' || page !== 'overview';
       byId('overview').hidden = page !== 'overview'; byId('settings').hidden = page !== 'settings';
       byId('logs').hidden = page !== 'logs';
@@ -739,7 +747,7 @@
         if (name === page) byId('nav-'+name).setAttribute('aria-current','page');
         else byId('nav-'+name).removeAttribute('aria-current');
       }
-      if (page === 'settings') {preparationRequest++; await showSettings('tools');}
+      if (page === 'settings') {preparationRequest++; await showSettings(currentSettingsSection);}
       else if (page === 'logs') {preparationRequest++; await loadJobLogs();}
       else if (workspaceArea === 'malware') {byId('overview').hidden = true; await loadStaticPreparation();}
       else await loadPreparation();
@@ -845,15 +853,18 @@
     }
     async function showSettings(section) {
       byId('tool-settings').hidden = section !== 'tools';
-      byId('mode-settings').hidden = section !== 'modes' || workspaceArea === 'malware';
-      byId('malware-settings').hidden = section !== 'modes' || workspaceArea !== 'malware';
+      currentSettingsSection=section;
+      byId('mode-settings').hidden = section !== 'modes';
+      byId('malware-settings').hidden = section !== 'malware';
       byId('transfer-settings').hidden = section !== 'transfer';
       byId('processing-settings').hidden = section !== 'processing';
-      for (const name of ['tools','modes','transfer','processing']) {
+      for (const name of ['tools','modes','malware','transfer','processing']) {
         if (name === section) byId('settings-'+name).setAttribute('aria-current','page');
         else byId('settings-'+name).removeAttribute('aria-current');
       }
-      if (section === 'modes') {if (workspaceArea === 'malware') await loadStaticModules(); else await loadModes();} else if (section === 'tools') await loadTools();
+      if (section === 'modes') await loadModes();
+      else if (section === 'malware') await loadStaticModules();
+      else if (section === 'tools') await loadTools();
       else if (section === 'processing') {
         const limits = await api('/api/settings/processing');
         byId('upload-limit-gib').value = limits.max_upload_bytes/1024**3;
@@ -1609,7 +1620,7 @@
     byId('download-job-log').addEventListener('click', () => run(() => downloadLogFile('/api/jobs/'+byId('log-job').value+'/log','KAPE-'+byId('log-job').value+'.log')));
     byId('reload-tools').addEventListener('click', () => run(loadTools));
     byId('cancel-edit').addEventListener('click', resetEditor);
-    for (const section of ['tools','modes','transfer','processing']) byId('settings-'+section).addEventListener('click', () => run(() => showSettings(section)));
+    for (const section of ['tools','modes','malware','transfer','processing']) byId('settings-'+section).addEventListener('click', () => run(() => showSettings(section)));
     byId('limits-form').addEventListener('submit', event => {
       event.preventDefault(); run(async () => {
         const result = await api('/api/settings/processing','PUT',{
@@ -1728,7 +1739,7 @@
       const link = document.createElement('a'); link.href = url;
       link.download = 'PostProcessingMagic-config-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
       document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url),1000);
-      byId('config-message').textContent = 'Konfiguration exportiert: '+data.tools.length+' Tools, '+data.modes.length+' Modi.';
+      byId('config-message').textContent = 'Konfiguration exportiert: '+data.tools.length+' gemeinsame Tools, '+data.modes.length+' Forensik-Modi und '+data.malware_modes.length+' Malware-Module.';
     },byId('export-config')));
     byId('preview-config').addEventListener('click', () => run(async () => {
       invalidateImport(); const generation = importGeneration;
@@ -1743,7 +1754,7 @@
       if (generation !== importGeneration || byId('workspace').hidden) return;
       byId('config-preview').hidden = false;
       byId('config-preview-summary').textContent = (result.valid ? 'Prüfung erfolgreich. ' : 'Import gesperrt. ')+
-        'Nach dem Import: '+result.total_tools+' Tools, '+result.total_modes+' Modi.';
+        'Nach dem Import: '+result.total_tools+' gemeinsame Tools, '+result.total_modes+' Forensik-Modi und '+result.total_malware_modes+' Malware-Module.';
       if (result.limits) {
         const limits = document.createElement('p'); limits.className = 'help';
         limits.textContent = 'Verarbeitungslimits '+(result.limits.changed ? 'werden geändert: ' : 'bleiben unverändert: ')+
@@ -1775,8 +1786,9 @@
           const result = await api('/api/settings/configuration/apply','POST',{
             ticket:importTicket,confirm_replace:byId('replace-confirm').checked});
           invalidateImport(); resetEditor(); resetModeEditor(); savedModes = [];
+          byId('static-editor').hidden=true; staticEditId=null; staticSteps=[]; staticModules=[];
           byId('config-message').textContent = 'Import abgeschlossen: '+result.total_tools+' Tools, '+
-            result.total_modes+' Modi. Kein Tool wurde ausgeführt. Vorherige Konfiguration gesichert unter: '+result.backup_file;
+            result.total_modes+' Forensik-Modi und '+result.total_malware_modes+' Malware-Module. Kein Tool wurde ausgeführt. Vorherige Konfiguration gesichert unter: '+result.backup_file;
         } catch (error) {
           invalidateImport(); byId('config-message').textContent = error.message; throw error;
         }

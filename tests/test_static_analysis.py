@@ -147,7 +147,9 @@ def test_static_limits_partial_scan_and_no_office_extraction(tmp_path):
 def test_configuration_v3_roundtrip_stale_preview_and_legacy_preservation(setup):
     client,_=setup
     original=client.get('/api/settings/configuration/export').json()
-    assert original['schema_version']==2
+    assert original['schema_version']==3 and original['malware_modes']==[]
+    original['schema_version']=2
+    original.pop('malware_modes')
     saved=client.post('/api/settings/malware',json=mode_document()).json()
     exported=client.get('/api/settings/configuration/export').json()
     assert exported['schema_version']==3 and exported['malware_modes'][0]['id']==saved['id']

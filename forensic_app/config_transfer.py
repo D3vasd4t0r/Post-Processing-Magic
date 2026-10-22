@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from starlette.concurrency import run_in_threadpool
 
 from forensic_app import __version__
@@ -50,6 +50,12 @@ class ConfigurationFile(BaseModel):
     malware_modes: list[ExportMalwareMode] = Field(default_factory=list,max_length=100)
     limits: ProcessingLimits | None = None
 
+    @model_validator(mode='after')
+    def complete_unified_document(self):
+        if self.schema_version==3 and 'malware_modes' not in self.model_fields_set:
+            raise ValueError('Schema 3 muss Forensik-Modi und Malware-Module enthalten. Leere Bereiche als leere Listen angeben.')
+        return self
+
 
 class PreviewRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -82,10 +88,8 @@ def snapshot(connection) -> dict:
 
 def document(state: dict) -> dict:
     state = dict(state)
-    version = 3 if state.get('malware_modes') else 2
-    if version == 2:
-        state.pop('malware_modes',None)
-    return {"format": "post-processing-magic.configuration", "schema_version": version,
+    state.setdefault('malware_modes',[])
+    return {"format": "post-processing-magic.configuration", "schema_version": 3,
             "app_version": __version__, "exported_at": datetime.now(UTC).isoformat(), **state}
 
 
