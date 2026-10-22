@@ -67,3 +67,30 @@ def test_force_never_recovers_jobs_owned_by_another_server(tmp_path):
     with InstanceLock(tmp_path):
         session.force()
     assert 'Keine fremden Aufträge verändert' in session.problem
+
+
+def test_force_waits_for_own_async_lock_release(tmp_path,monkeypatch):
+    from forensic_app.jobs import JobStore
+    from forensic_app.storage import Storage
+    storage = Storage(tmp_path)
+    storage.initialize()
+    JobStore(storage).initialize()
+    args = parser().parse_args(['--test-no-admin','--data-dir',str(tmp_path)])
+    session = DesktopSession(args)
+    class Process:
+        def poll(self): return None
+        def wait(self,timeout): return 0
+    session.process,session.verified = Process(),True
+    attempts = []
+    class DelayedLock(InstanceLock):
+        def __enter__(self):
+            attempts.append(True)
+            if len(attempts)<3:
+                raise RuntimeError('Own previous process still releasing handle')
+            return super().__enter__()
+    monkeypatch.setattr('forensic_app.storage.InstanceLock',DelayedLock)
+    recovered = []
+    monkeypatch.setattr(JobStore,'recover',lambda self,reason:recovered.append(reason))
+    session.force()
+    assert len(attempts) == 3 and len(recovered) == 1
+    assert 'Force Shutdown' in recovered[0]

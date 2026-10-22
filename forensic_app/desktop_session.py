@@ -160,17 +160,23 @@ class DesktopSession:
             # Never create jobs or access evidence; only mark persisted incomplete work.
             import sqlite3
             from contextlib import closing
-            try:
-                with InstanceLock(storage.root):
-                    with closing(sqlite3.connect(storage.database)) as c:
-                        exists = c.execute("SELECT 1 FROM sqlite_master WHERE name='jobs'").fetchone()
-                    if exists:
-                        JobStore(storage).recover(reason='Force Shutdown: Verarbeitung unterbrochen; keine automatische Wiederholung.')
-            except RuntimeError:
-                # A different server may already have acquired the released directory.
-                # Leave its state untouched; that server owns recovery.
-                self.problem = 'Eigener Serverprozess beendet; Datenordner bereits wieder belegt. Keine fremden Aufträge verändert.'
-                return
+            deadline = time.monotonic()+2
+            while True:
+                try:
+                    with InstanceLock(storage.root):
+                        with closing(sqlite3.connect(storage.database)) as c:
+                            exists = c.execute("SELECT 1 FROM sqlite_master WHERE name='jobs'").fetchone()
+                        if exists:
+                            JobStore(storage).recover(reason='Force Shutdown: Verarbeitung unterbrochen; keine automatische Wiederholung.')
+                    break
+                except RuntimeError:
+                    # Job-object termination is asynchronous: the bootloader can exit
+                    # before Windows releases its inner server's file lock.
+                    if time.monotonic()<deadline:
+                        time.sleep(.05)
+                        continue
+                    self.problem = 'Eigener Serverprozess beendet; Datenordner bereits wieder belegt. Keine fremden Aufträge verändert.'
+                    return
         self.problem = 'Force Shutdown ausgeführt. Unterbrochene Aufträge werden nicht automatisch wiederholt.'
 
     def startup_log(self):
