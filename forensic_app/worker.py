@@ -17,6 +17,7 @@ from forensic_app.kape_plan import sha256_file
 from forensic_app.process_guard import ProcessGuard
 from forensic_app.processing_settings import ProcessingLimits
 from forensic_app.queue_control import QueueControl
+from forensic_app.static_analysis import prepare_sample, run_static
 from forensic_app.storage import Storage
 from forensic_app.windows_access import input_identity, is_admin, locked_input
 from forensic_app.workspaces import job_paths
@@ -122,58 +123,69 @@ def process_job(store: JobStore, ident: str, plan: dict, stop, runner=execute):
         work.mkdir(exist_ok=False)
         # Snapshot stays outside PostMortem; packaged audit is added only to the result archive.
         (work / "configuration.json").write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
-        store.update(ident, status="running", phase="ZIP prüfen und entpacken")
-        target = work / relative_path(plan["mode"]["extract_folder"])
-        limits = ProcessingLimits.model_validate(plan.get("limits", {}))
-        def extract(archive):
-            extract_checked(archive, target, check, lambda text: store.log(ident, text+"\n"),
-                            allow_high_compression=plan.get("allow_high_compression", False), max_extract_bytes=limits.max_extract_bytes)
-        if plan.get("source_kind") == "local":
-            local = plan["local_input"]
-            archive_path = Path(local["path"])
-            store.update(ident, phase="Lokale ZIP prüfen und hashen")
-            with locked_input(archive_path) as original:
-                if input_identity(original) != {key: local[key] for key in ("size", "mtime_ns", "device", "inode")}:
-                    raise ValueError("Lokale ZIP wurde seit der Auswahl verändert oder ersetzt. Bitte erneut auswählen und Run starten.")
-                checksum, sha1, read, reported = hashlib.sha256(), hashlib.sha1(), 0, 0
-                while chunk := original.read(8*1024**2):
-                    check()
-                    checksum.update(chunk)
-                    sha1.update(chunk)
-                    read += len(chunk)
-                    if read-reported >= 256*1024**2:
-                        store.update(ident, phase=f"Lokale ZIP hashen: {read/1024**3:.1f}/{local['size']/1024**3:.1f} GiB")
-                        reported = read
-                store.update(ident, input_sha256=checksum.hexdigest(), input_sha1=sha1.hexdigest(), phase="ZIP prüfen und entpacken")
-                extract(archive_path)
+        if plan.get('workspace') == 'malware':
+            from forensic_app.malware_modes import compile_static, implementation_hash
+            expected = compile_static(plan['mode'])
+            if plan['tool'].get('sha256') != implementation_hash():
+                raise ValueError('Interne Prüfimplementation hat sich seit der Auftragserstellung geändert. Neuen Lauf anlegen.')
+            if [(c.get('kind'),c.get('inspector'),c.get('id')) for c in plan.get('commands',[])] != [(c['kind'],c['inspector'],c['id']) for c in expected['commands']]:
+                raise ValueError('Malware-Auftrag enthält nicht freigegebene Befehlsblöcke.')
+            store.update(ident,status='running',phase='Einzeldatei prüfen, kopieren und hashen')
+            plan = copy.deepcopy(plan)
+            plan['static_input'] = prepare_sample(store,ident,plan,work,check)
         else:
-            extract(root / "evidence" / ident / "Evidence.zip")
-        source = work / relative_path(plan["source"])
-        if not source.is_dir():
-            configured = PureWindowsPath(plan["source"])
-            extraction = PureWindowsPath(plan["mode"]["extract_folder"])
-            drives = [path for path in target.iterdir() if len(path.name) == 1 and path.name.isascii() and path.name.isalpha()
-                      and path.is_dir() and not path.is_symlink() and not path.is_junction()]
-            if configured.parent == extraction and len(configured.name) == 1 and len(drives) == 1:
-                plan = copy.deepcopy(plan)
-                resolved = str(extraction / drives[0].name)
-                plan["source_resolution"] = {"configured": plan["source"], "effective": resolved}
-                plan["source"] = resolved
-                plan["argv"][plan["argv"].index("--msource")+1] = ".\\"+resolved
-                plan["command"] = subprocess.list2cmdline(plan["argv"])
-                for command in plan.get("commands", []):
-                    if command.get("kind") == "kape":
-                        command["source"] = resolved
-                        command["argv"][command["argv"].index("--msource")+1] = ".\\"+resolved
-                        command["command"] = subprocess.list2cmdline(command["argv"])
-                if plan.get("commands"):
-                    plan["command"] = "\n\n".join(command["command"] for command in plan["commands"])
-                source = drives[0]
-                store.log(ident, f"Laufwerksordner automatisch erkannt: {configured} → {resolved}. Archivnamen unverändert.\n")
+            store.update(ident, status="running", phase="ZIP prüfen und entpacken")
+            target = work / relative_path(plan["mode"]["extract_folder"])
+            limits = ProcessingLimits.model_validate(plan.get("limits", {}))
+            def extract(archive):
+                extract_checked(archive, target, check, lambda text: store.log(ident, text+"\n"),
+                                allow_high_compression=plan.get("allow_high_compression", False), max_extract_bytes=limits.max_extract_bytes)
+            if plan.get("source_kind") == "local":
+                local = plan["local_input"]
+                archive_path = Path(local["path"])
+                store.update(ident, phase="Lokale ZIP prüfen und hashen")
+                with locked_input(archive_path) as original:
+                    if input_identity(original) != {key: local[key] for key in ("size", "mtime_ns", "device", "inode")}:
+                        raise ValueError("Lokale ZIP wurde seit der Auswahl verändert oder ersetzt. Bitte erneut auswählen und Run starten.")
+                    checksum, sha1, read, reported = hashlib.sha256(), hashlib.sha1(), 0, 0
+                    while chunk := original.read(8*1024**2):
+                        check()
+                        checksum.update(chunk)
+                        sha1.update(chunk)
+                        read += len(chunk)
+                        if read-reported >= 256*1024**2:
+                            store.update(ident, phase=f"Lokale ZIP hashen: {read/1024**3:.1f}/{local['size']/1024**3:.1f} GiB")
+                            reported = read
+                    store.update(ident, input_sha256=checksum.hexdigest(), input_sha1=sha1.hexdigest(), phase="ZIP prüfen und entpacken")
+                    extract(archive_path)
             else:
-                found = ", ".join(path.name for path in drives) or "keine einzelnen Laufwerksordner"
-                raise ValueError(f"KAPE-Quellordner fehlt: {plan['source']}. Gefundene Laufwerksordner: {found}. "
-                                 "Automatische Auswahl nur bei genau einem eindeutigen Laufwerk möglich.")
+                extract(root / "evidence" / ident / "Evidence.zip")
+            source = work / relative_path(plan["source"])
+            if not source.is_dir():
+                configured = PureWindowsPath(plan["source"])
+                extraction = PureWindowsPath(plan["mode"]["extract_folder"])
+                drives = [path for path in target.iterdir() if len(path.name) == 1 and path.name.isascii() and path.name.isalpha()
+                          and path.is_dir() and not path.is_symlink() and not path.is_junction()]
+                if configured.parent == extraction and len(configured.name) == 1 and len(drives) == 1:
+                    plan = copy.deepcopy(plan)
+                    resolved = str(extraction / drives[0].name)
+                    plan["source_resolution"] = {"configured": plan["source"], "effective": resolved}
+                    plan["source"] = resolved
+                    plan["argv"][plan["argv"].index("--msource")+1] = ".\\"+resolved
+                    plan["command"] = subprocess.list2cmdline(plan["argv"])
+                    for command in plan.get("commands", []):
+                        if command.get("kind") == "kape":
+                            command["source"] = resolved
+                            command["argv"][command["argv"].index("--msource")+1] = ".\\"+resolved
+                            command["command"] = subprocess.list2cmdline(command["argv"])
+                    if plan.get("commands"):
+                        plan["command"] = "\n\n".join(command["command"] for command in plan["commands"])
+                    source = drives[0]
+                    store.log(ident, f"Laufwerksordner automatisch erkannt: {configured} → {resolved}. Archivnamen unverändert.\n")
+                else:
+                    found = ", ".join(path.name for path in drives) or "keine einzelnen Laufwerksordner"
+                    raise ValueError(f"KAPE-Quellordner fehlt: {plan['source']}. Gefundene Laufwerksordner: {found}. "
+                                     "Automatische Auswahl nur bei genau einem eindeutigen Laufwerk möglich.")
         store.update(ident, effective_json=json.dumps(plan, ensure_ascii=False))
         (work / "effective-configuration.json").write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
         check()
@@ -202,14 +214,14 @@ def process_job(store: JobStore, ident: str, plan: dict, stop, runner=execute):
                     raise ValueError(f"Arbeitsordner für Befehl {index+1} fehlt oder liegt außerhalb der Aufbereitung: {directory}")
                 executable = dict(plan, **command)
                 executable["test_no_admin"] = plan.get("test_no_admin", False)
-                title = "PowerShell" if command.get("kind") == "powershell" else "KAPE"
+                title = "Statische Prüfung" if command.get("kind") == "static" else "PowerShell" if command.get("kind") == "powershell" else "KAPE"
                 store.update(ident, phase=title+" läuft", current_step=index, exit_code=None)
                 emit(f"\nBefehl {index+1}/{len(commands)}: {command.get('name',title)}\nAufruf: {command['command']}\nArbeitsordner: {directory}\n")
                 timing = {'index':index+1,'name':command.get('name',title),'command':command['command'],
                           'tool':command['tool'],'started_at_utc':utc(),'ended_at_utc':None,'exit_code':None}
                 command_runs.append(timing)
                 try:
-                    code = runner(executable, directory, check, emit)
+                    code = run_static(executable,work,check,emit) if command.get('kind')=='static' else runner(executable, directory, check, emit)
                     timing['exit_code'] = code
                 finally:
                     timing['ended_at_utc'] = utc()

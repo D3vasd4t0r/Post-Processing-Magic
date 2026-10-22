@@ -14,6 +14,7 @@ from forensic_app.config_transfer import ConfigurationTransfer, configuration_ro
 from forensic_app.diagnostics import Diagnostics, diagnostics_router
 from forensic_app.feedback import FeedbackStore, feedback_router
 from forensic_app.jobs import JobService, jobs_router, results_router
+from forensic_app.malware_modes import MalwareModes, malware_router
 from forensic_app.modes import ModeStore, modes_router
 from forensic_app.processing_settings import ProcessingSettings, processing_settings_router
 from forensic_app.queue_control import QueueControl, queue_router
@@ -41,6 +42,7 @@ def create_app(storage: Storage, token: str, *, lan: bool = False, processing: b
         storage.initialize()
         limits.initialize()
         mode_store.initialize()
+        MalwareModes(storage).initialize()
         transfer.initialize()
         jobs.store.initialize()
         queue.initialize()
@@ -100,6 +102,7 @@ def create_app(storage: Storage, token: str, *, lan: bool = False, processing: b
     app.include_router(feedback_router(FeedbackStore(storage),authorize))
     app.include_router(diagnostics_router(Diagnostics(storage,lambda:{'server_running':True,'worker_running':jobs.available(),'administrator':is_admin(),**(runtime or {})}),authorize))
     app.include_router(results_router(jobs))
+    app.include_router(malware_router(MalwareModes(storage),authorize))
 
     @app.post("/api/system/stop", dependencies=[Depends(authorize)])
     def stop_server():
@@ -112,6 +115,10 @@ def create_app(storage: Storage, token: str, *, lan: bool = False, processing: b
     @app.get("/", include_in_schema=False)
     def index():
         return FileResponse(Path(__file__).parent / "web" / "index.html")
+
+    @app.get('/malware.js',include_in_schema=False)
+    def malware_script():
+        return FileResponse(Path(__file__).parent/'web'/'malware.js',media_type='text/javascript')
 
     @app.get("/health")
     def health():

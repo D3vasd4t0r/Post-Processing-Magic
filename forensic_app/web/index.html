@@ -114,6 +114,16 @@
     label.checkbox-inline{display:flex;align-items:center;gap:10px}
     label.checkbox-inline input[type=checkbox]{display:inline-block;width:18px;height:18px;flex:0 0 18px;margin:0;padding:0}
     #admin-status{margin:0 0 16px;padding:10px 16px;font-weight:600}
+    .area-switch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 18px}.area-switch button[aria-pressed=true]{outline:2px solid currentColor;outline-offset:2px}
+    body.malware{--edge:#613342;--muted:#d3b4be;color:#f8e8ed}html:has(body.malware){background:radial-gradient(ellipse at 95% 0%,#592234 0,transparent 50%),#170b12}
+    body.malware header{background:linear-gradient(115deg,#2d1320,#4b1d2d 68%,#6e293c);border-color:#98445c}body.malware .brand-icon{background:#4e2031;border-color:#b25a72;color:#ffb2c5}
+    body.malware .panel,body.malware dialog{background:linear-gradient(120deg,#2b1520f5,#211018f5)}body.malware .workspace-shield,body.malware .hero-shield{color:#fb809f}body.malware .eyebrow{color:#ffa2bd}
+    body.malware nav{background:#2b1420;border-color:#613342}body.malware nav button[aria-current=page]{background:#6b2b40;border-color:#b45670;color:#ffe7ef}
+    body.malware button{background:linear-gradient(135deg,#ffacc2,#e87799);color:#35121e;border-color:#ffbfd166}body.malware button.secondary{background:#482031;color:#f9dbe5;border-color:#835066}
+    body.malware input,body.malware select,body.malware textarea,body.malware pre,body.malware .command-step{background:#1c0e16;color:#f4e1e9;border-color:#794155}
+    body.malware select option{background:#2a1420;color:#ffe7ef}body.malware .note{background:#431f2e;border-left-color:#fc92b0;color:#f5d7e1}body.malware .badge{background:#56243a;color:#ffd8e5;border-color:#ab5772}
+    body.malware .terminal-bar{background:#492034;border-color:#8d4d64}body.malware .terminal-output{background:#10080d;border-color:#8d4d64;color:#f7d5e1}body.malware .terminal-output:focus-visible{outline:2px solid #ffb7d0}
+    body.malware progress::-webkit-progress-value{background:linear-gradient(90deg,#b84066,#ffa4c0)}body.malware .result-card{background:#381a29;border-color:#8b435e;border-left-color:#fa99b7}body.malware #job-search-count{background:#50263b;color:#ffe4ef;border-color:#a95a77}
   </style>
 </head>
 <body>
@@ -135,7 +145,7 @@
         <path d="m32 5 25 10v22c0 16-11 27-25 34C18 64 7 53 7 37V15Z" stroke="currentColor" stroke-width="2"/>
         <path d="M32 16v42M17 31h30" stroke="currentColor" stroke-opacity=".45"/><circle cx="32" cy="36" r="11" stroke="currentColor" stroke-width="1.5"/>
       </svg></span>
-      <div><div class="eyebrow">Digital Forensics · Workspace 0.24</div>
+      <div><div class="eyebrow">Digital Forensics · Workspace 0.25 · Entwicklung</div>
         <h1>Post-Processing-Magic</h1>
         <p>Dein Arbeitsbereich für die forensische Nachbearbeitung.</p></div>
     </div>
@@ -160,6 +170,11 @@
     </details>
   </section>
   <main id="workspace" hidden>
+    <div class="area-switch" role="group" aria-label="Arbeitsbereich">
+      <button id="area-forensics" aria-pressed="true">♢ Forensik</button>
+      <button id="area-malware" aria-pressed="false">☠ Statische Malware-Analyse</button>
+      <span id="area-note" class="help">Getrennte Module und Aufträge · gemeinsame Tools</span>
+    </div>
     <p id="admin-status" class="badge" role="status">Administratorstatus wird geprüft…</p>
     <nav aria-label="Hauptnavigation">
       <button id="nav-overview" aria-current="page">Aufbereitung</button>
@@ -265,6 +280,29 @@
         <p id="run-download-note" class="help">Der Download wird nach erfolgreicher Verarbeitung verfügbar.</p>
       </section>
     </div>
+    <div id="malware-overview" hidden>
+      <section class="panel">
+        <div class="heading"><div><div class="eyebrow">STATIC ANALYSIS · OFFLINE</div><h2>Verdächtige Datei untersuchen</h2></div><span class="badge">☠ Keine Sample-Ausführung</span></div>
+        <p class="note">Eine einzelne PDF-, Office- oder Windows-PE-Datei als Daten untersuchen. Interne Prüfungen lesen Rohdaten; sie starten keine Samples, Makros oder eingebetteten Inhalte. Kein Cloud-Upload.</p>
+        <p class="help">0.25 ist eine erste statische Triage, keine Sandbox und keine Malware-Erkennung. Befunde und Grenzen stehen im Bericht. Maximal 256 MiB pro Datei.</p>
+        <label for="static-source">1. Quelle</label><select id="static-source"><option value="upload">Upload</option><option value="local">Lokale Datei auf dem Server</option></select>
+        <div id="static-upload"><label for="static-file">Einzeldatei auswählen</label><input id="static-file" type="file" accept=".pdf,.exe,.dll,.sys,.scr,.doc,.docx,.docm,.xls,.xlsx,.xlsm,.ppt,.pptx,.pptm"></div>
+        <div id="static-local" hidden><label for="static-path">Absoluter Dateipfad auf dem Server</label><div class="path-input"><input id="static-path" maxlength="4096" spellcheck="false"><button id="static-browse" class="secondary">Durchsuchen…</button></div><p class="help">Das Original bleibt erhalten. Eine lesend geprüfte Arbeitskopie wird unter neutralem Dateinamen erstellt.</p></div>
+        <div class="fields"><div><label for="static-format">2. Dateiformat</label><select id="static-format"><option value="PDF">PDF</option><option value="OFFICE">Office-Dokument</option><option value="EXE">Windows Executable / PE</option></select></div>
+        <div><label for="static-mode">3. Aufwand / Modul</label><select id="static-mode"></select></div></div>
+        <p id="static-ready" class="help" role="status"></p>
+        <label class="checkbox-inline"><input id="static-zip" type="checkbox" checked> Ergebnis-ZIP direkt erstellen</label>
+        <div class="actions"><button id="static-run" disabled>Statische Analyse starten</button><button id="static-reload" class="secondary">Module aktualisieren</button><button id="static-configure" class="secondary">Module einrichten</button></div>
+        <details><summary>Geplanter Ablauf</summary><pre id="static-plan">Noch kein Modul gewählt.</pre></details>
+      </section>
+      <section class="panel"><h2 id="static-status">Noch keine Analyse gestartet</h2><p id="static-detail" role="status"></p>
+        <label id="static-progress-label" for="static-progress">0 Schritte abgeschlossen</label><progress id="static-progress" max="1" value="0"></progress>
+        <details><summary>Aktuelle Prüfung und Terminal anzeigen</summary><pre id="static-command" class="terminal-command">Kein Schritt gestartet.</pre>
+        <div class="terminal-bar"><span>Statische Prüfungen · Live-Ausgabe</span><button id="static-follow" class="secondary">Live folgen: an</button></div><pre id="static-terminal" class="terminal-output" tabindex="0" aria-label="Ausgabe der statischen Analyse">Noch keine Ausgabe.</pre></details>
+        <div class="actions"><button id="static-cancel" class="danger" disabled>Abbrechen</button><button id="static-download" disabled>Ergebnisse herunterladen</button><button id="static-report" class="secondary" disabled>HTML-Abschlussbericht</button><button id="static-archive" class="secondary" disabled>Ergebnis-ZIP erstellen</button><button id="static-explorer" class="secondary" hidden>Show in Explorer</button></div>
+        <p class="help">Das Ergebnisarchiv enthält Prüfberichte, keine Kopie der verdächtigen Eingangsdatei. Frühere Analysen stehen im Logs-Tab dieses Bereichs.</p>
+      </section>
+    </div>
     <div id="settings" hidden>
       <nav class="settings-tabs" aria-label="Einstellungen">
         <button id="settings-tools" aria-current="page">Tools</button>
@@ -272,9 +310,22 @@
         <button id="settings-processing">Verarbeitung</button>
         <button id="settings-transfer">Konfiguration</button>
       </nav>
-      <div id="tool-settings">
+      <div id="malware-settings" hidden>
+      <section class="panel"><div class="heading"><div><div class="eyebrow">MALWARE-MODULE</div><h2>Statische Abläufe</h2></div><button id="static-new-module">Modul hinzufügen</button></div>
+      <p>Eigene Reihenfolge aus internen statischen Prüfungen zusammenstellen. Tools sind mit Forensik gemeinsam; Module und Aufträge sind getrennt.</p><p class="help">Externe Toolblöcke mit Parametern können als Entwurf gespeichert werden. Ihre Ausführung folgt nach gemeinsamer Adapter-Abstimmung. Keine freien PowerShell-Blöcke in diesem Bereich.</p>
+      <p id="static-module-message" role="status"></p><div id="static-modules"></div></section>
+      <section id="static-editor" class="panel" hidden><h2 id="static-editor-title">Malware-Modul hinzufügen</h2><form id="static-module-form">
+        <label for="static-module-name">Modulname</label><input id="static-module-name" maxlength="120" required>
+        <label for="static-module-description">Beschreibung</label><textarea id="static-module-description" maxlength="4000" rows="2"></textarea>
+        <div class="fields"><div><label for="static-module-format">Import · einzelne Datei</label><select id="static-module-format"><option value="PDF">PDF</option><option value="OFFICE">Office</option><option value="EXE">Windows PE</option></select></div><div><label for="static-module-effort">Aufwand</label><select id="static-module-effort"><option>schnell</option><option selected>Medium</option><option>langsam</option></select></div></div>
+        <div class="mode-category"><div class="heading"><h3>Verarbeitung</h3><button type="button" id="static-add-step" class="secondary">Prüfung hinzufügen</button></div><div id="static-steps"></div></div>
+        <div class="mode-category"><h3>Export</h3><label for="static-module-output">Diesen Ergebnisordner am Ende zippen</label><input id="static-module-output" value="Analysis" maxlength="240" required><p class="help">Relativer Unterordner des eigenen Auftrags. Der reservierte Sample-Ordner ist ausgeschlossen.</p></div>
+        <p id="static-editor-error" class="help" role="alert"></p><div class="actions"><button id="static-save-module" type="submit">Modul speichern</button><button id="static-cancel-module" type="button" class="secondary">Abbrechen</button></div>
+      </form></section>
+    </div>
+    <div id="tool-settings">
       <section class="panel">
-        <h2>Forensiktools</h2>
+        <h2>Gemeinsame Toolverwaltung</h2>
         <p>Hinterlege pro Tool die Programmdatei oder das Installationsverzeichnis.</p>
         <p class="help">Die Pfade gelten auf dem Rechner, auf dem die EXE läuft.
           „Pfad prüfen“ kontrolliert die Erreichbarkeit. Es wird dabei kein Programm gestartet.
@@ -603,6 +654,7 @@
     const fragment = new URLSearchParams(location.hash.slice(1));
     let token = fragment.get('token') || sessionStorage.getItem('ppm-token') || '';
     let editingId = null;
+    let workspaceArea = 'forensics';
     let pickerFolder = null, pickerParent = null, pickerFile = null, pickerRequest = 0, searchTimer;
     let lastToolFolder = sessionStorage.getItem('ppm-last-tool-folder') || null;
     let pickerPurpose = 'tool', lastEvidenceFolder = sessionStorage.getItem('ppm-last-evidence-folder') || null;
@@ -621,6 +673,7 @@
       byId('message').classList.toggle('error', error);
     }
     function hideWorkspace() {
+      if (typeof clearStaticSession === 'function') clearStaticSession();
       for (const id of ['feedback-dialog','diagnostics-dialog']) byId(id).close();
       byId('feedback-list').replaceChildren(); byId('diagnostics-files').replaceChildren();
       byId('feedback-form').reset(); diagnosticsTicket = null;
@@ -679,6 +732,7 @@
       }
     }
     async function navigate(page) {
+      byId('malware-overview').hidden = workspaceArea !== 'malware' || page !== 'overview';
       byId('overview').hidden = page !== 'overview'; byId('settings').hidden = page !== 'settings';
       byId('logs').hidden = page !== 'logs';
       for (const name of ['overview','settings','logs']) {
@@ -687,6 +741,7 @@
       }
       if (page === 'settings') {preparationRequest++; await showSettings('tools');}
       else if (page === 'logs') {preparationRequest++; await loadJobLogs();}
+      else if (workspaceArea === 'malware') {byId('overview').hidden = true; await loadStaticPreparation();}
       else await loadPreparation();
     }
     function clearPreparationPlan() {
@@ -790,14 +845,15 @@
     }
     async function showSettings(section) {
       byId('tool-settings').hidden = section !== 'tools';
-      byId('mode-settings').hidden = section !== 'modes';
+      byId('mode-settings').hidden = section !== 'modes' || workspaceArea === 'malware';
+      byId('malware-settings').hidden = section !== 'modes' || workspaceArea !== 'malware';
       byId('transfer-settings').hidden = section !== 'transfer';
       byId('processing-settings').hidden = section !== 'processing';
       for (const name of ['tools','modes','transfer','processing']) {
         if (name === section) byId('settings-'+name).setAttribute('aria-current','page');
         else byId('settings-'+name).removeAttribute('aria-current');
       }
-      if (section === 'modes') await loadModes(); else if (section === 'tools') await loadTools();
+      if (section === 'modes') {if (workspaceArea === 'malware') await loadStaticModules(); else await loadModes();} else if (section === 'tools') await loadTools();
       else if (section === 'processing') {
         const limits = await api('/api/settings/processing');
         byId('upload-limit-gib').value = limits.max_upload_bytes/1024**3;
@@ -1098,6 +1154,7 @@
       byId('path-picker').close();
     }
     function selectPath(path, name) {
+      if (pickerPurpose === 'static') {if (!staticExtensions[byId('static-format').value].test(path)) {byId('picker-error').textContent='Datei passt nicht zum gewählten Format.';return;}sessionStorage.setItem('ppm-static-folder',pickerFolder || '');byId('static-path').value=path;closePicker();updateStaticForm();return;}
       if (pickerPurpose === 'workspace') {byId('workspace-folder').value = path; closePicker(); return;}
       if (pickerPurpose === 'local') {
         if (!/\.zip$/i.test(path)) {byId('picker-error').textContent = 'Bitte eine ZIP-Datei auswählen.'; return;}
@@ -1119,11 +1176,11 @@
       byId('picker-select-folder').disabled = true; byId('picker-select-file').hidden = true;
       byId('picker-up').disabled = true; pickerFile = null;
       try {
-        const data = await api(pickerPurpose === 'local' ? '/api/jobs/browse' : '/api/settings/tools/browse','POST',{path:path || null,query});
+        const data = await api(pickerPurpose === 'static' ? '/api/jobs/browse?workspace=malware' : pickerPurpose === 'local' ? '/api/jobs/browse?workspace=forensics' : '/api/settings/tools/browse','POST',{path:path || null,query});
         if (request !== pickerRequest || !byId('path-picker').open) return;
         pickerFolder = data.path; pickerParent = data.parent; pickerFile = data.selected_file;
         byId('picker-address').value = data.path;
-        byId('picker-select-folder').disabled = pickerPurpose === 'local';
+        byId('picker-select-folder').disabled = ['local','static'].includes(pickerPurpose);
         byId('picker-select-file').hidden = !pickerFile || pickerPurpose === 'workspace';
         byId('picker-up').disabled = !data.parent;
         byId('picker-roots').replaceChildren(...data.roots.map(root => action(root, () => navigatePicker(root))));
@@ -1442,7 +1499,7 @@
     async function loadJobLogs(preferredId) {
       const generation = ++jobsSearchRequest;
       const previous = preferredId || byId('log-job').value || activeJobId;
-      const params = new URLSearchParams({limit:'50',offset:String(jobsOffset)});
+      const params = new URLSearchParams({limit:'50',offset:String(jobsOffset),workspace:workspaceArea});
       for (const [key,id] of [['q','job-query'],['status','job-status-filter'],['mode_id','job-mode-filter'],['date_from','job-date-from'],['date_to','job-date-to']]) {
         if (byId(id).value) params.set(key,byId(id).value);
       }
@@ -1693,8 +1750,8 @@
           result.limits.after.max_upload_bytes+' Bytes Upload, '+result.limits.after.max_extract_bytes+' Bytes entpackt.';
         byId('config-preview-changes').append(limits);
       }
-      for (const [kind,title] of [['tools','Tools'],['modes','Modi']]) {
-        const change = result.changes[kind], paragraph = document.createElement('p');
+      for (const [kind,title] of [['tools','Tools'],['modes','Forensik-Modi'],['malware_modes','Malware-Module']]) {
+        const change = result.changes[kind] || {added:[],updated:[],removed:[],unchanged:0}, paragraph = document.createElement('p');
         paragraph.textContent = title+': '+change.added.length+' neu, '+change.updated.length+' geändert, '+
           change.removed.length+' entfallen, '+change.unchanged+' unverändert.';
         byId('config-preview-changes').append(paragraph);
@@ -1730,5 +1787,6 @@
     });
     if (token) run(async () => {await connect(); await navigate('overview');});
   </script>
+  <script src="/malware.js"></script>
 </body>
 </html>

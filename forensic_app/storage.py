@@ -113,9 +113,13 @@ class Storage:
 
     def tool_usage(self, tool_id: str) -> list[dict]:
         with closing(sqlite3.connect(self.database)) as connection:
-            return [{"id": row[0], "name": row[1]} for row in connection.execute(
-                "SELECT id,name,body_json FROM mode_drafts ORDER BY name COLLATE NOCASE"
-            ) if any(step.get("tool_id") == tool_id for step in json.loads(row[2]).get("steps", []))]
+            result = []
+            for table in ('mode_drafts','malware_modes'):
+                if connection.execute('SELECT 1 FROM sqlite_master WHERE name=?',(table,)).fetchone():
+                    result.extend({'id':row[0],'name':row[1]} for row in connection.execute('SELECT id,name,body_json FROM '+table)
+                                  if any(step.get('tool_id') == tool_id for step in json.loads(row[2]).get('steps',[])))
+            return result
+
 
     def delete_tool(self, tool_id: str) -> None:
         with closing(sqlite3.connect(self.database)) as connection, connection:
@@ -134,6 +138,11 @@ class Storage:
                 if used_by:
                     raise ValueError("Tool ist in folgenden Modi eingebunden: "+", ".join(used_by)+
                                      ". Löschen gesperrt; Verknüpfungen bleiben erhalten.")
+            if connection.execute("SELECT 1 FROM sqlite_master WHERE name='malware_modes'").fetchone():
+                names = [name for name,body in connection.execute('SELECT name,body_json FROM malware_modes')
+                         if any(step.get('tool_id') == tool_id for step in json.loads(body).get('steps',[]))]
+                if names:
+                    raise ValueError('Tool ist in Malware-Modulen eingebunden: '+', '.join(names)+'. Verknüpfungen bleiben erhalten.')
             connection.execute("DELETE FROM tool_locations WHERE id = ?", (tool_id,))
             connection.execute(
                 "INSERT INTO configuration_events "

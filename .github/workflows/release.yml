@@ -1,7 +1,7 @@
 name: Windows release
 on:
   push:
-    branches: [main]
+    branches: [main, codex/malware-025]
     paths: [pyproject.toml, 'docs/releases/**', '.github/workflows/release.yml']
   workflow_dispatch:
 permissions:
@@ -35,6 +35,8 @@ jobs:
         run: .\.venv\Scripts\python.exe tests/smoke_control.py --exe dist/release/PostProcessingMagic.exe
       - name: EXE maintenance and TLS test
         run: .\.venv\Scripts\python.exe tests/smoke_maintenance.py --exe dist/release/PostProcessingMagic.exe
+      - name: Static malware EXE test
+        run: .\.venv\Scripts\python.exe tests/smoke_static.py --exe dist/release/PostProcessingMagic.exe
       - name: Package executable and checksums
         run: .\.venv\Scripts\python.exe tools/package_release.py --exe dist/release/PostProcessingMagic.exe --output release-files
       - name: Publish versioned prerelease with Windows build

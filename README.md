@@ -2,11 +2,21 @@
 
 KI-gestütztes Entwicklungsprojekt für die lokale Nachbearbeitung von DFIR-Evidencen unter Windows.
 
-**Aktueller Stand: 0.24.0, Vorabversion vor V1.** Der Sammeltest von 0.24 erfolgt gemeinsam mit dem Nutzer. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
+**Dieser Entwicklungszweig: 0.25.0, experimentelle statische Malware-Analyse.** Die getrennte Version 0.24.0 bleibt für den laufenden Wartungstest verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
 
-[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.24.0](docs/releases/0.24.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
+[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.25.0](docs/releases/0.25.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
 
-## Neu in 0.24.0
+## Neu in 0.25.0 – separater Entwicklungsstand
+
+- Bereichswechsel: blaue Forensik mit Schild und rote statische Analyse mit Totenkopf. Eigene Formulare, Module und Auftragshistorien, gemeinsame Toolverwaltung und serieller Worker.
+- Einzeldateien PDF, Office (Legacy OLE und OOXML) sowie Windows PE. Upload oder lokale Dateireferenz mit Picker, maximal 256 MiB. Signaturprüfung und neutrale Arbeitskopie, Original unverändert.
+- Bearbeitbarer Malware-Baukasten mit geordneten internen Prüfungen: Metadaten/SHA-1/SHA-256, begrenzte Entropie-/Strings-Suche, PDF-Schlüsselwörter, Office-Verzeichnis ohne Entpacken und PE-Header/Sektionstabelle. Leerer Start; passende Vorschläge erscheinen erst beim Anlegen eines Moduls.
+- Persistente Queue, echte abgeschlossene Schritte, SSE-Terminal, Abbruch, HTML-/JSON-Berichte und optionales Ergebnis-ZIP ohne Sample. Lokale Ergebnisanzeige und spätere Archivierung.
+- Schema 3 für Konfigurationen mit Malware-Modulen; alte Forensik-Dateien bleiben importierbar. Externe Toolreferenzen samt Parametern können als Entwurf gespeichert werden und sperren Run. PDFID-/oleid-Adapter folgen nach Abstimmung.
+
+**Grenze:** begrenzte statische Triage, keine Malware-Erkennung oder Isolation. Keine Ausführung von Eingangsdateien, Makros, Skripten oder eingebetteten Inhalten. Kein automatischer Internetzugriff. Der bestehende Administratorstart ist keine Sandbox; externe Tools und freie PowerShell werden im Malware-Runner dieser Version nicht gestartet. [Architektur und Grenzen 0.25](docs/MALWARE_025.md).
+
+## Wartung aus 0.24.0
 
 - **Diagnosepaket mit Vorschau:** im Serverfenster und unter Einstellungen → Verarbeitung. App-/Systemversion, Server-/Workerstatus, Auftragszähler und bereinigte technische Ereignisse. Alle enthaltenen Texte vor dem ZIP-Export prüfen. Keine Tokens, Evidenzen, Ergebnisse, Toolbefehle/-ausgaben oder Feedbacktexte. Unbekannte Logdetails werden ausgelassen; Export entspricht exakt der Vorschau. Kein automatischer Versand.
 - **Lokales Feedback:** Button oben in der Web-Leiste für Bugs, Wünsche und allgemeines Feedback. Lokal speichern, letzte 100 Einträge ansehen, bis zu 1.000 Einträge als JSON exportieren. Eingegebene Texte bleiben unverändert; keine automatischen Anhänge oder Übermittlung.
@@ -27,7 +37,7 @@ Nach jedem Serverstart neuer Access Token; **Browser öffnen** verwendet automat
 
 ## Evidence-Aufbereitung
 
-Version 1 konzentriert sich auf **ZIP-Dateien mit KAPE-Targets**. E01/VMDK erscheinen höchstens deaktiviert als geplant. Eigene ZIP wählen oder eine lokale ZIP auf dem Server referenzieren, Aufwand auswählen und **Run** klicken. Nur vollständig konfigurierte Modi sind auswählbar.
+Der Forensik-Bereich konzentriert sich weiterhin auf **ZIP-Dateien mit KAPE-Targets**. E01/VMDK erscheinen höchstens deaktiviert als geplant. Eigene ZIP wählen oder eine lokale ZIP auf dem Server referenzieren, Aufwand auswählen und **Run** klicken. Nur vollständig konfigurierte Modi sind auswählbar.
 
 - Toolnamen und absolute Serverpfade im Browser verwalten, mit Datei-/Ordner-Picker und Pfadprüfung. Eingebundene Tools lassen sich nicht versehentlich löschen.
 - Modi in **Import, Verarbeitung und Export** konfigurieren: relatives Entpackziel, geordnete Befehlsblöcke, Ergebnisordner. Schritte einfügen, verschieben und entfernen. Kein PS1-Editieren erforderlich.
