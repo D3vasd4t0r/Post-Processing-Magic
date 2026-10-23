@@ -193,7 +193,7 @@ def preview_csv(path: Path, *, search: str = "", offset: int = 0, limit: int = 2
     has_more = offset + len(rows) < matched_rows
     reason = partial_reason or ("page_limit" if has_more else None)
     return {
-        "columns": columns, "rows": rows, "encoding": encoding, "delimiter": delimiter,
+        "columns": columns, "column_types": infer_column_types(columns, window), "rows": rows, "encoding": encoding, "delimiter": delimiter,
         "offset": offset, "limit": limit, "next_offset": offset + len(rows) if has_more else None,
         "has_more": has_more, "partial": reason is not None,
         "partial_reason": reason, "scanned_rows": len(window), "matched_rows": matched_rows,
@@ -224,3 +224,19 @@ def _sort_value(value, kind):
         return (result.tzinfo is not None, result.isoformat() if result.tzinfo is None else result.timestamp())
     except (ValueError, OverflowError):
         return None
+
+
+def infer_column_types(columns, rows):
+    """Conservative hints from the complete bounded window, never just one page."""
+    kinds=[]
+    for index in range(len(columns)):
+        values=[row["values"][index] for row in rows if index < len(row["values"]) and row["values"][index]]
+        if not values:
+            kinds.append("text")
+        elif all(_sort_value(value,"time") is not None for value in values) and len({datetime.fromisoformat(value).tzinfo is not None for value in values})==1:
+            kinds.append("time")
+        elif all(_sort_value(value,"number") is not None and not re.match(r"^[+-]?0[0-9]",value.strip()) for value in values):
+            kinds.append("number")
+        else:
+            kinds.append("text")
+    return kinds

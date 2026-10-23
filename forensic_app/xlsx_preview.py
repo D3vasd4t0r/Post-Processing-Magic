@@ -15,7 +15,7 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from forensic_app.csv_preview import _sort_value
+from forensic_app.csv_preview import _sort_value, infer_column_types
 from forensic_app.workspaces import no_links
 
 MAX_FILE_BYTES = 64 * 1024**2
@@ -377,6 +377,7 @@ def preview_xlsx(
     else:
         columns = rows[0]["values"]
         data = rows[1:]
+    column_types = infer_column_types(columns,data)
     scanned_rows = len(data)
     query = search.casefold()
     if query:
@@ -396,7 +397,7 @@ def preview_xlsx(
     visible_sheets = [{key: value for key, value in item.items() if key != "_part"}
                       for item in sheets]
     return {
-        "sheets": visible_sheets, "sheet_id": sheet_id, "columns": columns, "rows": page,
+        "sheets": visible_sheets, "sheet_id": sheet_id, "columns": columns, "column_types": column_types, "rows": page,
         "offset": offset, "limit": limit, "next_offset": offset + len(page) if has_more else None,
         "has_more": has_more, "partial": partial_reason is not None,
         "partial_reason": partial_reason, "scanned_rows": scanned_rows,

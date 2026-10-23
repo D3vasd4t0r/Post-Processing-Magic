@@ -127,3 +127,13 @@ def test_sort_and_filter_apply_before_page_and_preserve_values(tmp_path):
     for options in ({"sort_column": 4}, {"sort_column": True}, {"sort_kind": "eval"}):
         with pytest.raises(csv_preview.CSVPreviewError):
             csv_preview.preview_csv(path, **options)
+
+
+def test_column_hints_use_entire_window_and_keep_ambiguous_values_as_text(tmp_path):
+    path=tmp_path/'types.csv'
+    path.write_text('Number,ISO,Identifier,Mixed\n'+''.join(f'{i},2026-01-01,000{i},'+(str(i) if i<26 else 'not-number')+'\n' for i in range(1,28)),encoding='utf-8')
+    result=csv_preview.preview_csv(path,limit=2)
+    assert result['column_types']==['number','time','text','text']
+    assert result['scanned_rows']==27
+    path.write_text('Time\n2026-01-01T00:00:00\n2026-01-01T00:00:00Z\n',encoding='utf-8')
+    assert csv_preview.preview_csv(path)['column_types']==['text']

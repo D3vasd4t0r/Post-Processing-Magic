@@ -1,4 +1,4 @@
 """Local forensic service bootstrap; analysis pipelines are not implemented yet."""
 
-__version__ = "0.28.0"
+__version__ = "0.29.0"
 

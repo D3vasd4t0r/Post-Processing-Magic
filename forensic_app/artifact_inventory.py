@@ -15,7 +15,7 @@ MAX_ENTRIES = 500_000
 MAX_SECONDS = 10.0
 MAX_SAMPLES_PER_GROUP = 5
 MAX_SAMPLE_PATH_LENGTH = 240
-CLASSIFIER_VERSION = 2
+CLASSIFIER_VERSION = 3
 
 GROUP_LABELS = {
     "evtx": "Windows-Ereignisprotokolle (.evtx)",
@@ -29,6 +29,8 @@ GROUP_LABELS = {
     "cloud_client": "Cloud-Client-Metadaten (bekannte Pfade)",
     "remote_app": "Fernwartungs-App-Logs (bekannte Pfade)",
     "setupapi": "Geräteinstallationslog",
+    "windows_search": "Windows-Suchindex (Datenbankdatei)",
+    "activities_cache": "Windows-Aktivitätsdatenbank (Datei gefunden)",
     "other": "Weitere Dateien",
 }
 
@@ -146,6 +148,12 @@ def _known_windows_group(parts):
             and path[1] == "teamviewer" and re.fullmatch(r"connections[^/]*\.txt", name)):
         return "remote_app"
 
+    if path == ("programdata", "microsoft", "search", "data", "applications", "windows", "windows.edb"):
+        return "windows_search"
+    if (path[0] == "users" and len(profile) == 5
+            and profile[:3] == ("appdata", "local", "connecteddevicesplatform")
+            and name == "activitiescache.db"):
+        return "activities_cache"
     if path == ("windows", "inf", "setupapi.dev.log"):
         return "setupapi"
     return None

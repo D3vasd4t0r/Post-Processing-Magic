@@ -41,7 +41,7 @@ def test_inventory_classifies_extracted_tree_without_reading_contents(tmp_path, 
     assert {key: group["files"] for key, group in groups.items() if group["files"]} == {
         "evtx": 1, "mft": 1, "prefetch": 1, "registry": 4, "other": 2,
     }
-    assert result["schema_version"] == 1 and result["classifier_version"] == 2
+    assert result["schema_version"] == 1 and result["classifier_version"] == 3
     assert groups["registry"]["bytes"] == 14 + 15 + 16 + 17
     assert "kein Nachweis" in result["scope_note"]
     for group in groups.values():
@@ -191,3 +191,18 @@ def test_root_must_be_real_directory(tmp_path):
     file.write_bytes(b"synthetic")
     with pytest.raises(ValueError, match="regular directory"):
         collect_inventory(file)
+
+
+def test_search_and_activities_are_exact_path_groups(tmp_path):
+    root=tmp_path/'extracted'
+    for volume in ['C','G']:
+        _file(root,volume+'/ProgramData/Microsoft/Search/Data/Applications/Windows/Windows.edb')
+        _file(root,volume+'/Users/A/AppData/Local/ConnectedDevicesPlatform/K/ActivitiesCache.db')
+    for name in ['C/Temp/Windows.edb','C/Archive/ProgramData/Microsoft/Search/Data/Applications/Windows/Windows.edb','C/Users/A/Downloads/ActivitiesCache.db','C/Users/A/AppData/Local/ConnectedDevicesPlatform/ActivitiesCache.db']:
+        _file(root,name)
+    result=collect_inventory(root)
+    assert result['classifier_version']==3
+    assert result['groups']['windows_search']['files']==2
+    assert result['groups']['activities_cache']['files']==2
+    assert result['groups']['other']['files']==4
+    assert result['files']==8

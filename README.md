@@ -2,17 +2,15 @@
 
 KI-gestütztes Entwicklungsprojekt für die lokale Nachbearbeitung von DFIR-Evidencen unter Windows.
 
-**Dieser Entwicklungszweig: 0.28.0, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
+**Dieser Entwicklungszweig: 0.29.0, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
 
-[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.28.0](docs/releases/0.28.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
+[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.29.0](docs/releases/0.29.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
 
-## Was ist neu in 0.28.0?
+## Was ist neu in 0.29.0?
 
-- Eigener Ergebnis-Reiter mit vergrößerbarer Tabelle, Datei-/XLSX-Blattwahl und Sortierung nach Text, Zahl oder ISO-Zeit. Filter und Sortierung vor Paginierung im begrenzten Ausschnitt; Originalwerte bleiben erhalten.
-- Begrenzte interne XLSX-Vorschau ohne Office, Formelberechnung oder Netzwerk. Nur gespeicherte Formelwerte; Excel-Datumsserien bleiben roh. CSV bleibt auf 1 MiB / 2.000 Datenzeilen begrenzt, XLSX auf 64 MiB Paket und 2.000 Datenzeilen, beide auf 64 Spalten.
-- Optionaler lokaler Start von Timeline Explorer für CSV und EZViewer für XLSX auf bewussten Klick. Gemeinsame editierbare Toolpfade, getesteter Datei-Aufruf für Build 2026.5.0; unbekannte EXE-/DLL-Versionen bleiben gesperrt. Kein automatischer Download oder Start, keine Sandbox.
-- Sieben weitere pfadgebundene Artefaktgruppen im frisch entpackten Eingang: LNK/Jump Lists, SRUM, Papierkorb, Browserprofile, Cloud-Client-Metadaten, Fernwartungslogs und Geräteinstallationslog. Keine Inhaltsbefunde und keine Nachinventur alter Aufträge.
-- HTML-Berichtsblöcke einzeln einklappbar, unabhängige vollständige Druckdarstellung. Hohe Komprimierung im Browser für neue Aufträge vorausgewählt und abwählbar; alte Snapshots und API-Standard bleiben unverändert.
+- Getrennte CSV-/XLSX-Untertabs und Dateilisten in der Ergebnisansicht.
+- Sortierung per Tabellenüberschrift (auf-/absteigend), mit Pfeil, Tastaturbedienung und Fokus. Konservative Sortiertypen aus dem gesamten begrenzten Ausschnitt; optionaler Typwechsel direkt im Header, keine Sortier-Choicebox.
+- Zwei zusätzliche enge Pfadgruppen: Windows-Suchindex und Windows-Aktivitätsdatenbank. Nur Dateifunde, keine Inhalts- oder Aktivitätsbefunde; Altaufträge bleiben unverändert.
 
 ## Funktionsumfang
 

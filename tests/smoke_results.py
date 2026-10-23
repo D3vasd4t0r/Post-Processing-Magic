@@ -62,9 +62,9 @@ def main():
         assert b'<details open>' in html and b'print-content' in html
         assert not api(base+'/viewer?path=own.csv')['available']
         assert api('/api/settings/viewers')['viewers'][0]['tool'] is None
-        assert state['input_inventory']['classifier_version']==2
+        assert state['input_inventory']['classifier_version']==3
         session.stop()
-        report={'passed':True,'version':__version__,'checks':['real ZIP worker','recorded result files','CSV numeric before page','XLSX sheet and numeric sort','collapsible and print report','missing viewer blocked','no automatic viewer config','inventory classifier 2']}
+        report={'passed':True,'version':__version__,'checks':['real ZIP worker','recorded result files','CSV numeric before page','XLSX sheet and numeric sort','collapsible and print report','missing viewer blocked','no automatic viewer config','inventory classifier 3']}
         (folder/'report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
         print(json.dumps({'passed':True,'report':str(folder/'report.json'),'checks':len(report['checks'])}))
     finally:
