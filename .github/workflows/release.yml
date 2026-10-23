@@ -2,7 +2,7 @@ name: Windows release
 on:
   push:
     branches: [main, codex/malware-025]
-    paths: [pyproject.toml, 'forensic_app/**', 'tests/**', 'docs/releases/**', '.github/workflows/release.yml']
+    paths: [build.ps1, pyproject.toml, 'forensic_app/**', 'tests/**', 'docs/releases/**', '.github/workflows/release.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -53,3 +53,15 @@ jobs:
           if ($LASTEXITCODE -eq 0) { Write-Output 'Release already exists; no replacement.'; exit 0 }
           gh release create "v$releaseVersion" "release-files/PostProcessingMagic-$releaseVersion-Windows.zip" "release-files/PostProcessingMagic-$releaseVersion-Windows.sha256.txt" "dist/release/build-environment.txt" --target $env:RELEASE_COMMIT --title "Post-Processing-Magic $releaseVersion" --notes-file "docs/releases/$releaseVersion.md" --prerelease
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
+
+      - name: Point previous release to desktop hotfix
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $releaseVersion = (& .\.venv\Scripts\python.exe -c 'from forensic_app import __version__; print(__version__)').Trim()
+          if ($releaseVersion -eq '0.25.2') {
+            gh release edit v0.25.1 --title "Post-Processing-Magic 0.25.1 (ersetzt durch 0.25.2)" --notes-file docs/releases/0.25.1.md
+            if ($LASTEXITCODE -ne 0) { throw 'Previous release notice failed' }
+          }

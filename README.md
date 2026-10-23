@@ -2,9 +2,15 @@
 
 KI-gestütztes Entwicklungsprojekt für die lokale Nachbearbeitung von DFIR-Evidencen unter Windows.
 
-**Dieser Entwicklungszweig: 0.25.1, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
+**Dieser Entwicklungszweig: 0.25.2, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
 
-[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.25.1](docs/releases/0.25.1.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
+[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.25.2](docs/releases/0.25.2.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
+
+## Korrekturen in 0.25.2
+
+- SSL-Policydatei bei betroffenen Python-Distributionen im Windows-Paket mitliefern: Desktop-Statusabfrage funktioniert.
+- Beenden-Button bleibt vollständig sichtbar; Logbereich passt seine Höhe an.
+- Konfigurationstest von 0.25.1 vom Nutzer erfolgreich bestätigt.
 
 ## Neu in 0.25.1 – zentrale Einstellungen und eine Konfigurationsdatei
 
@@ -85,3 +91,7 @@ Das Buildskript prüft pytest/Ruff und bündelt Python, Tcl/Tk und Weboberfläch
 Pro Version README und `docs/releases/<Version>.md` aktualisieren sowie Versionsnummer in `pyproject.toml` und `forensic_app/__init__.py` angleichen. Der Windows-Workflow baut und prüft bei einem entsprechenden Push auf `main` den Stand und erstellt einen versionierten GitHub-Vorabrelease mit Windows-ZIP, SHA-256-Prüfsumme und Build-Paketinventar. Vorhandene Releases werden nicht überschrieben. Google Drive bleibt ein zusätzlicher Downloadkanal in Versionsordnern. Testanleitungen und aktueller Instanztoken werden direkt im Chat bereitgestellt, niemals ins Repository geschrieben.
 
 Siehe [AGENTS.md](AGENTS.md) für Entwicklungsgrenzen und [VALIDATION.md](docs/VALIDATION.md) für die tatsächlichen Prüfungen. [MIT-Lizenz](LICENSE).
+
+Buildhinweis: build.ps1 übernimmt bei Python-Distributionen mit zusätzlicher SSL-Policydatei diese Datei ins EXE-Paket, damit auch das Desktopfenster SSL korrekt initialisieren kann.
+
+Desktop-Hotfix: Der Beenden-Button behält seine volle Höhe; beim Verkleinern schrumpft der Logbereich und der Fußzeilentext bricht um.

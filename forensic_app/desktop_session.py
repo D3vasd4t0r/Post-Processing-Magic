@@ -6,6 +6,7 @@ import ssl
 import subprocess
 import sys
 import time
+import traceback
 from collections import deque
 from threading import Lock, Thread
 from urllib.request import Request, urlopen
@@ -133,6 +134,12 @@ class DesktopSession:
                          administrator=system['administrator'],control=control,queue=queue,stopping=self.stopping,runtime=system.get('runtime',{}))
         except (OSError,ValueError,KeyError) as exc:
             self.ready = False
+            # Stack frames identify the failing operation without serializing credentials.
+            diagnostic = ''.join(traceback.format_tb(exc.__traceback__)) + type(exc).__name__ + ': ' + str(exc)
+            try:
+                (self.root/'logs/desktop-connection-error.txt').write_text(diagnostic,encoding='utf-8')
+            except OSError:
+                pass
             if time.monotonic()-self.started_at > 30:
                 state['problem'] = 'Server noch nicht erreichbar: '+str(exc)
         return state

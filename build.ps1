@@ -14,7 +14,12 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Lint fehlgeschlagen.' }
     # A fresh workspace avoids locked remnants from earlier builds and antivirus scans.
     $buildDirectory = Join-Path $PSScriptRoot ('build/' + [guid]::NewGuid().ToString('N'))
-    & $Python -m PyInstaller --noconfirm --noupx --onefile --windowed --icon 'forensic_app/assets/shield.ico' --name PostProcessingMagic --distpath $OutputDirectory --workpath $buildDirectory --add-data 'forensic_app/web:forensic_app/web' --add-data 'forensic_app/assets:forensic_app/assets' --collect-submodules uvicorn run_app.py
+    # Some Python distributions carry an additional SSL trust-policy file.
+    # ssl.SSLContext loads it relative to ssl.__file__, including in a frozen app.
+    $sslPolicy = & $Python -c "import pathlib, ssl; p=pathlib.Path(ssl.__file__).with_name('codex-rejected-cas.pem'); print(p if p.is_file() else '')"
+    $sslData = @()
+    if ($sslPolicy) { $sslData = @('--add-data', ($sslPolicy.Trim() + ';.')) }
+    & $Python -m PyInstaller @sslData --noconfirm --noupx --onefile --windowed --icon 'forensic_app/assets/shield.ico' --name PostProcessingMagic --distpath $OutputDirectory --workpath $buildDirectory --add-data 'forensic_app/web:forensic_app/web' --add-data 'forensic_app/assets:forensic_app/assets' --collect-submodules uvicorn run_app.py
     if ($LASTEXITCODE -ne 0) { throw 'PyInstaller-Build fehlgeschlagen.' }
     & $Python -m pip freeze | Set-Content -LiteralPath (Join-Path $OutputDirectory 'build-environment.txt') -Encoding utf8
     if ($LASTEXITCODE -ne 0) { throw 'Paketinventar fehlgeschlagen.' }
