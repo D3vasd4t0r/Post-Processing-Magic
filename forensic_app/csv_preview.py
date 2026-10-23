@@ -6,8 +6,11 @@ job. This module adds per-file link and resource checks; it is not a path resolv
 
 import codecs
 import os
+import re
 import stat
 import time
+from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from forensic_app.workspaces import no_links
@@ -108,7 +111,8 @@ def _records(text: str, delimiter: str, complete: bool, deadline: float):
         yield record_line, row
 
 
-def preview_csv(path: Path, *, search: str = "", offset: int = 0, limit: int = 25) -> dict:
+def preview_csv(path: Path, *, search: str = "", offset: int = 0, limit: int = 25,
+                sort_column: int | None = None, sort_kind: str = "text", descending: bool = False) -> dict:
     """Preview one authorized CSV. Search and offsets apply only to scanned rows.
 
     No total count is promised. ``partial`` means further rows may exist beyond a
@@ -164,31 +168,59 @@ def preview_csv(path: Path, *, search: str = "", offset: int = 0, limit: int = 2
         raise CSVPreviewError("CSV enthält keinen vollständigen Kopfdatensatz.") from exc
     if len(columns) == 1 and not columns[0]:
         raise CSVPreviewError("CSV-Kopfdatensatz ist leer.")
+    if sort_kind not in ("text", "number", "time") or (sort_column is not None and
+            (type(sort_column) is not int or not 0 <= sort_column < len(columns))):
+        raise CSVPreviewError("Sortierspalte oder Sortiertyp ist ungültig.")
     query = search.casefold()
-    rows = []
-    scanned_rows = matched_rows = 0
+    window = []
     partial_reason = "read_limit" if truncated_bytes else None
-    has_more = False
     for line, values in records:
-        if scanned_rows >= MAX_ROWS:
+        if len(window) >= MAX_ROWS:
             partial_reason = "row_limit"
             break
-        scanned_rows += 1
-        if query and not any(query in value.casefold() for value in values):
-            continue
-        matched_rows += 1
-        if matched_rows <= offset:
-            continue
-        if len(rows) >= limit:
-            has_more = True
-            partial_reason = "page_limit"
-            break
-        rows.append({"line": line, "values": values})
+        window.append({"line": line, "values": values})
+    rows = [row for row in window if not query or any(query in value.casefold() for value in row["values"])]
+    if sort_column is not None:
+        valid, invalid = [], []
+        for row in rows:
+            value = row["values"][sort_column] if sort_column < len(row["values"]) else ""
+            key = _sort_value(value, sort_kind)
+            (invalid if key is None else valid).append((key, row))
+        valid.sort(key=lambda item: item[0], reverse=descending)
+        rows = [row for _, row in valid + invalid]
+    matched_rows = len(rows)
+    rows = rows[offset:offset + limit]
+    has_more = offset + len(rows) < matched_rows
+    reason = partial_reason or ("page_limit" if has_more else None)
     return {
         "columns": columns, "rows": rows, "encoding": encoding, "delimiter": delimiter,
         "offset": offset, "limit": limit, "next_offset": offset + len(rows) if has_more else None,
-        "has_more": has_more, "partial": partial_reason is not None,
-        "partial_reason": partial_reason, "scanned_rows": scanned_rows,
-        "note": "Suche und Seiten gelten nur für den begrenzt geprüften Dateiausschnitt."
-        if partial_reason else "Dateiende innerhalb der Vorschau erreicht.",
+        "has_more": has_more, "partial": reason is not None,
+        "partial_reason": reason, "scanned_rows": len(window), "matched_rows": matched_rows,
+        "note": "Filter und Sortierung gelten vor der Seitenteilung für den begrenzten Dateiausschnitt. "
+                "Zahlen: Dezimalpunkt, keine Tausendertrenner. Zeit: ISO 8601; Werte ohne und mit Zeitzone getrennt gruppiert, ohne erfundene Zeitzone. "
+                "Leere/ungültige Werte stehen stabil am Ende.",
     }
+
+
+def _sort_value(value, kind):
+    if not value:
+        return None
+    if kind == "text":
+        return value.casefold()
+    if kind == "number":
+        if not re.fullmatch(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?", value.strip()):
+            return None
+        try:
+            result = Decimal(value)
+            return result if result.is_finite() else None
+        except InvalidOperation:
+            return None
+    try:
+        # Keep timezone-bearing values in a separate group: no invented timezone.
+        if not re.match(r"^\d{4}-\d{2}-\d{2}(?:[T ]|$)", value):
+            return None
+        result = datetime.fromisoformat(value)
+        return (result.tzinfo is not None, result.isoformat() if result.tzinfo is None else result.timestamp())
+    except (ValueError, OverflowError):
+        return None

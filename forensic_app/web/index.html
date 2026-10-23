@@ -128,7 +128,7 @@
       .result-preview-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.9rem}
     .result-preview-table th,.result-preview-table td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid #35516d;overflow-wrap:anywhere;min-width:5rem}
     .result-preview-table th{color:#c9e6ff;background:#132b43}
-    #csv-search-button,#csv-next{margin-right:.5rem;margin-top:.5rem}
+    #result-workplace.maximized{position:fixed;inset:12px;z-index:1000;overflow:auto;background:var(--panel,#102238)} #result-workplace label{margin-top:10px}#result-workplace .fields{grid-template-columns:repeat(4,minmax(0,1fr))}#result-workplace.maximized #csv-table{height:max(280px,calc(100vh - 500px))}@media(max-width:800px){#result-workplace .fields{grid-template-columns:1fr 1fr}} #csv-table th{position:sticky;top:0} #csv-search-button,#csv-next{margin-right:.5rem;margin-top:.5rem}
   </style>
 </head>
 <body>
@@ -150,7 +150,7 @@
         <path d="m32 5 25 10v22c0 16-11 27-25 34C18 64 7 53 7 37V15Z" stroke="currentColor" stroke-width="2"/>
         <path d="M32 16v42M17 31h30" stroke="currentColor" stroke-opacity=".45"/><circle cx="32" cy="36" r="11" stroke="currentColor" stroke-width="1.5"/>
       </svg></span>
-      <div><div class="eyebrow">Digital Forensics · Workspace 0.27.0 · Entwicklung</div>
+      <div><div class="eyebrow">Digital Forensics · Workspace 0.28.0 · Entwicklung</div>
         <h1>Post-Processing-Magic</h1>
         <p>Dein Arbeitsbereich für die forensische Nachbearbeitung.</p></div>
     </div>
@@ -184,7 +184,7 @@
     <nav aria-label="Hauptnavigation">
       <button id="nav-overview" aria-current="page">Aufbereitung</button>
       <button id="nav-settings">Einstellungen</button>
-      <button id="nav-logs">Logs</button>
+      <button id="nav-logs">Logs</button><button id="nav-results">Ergebnisse</button>
       <button id="open-feedback">Feedback</button>
       <button id="logout" class="secondary" style="margin-left:auto">Abmelden</button>
     </nav>
@@ -232,7 +232,7 @@
         <p id="run-start-note" class="help">Limits werden geladen…</p>
         <details class="run-placeholder">
           <summary>Archivoptionen</summary>
-          <label><input id="allow-high-compression" type="checkbox" style="display:inline;width:auto">
+          <label><input id="allow-high-compression" type="checkbox" checked style="display:inline;width:auto">
             Hohe Kompression zulassen</label>
           <p class="help">Für bekannte eigene Sicherungen mit stark komprimierten Dateien (über 1000:1).
             Das eingestellte Entpacklimit sowie alle Pfad-/Speicherplatzprüfungen bleiben aktiv.</p>
@@ -460,6 +460,7 @@
         </section>
       </div>
       <div id="processing-settings" hidden>
+        <section class="panel"><h2>Lokale Ergebnis-Viewer</h2><p>Gemeinsame Toolpfade für beide Bereiche; im Konfigurationsexport enthalten. Speichern startet kein Programm. Getestet: 2026.5.0; andere Builds bleiben als ungeprüft gesperrt. Fremdviewer verarbeiten Ergebnisse außerhalb der internen Vorschau und erben die Serverrechte; keine Sandbox.</p><div id="viewer-settings"></div></section>
         <section class="panel">
           <h2>Warteschlange</h2>
           <p id="queue-status" role="status"></p>
@@ -592,7 +593,7 @@
         <div class="actions"><button id="jobs-prev" class="secondary" disabled>Vorherige Seite</button><button id="jobs-next" class="secondary" disabled>Nächste Seite</button></div>
         <label for="log-job">Aufbereitung auswählen (50 je Seite)</label>
         <select id="log-job"></select>
-        <p id="log-job-status" role="status"></p><div id="log-inventory"></div><section class="panel"><h3>CSV-Ergebnisvorschau</h3><p>Suche nur im begrenzten Vorschauausschnitt: maximal 1 MiB und 2.000 Datenzeilen. Keine Gesamtdateisuche, keine Formelauswertung.</p><button id="csv-load" type="button" disabled>CSV-Dateien anzeigen</button><label for="csv-file">Ergebnisdatei</label><select id="csv-file"></select><label for="csv-search">Im Vorschauausschnitt suchen</label><input id="csv-search" maxlength="128" type="search"><button id="csv-search-button" type="button" disabled>Suchen</button><button id="csv-next" type="button" disabled>Weitere Treffer im Ausschnitt</button><p id="csv-note" role="status"></p><div id="csv-table" style="overflow:auto;max-height:420px"></div></section>
+        <p id="log-job-status" role="status"></p><div id="log-inventory"></div>
         <pre id="log-job-error" hidden></pre>
         <h3>Kommandozeile</h3><pre id="log-job-command" class="terminal-command"></pre>
         <div class="terminal-bar"><span>Terminal · gespeicherte Ausgabe</span></div>
@@ -608,6 +609,24 @@
           <button id="log-explorer" class="secondary" hidden disabled>Show in Explorer</button></div>
         <p id="log-artifacts-note" class="help" role="status"></p>
         <p id="log-explorer-note" class="help" role="status"></p>
+      </section>
+    </div>
+    <div id="results" hidden>
+      <section id="result-workplace" class="panel">
+        <div class="heading"><h2>Ergebnis-Arbeitsplatz</h2><button id="results-maximize" type="button">Ansicht vergrößern</button></div>
+        <label for="result-job">Erfolgreicher Auftrag · letzte 50 im gewählten Bereich</label><select id="result-job"></select>
+        <p id="result-job-note" role="status"></p>
+        <p>Vorschau, keine Gesamtdateisuche: CSV maximal 1 MiB / 2.000 Zeilen; XLSX maximal 64 MiB Paket / 2.000 Datenzeilen, 64 Spalten. Originalwerte bleiben erhalten. Keine Formelauswertung oder externen Verbindungen. XLSX zeigt gespeicherte Formelwerte und rohe Excel-Datumsserien, ohne Neuberechnung oder Datumsumwandlung.</p>
+        <button id="csv-load" type="button" disabled>Dateiliste aktualisieren</button>
+        <label for="csv-file">Ergebnisdatei · CSV oder XLSX</label><select id="csv-file"></select>
+        <label for="result-sheet">XLSX-Blatt</label><select id="result-sheet" disabled></select>
+        <div class="fields"><div><label for="csv-search">Im eingelesenen Ausschnitt filtern</label><input id="csv-search" maxlength="128" type="search"></div>
+        <div><label for="result-sort">Sortierspalte</label><select id="result-sort"><option value="">Quellreihenfolge</option></select></div>
+        <div><label for="result-kind">Sortiertyp</label><select id="result-kind"><option value="text">Text</option><option value="number">Zahl · Dezimalpunkt</option><option value="time">Zeit · ISO 8601</option></select></div>
+        <div><label for="result-order">Reihenfolge</label><select id="result-order"><option value="asc">Aufsteigend</option><option value="desc">Absteigend</option></select></div></div>
+        <button id="csv-search-button" type="button" disabled>Filter / Sortierung anwenden</button><button id="result-first" type="button">Erste Seite</button><button id="csv-next" type="button" disabled>Weitere Treffer im Ausschnitt</button>
+        <p id="csv-note" role="status"></p><div id="csv-table" tabindex="0" style="overflow:auto;height:55vh"></div>
+        <button id="result-viewer" type="button" disabled>Im lokalen Viewer öffnen</button><p id="result-viewer-note">Viewer wird ausschließlich nach eigenem Klick auf dem Server gestartet; keine Sandbox. Aufrufvertrag wird vor Freigabe geprüft.</p>
       </section>
     </div>
   </main>
@@ -749,13 +768,14 @@
       if (typeof updateWorkspacePresentation === 'function') updateWorkspacePresentation();
       byId('malware-overview').hidden = workspaceArea !== 'malware' || page !== 'overview';
       byId('overview').hidden = page !== 'overview'; byId('settings').hidden = page !== 'settings';
-      byId('logs').hidden = page !== 'logs';
-      for (const name of ['overview','settings','logs']) {
+      byId('logs').hidden = page !== 'logs'; byId('results').hidden = page !== 'results';
+      for (const name of ['overview','settings','logs','results']) {
         if (name === page) byId('nav-'+name).setAttribute('aria-current','page');
         else byId('nav-'+name).removeAttribute('aria-current');
       }
       if (page === 'settings') {preparationRequest++; await showSettings(currentSettingsSection);}
       else if (page === 'logs') {preparationRequest++; await loadJobLogs();}
+      else if (page === 'results') {preparationRequest++; await loadResultJobs();}
       else if (workspaceArea === 'malware') {byId('overview').hidden = true; await loadStaticPreparation();}
       else await loadPreparation();
     }
@@ -873,6 +893,7 @@
       else if (section === 'malware') await loadStaticModules();
       else if (section === 'tools') await loadTools();
       else if (section === 'processing') {
+        await loadViewerSettings();
         const limits = await api('/api/settings/processing');
         byId('upload-limit-gib').value = limits.max_upload_bytes/1024**3;
         byId('extract-limit-tb').value = limits.max_extract_bytes/1e12;
@@ -1518,39 +1539,65 @@
       for (const group of Object.values(inventory.groups)) {const row=document.createElement('tr');for (const value of [group.label,group.files,group.bytes,group.samples.join('; ')]) {const cell=document.createElement('td');cell.textContent=String(value);row.append(cell);}table.append(row);}
       const scroll=document.createElement('div');scroll.style.overflowX='auto';scroll.append(table);box.append(scroll);
     }
-    let csvJob=null, csvGeneration=0, csvNext=null;
+    let csvJob=null, csvGeneration=0, csvNext=null, resultJobsGeneration=0, viewerGeneration=0;
+    const viewerKind=()=>byId('csv-file').value.toLowerCase().endsWith('.xlsx')?'ezviewer':'timeline';
+    async function loadViewerSettings(){const data=await api('/api/settings/viewers');byId('viewer-settings').replaceChildren();for(const viewer of data.viewers){const label=document.createElement('label');label.textContent=viewer.name;const input=document.createElement('input');input.id='viewer-path-'+viewer.kind;label.htmlFor=input.id;input.value=viewer.tool?.path || viewer.proposal;input.maxLength=4096;input.spellcheck=false;const button=document.createElement('button');button.textContent='Pfad speichern';button.type='button';const note=document.createElement('p');note.textContent=viewer.tool?'Als gemeinsames Tool gespeichert; Verfügbarkeit wird im Ergebnisbereich geprüft.':'Pfadvorschlag; noch nicht gespeichert.';button.addEventListener('click',()=>run(async()=>{const payload={name:viewer.name,path:input.value};const saved=await api('/api/settings/tools'+(viewer.tool?'/'+viewer.tool.id:''),viewer.tool?'PUT':'POST',payload);viewer.tool=saved;note.textContent='Pfad gespeichert. Kein Programm gestartet.';},button));byId('viewer-settings').append(label,input,button,note);}}
+    async function refreshResultViewer(){const ident=csvJob,path=byId('csv-file').value,generation=++viewerGeneration;byId('result-viewer').disabled=true;if(!ident||!path)return;const kind=viewerKind();byId('result-viewer').textContent=kind==='ezviewer'?'In EZViewer öffnen':'In Timeline Explorer öffnen';const state=await api('/api/jobs/'+ident+'/viewer?'+new URLSearchParams({path,kind}));if(generation!==viewerGeneration||ident!==csvJob||path!==byId('csv-file').value)return;byId('result-viewer').disabled=!state.available;byId('result-viewer-note').textContent=state.reason;}
     function resetCSV(state) {
+      viewerGeneration++;byId('result-viewer').disabled=true;byId('result-viewer-note').textContent='Datei auswählen; lokale Verfügbarkeit wird geprüft.';
       csvGeneration++; csvJob=state?.id || null; csvNext=null;
-      byId('csv-file').replaceChildren();byId('csv-table').replaceChildren();byId('csv-note').textContent='';
+      for(const id of ['csv-file','csv-table','result-sheet']) byId(id).replaceChildren();
+      byId('result-sort').replaceChildren(new Option('Quellreihenfolge',''));
+      byId('csv-search').value='';byId('csv-note').textContent='';byId('result-sheet').disabled=true;
       byId('csv-load').disabled=state?.status!=='succeeded';byId('csv-search-button').disabled=true;byId('csv-next').disabled=true;
+    }
+    async function loadResultJobs() {
+      const generation=++resultJobsGeneration, area=workspaceArea;
+      resetCSV(null);byId('result-job').replaceChildren();byId('result-job-note').textContent='Aufträge werden geladen…';
+      const data=await api('/api/jobs?status=succeeded&limit=50&workspace='+area);
+      if(generation!==resultJobsGeneration || area!==workspaceArea)return;
+      byId('result-job').replaceChildren(...data.jobs.map(item=>new Option(item.created_at+' · '+item.filename+' · '+item.id,item.id)));
+      byId('result-job-note').textContent=data.jobs.length?'Dateien stammen aus der gespeicherten Ergebnisliste dieses Auftrags.':'Keine erfolgreichen Aufträge in diesem Bereich.';
+      if(data.jobs.length) {resetCSV(data.jobs[0]);await loadResultFiles();}
     }
     async function showCSV(offset=0) {
       const ident=csvJob, generation=++csvGeneration, path=byId('csv-file').value;
       if (!ident || !path) return;
-      byId('csv-next').disabled=true;byId('csv-table').replaceChildren();byId('csv-note').textContent='Vorschauausschnitt wird geladen...';
-      const result=await api('/api/jobs/'+ident+'/csv?path='+encodeURIComponent(path)+'&search='+encodeURIComponent(byId('csv-search').value)+'&offset='+offset);
+      byId('csv-next').disabled=true;byId('csv-table').replaceChildren();byId('csv-note').textContent='Vorschauausschnitt wird geladen…';
+      const params=new URLSearchParams({path,format:'all',search:byId('csv-search').value,offset:String(offset),sort_kind:byId('result-kind').value,descending:String(byId('result-order').value==='desc')});
+      if(byId('result-sort').value!=='')params.set('sort_column',byId('result-sort').value);
+      if(byId('result-sheet').value)params.set('sheet_id',byId('result-sheet').value);
+      const result=await api('/api/jobs/'+ident+'/preview?'+params);
       if (generation!==csvGeneration || ident!==csvJob) return;
+      const sort=byId('result-sort').value;
+      byId('result-sort').replaceChildren(new Option('Quellreihenfolge',''),...result.columns.map((title,i)=>new Option((i+1)+' · '+title,String(i))));byId('result-sort').value=sort;
+      byId('result-sheet').replaceChildren(...(result.sheets || []).map(item=>new Option(item.name+' · '+item.state,item.id)));
+      byId('result-sheet').disabled=!result.sheets;if(result.sheet_id)byId('result-sheet').value=result.sheet_id;
       const table=document.createElement('table');table.className='result-preview-table';const head=document.createElement('tr');
       for (const title of ['Quellzeile',...result.columns]) {const cell=document.createElement('th');cell.textContent=title;head.append(cell);}table.append(head);
-      for (const item of result.rows) {const row=document.createElement('tr');for(const value of [item.line,...item.values]) {const cell=document.createElement('td');cell.textContent=String(value);row.append(cell);}table.append(row);}
-      byId('csv-table').replaceChildren(table);csvNext=result.next_offset;
-      byId('csv-next').disabled=!result.has_more;
-      byId('csv-note').textContent=result.note+' Kodierung: '+result.encoding+'; Trennzeichen: '+JSON.stringify(result.delimiter)+'; gelesene Datenzeilen: '+result.scanned_rows+'. '+(result.partial?'Begrenzte Vorschau: '+result.partial_reason:'Pruefumfang dieses Ausschnitts abgeschlossen.');
+      for (const item of result.rows) {const row=document.createElement('tr');for(const [i,value] of [item.line,...item.values].entries()) {const cell=document.createElement('td');cell.textContent=String(value);if(i>0 && item.formula_cells?.includes(i-1)){cell.title='Gespeicherter Formelwert; nicht berechnet';cell.append(document.createTextNode(' [Formelwert]'));}row.append(cell);}table.append(row);}
+      byId('csv-table').replaceChildren(table);csvNext=result.next_offset;byId('csv-next').disabled=!result.has_more;
+      byId('csv-note').textContent=result.note+' Eingelesene Datenzeilen: '+result.scanned_rows+'. '+(result.partial?'Begrenzte Vorschau: '+result.partial_reason:'Dateiende innerhalb der Vorschau erreicht.');
     }
-    byId('csv-load').addEventListener('click',()=>run(async()=>{
-      const ident=csvJob,generation=++csvGeneration;
-      if(!ident)return;
-      const result=await api('/api/jobs/'+ident+'/csv');if(generation!==csvGeneration || ident!==csvJob)return;
+    async function loadResultFiles() {
+      const ident=csvJob,generation=++csvGeneration;if(!ident)return;
+      const result=await api('/api/jobs/'+ident+'/preview?format=all');if(generation!==csvGeneration || ident!==csvJob)return;
       byId('csv-file').replaceChildren(...result.files.map(path=>new Option(path,path)));
       byId('csv-search-button').disabled=!result.files.length;
-      byId('csv-note').textContent=result.files.length?result.note:'Keine CSV-Ergebnisdatei erfasst.';
-      if(result.files.length)await showCSV();
-    },byId('csv-load')));
+      byId('csv-note').textContent=result.files.length?result.note:'Keine CSV-/XLSX-Ergebnisdatei erfasst.';
+      if(result.files.length){await refreshResultViewer();await showCSV();}
+    }
+    byId('csv-load').addEventListener('click',()=>run(loadResultFiles,byId('csv-load')));
     byId('csv-search-button').addEventListener('click',()=>run(()=>showCSV()));
-    byId('csv-file').addEventListener('change',()=>run(()=>showCSV()));
+    byId('csv-file').addEventListener('change',()=>run(async()=>{byId('result-sheet').replaceChildren();byId('result-sort').value='';byId('csv-search').value='';byId('result-viewer').disabled=true;await refreshResultViewer();await showCSV();}));
+    byId('result-sheet').addEventListener('change',()=>run(()=>{byId('result-sort').value='';return showCSV();}));
     byId('csv-next').addEventListener('click',()=>run(()=>showCSV(csvNext ?? 0)));
+    byId('result-viewer').addEventListener('click',()=>run(async()=>{if(!confirm('Ergebnis im externen Viewer auf dem Server öffnen? Der Viewer erbt Serverrechte; keine Sandbox.'))return;const state=await api('/api/jobs/'+csvJob+'/viewer','POST',{kind:viewerKind(),path:byId('csv-file').value});byId('result-viewer-note').textContent=state.message;},byId('result-viewer')));
+    byId('result-first').addEventListener('click',()=>run(()=>showCSV()));
+    byId('result-job').addEventListener('change',()=>run(async()=>{resetCSV({id:byId('result-job').value,status:'succeeded'});await loadResultFiles();}));
+    byId('nav-results').addEventListener('click',()=>run(()=>navigate('results')));
+    byId('results-maximize').addEventListener('click',()=>{const full=byId('result-workplace').classList.toggle('maximized');byId('results-maximize').textContent=full?'Ansicht verkleinern':'Ansicht vergrößern';});
     function renderLogState(state) {
-      resetCSV(state);
       renderInputInventory(state,'log-inventory');
       byId('log-job-status').textContent = state.phase+' · '+state.created_at+' · '+state.filename+' · '+state.id+' · '+[state.case_number,state.device_name].filter(Boolean).join(' · ');
       byId('log-job-error').hidden = !state.error_detail;
@@ -1562,7 +1609,7 @@
     async function loadSelectedLog() {
       const id = byId('log-job').value, generation = ++logsRequest;
       for (const card of byId('job-results').children) card.classList.toggle('selected',card.dataset.job === id);
-      resetExplorer('log'); resetCSV(null); byId('log-inventory').replaceChildren();
+      resetExplorer('log'); byId('log-inventory').replaceChildren();
       if (!id) return;
       const state = await api('/api/jobs/'+id);
       if (generation === logsRequest) {
@@ -1603,7 +1650,7 @@
       }
       if (data.jobs.some(state => state.id === previous)) byId('log-job').value = previous;
       if (!data.jobs.length) {
-        resetExplorer('log'); resetCSV(null); byId('log-inventory').replaceChildren();
+        resetExplorer('log'); byId('log-inventory').replaceChildren();
         byId('log-job-status').textContent = 'Keine Aufbereitungen für diese Filter gefunden.';
         for (const id of ['log-job-error','log-job-command','log-job-output']) byId(id).textContent = '';
         byId('log-job-error').hidden = true;

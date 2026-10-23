@@ -453,49 +453,27 @@ def jobs_router(service: JobService, authorize):
             raise HTTPException(503,'Worker ist nicht verfügbar.')
         return ArchiveQueue(service.store).request(ident)
 
+    @router.get('/{ident}/preview')
     @router.get('/{ident}/csv')
     def csv_result(ident: str, path: str | None = Query(default=None,max_length=240),
                    search: str = Query(default='',max_length=128), offset: int = Query(default=0,ge=0,le=2000),
-                   limit: int = Query(default=25,ge=1,le=50)):
-        from forensic_app.csv_preview import CSVPreviewError, preview_csv
-        # Hold the same transaction domain as cleanup admission while reading.
-        with closing(sqlite3.connect(service.storage.database)) as connection:
-            connection.execute('BEGIN IMMEDIATE')
-            if connection.execute('SELECT active FROM cleanup_state WHERE id=1').fetchone()[0]:
-                raise HTTPException(409,'Eine Bereinigung laeuft. Vorschau danach erneut laden.')
-            if connection.execute("SELECT 1 FROM archive_requests WHERE job_id=? AND status IN ('queued','running')",(ident,)).fetchone():
-                raise HTTPException(409,'Archivierung laeuft. Vorschau danach erneut laden.')
-            state=service.store.get(ident)
-            if state['status']!='succeeded':
-                raise HTTPException(409,'CSV-Vorschau nur fuer abgeschlossene erfolgreiche Auftraege.')
-            plan=service.store.plan(ident)
-            root,work,_=job_paths(service.storage,plan,ident)
-            report=root/'results'/ident/'Abschlussbericht.json'
-            try:
-                no_links(report)
-                with report.open('rb') as manifest:
-                    payload=manifest.read(16*1024**2+1)
-                if len(payload)>16*1024**2:
-                    raise CSVPreviewError('Ergebnisdateiliste zu gross fuer die begrenzte Vorschau.')
-                entries=json.loads(payload).get('files',[])
-                csv_files=[item['path'] for item in entries if str(item.get('path','')).lower().endswith('.csv')]
-                if path is None:
-                    return {'files':csv_files[:200],'partial':len(csv_files)>200,
-                            'note':'Maximal 200 CSV-Dateien aus der gespeicherten Ergebnisliste.'}
-                relative=PureWindowsPath(path)
-                if relative.drive or relative.root or any(part in ('','.','..') for part in path.replace('\\','/').split('/')) or any(c in path for c in ':\x00'):
-                    raise CSVPreviewError('Ungueltiger relativer Ergebnisdateipfad.')
-                if path not in csv_files:
-                    raise HTTPException(404,'CSV nicht in der gespeicherten Ergebnisliste dieses Auftrags.')
-                output=work/Path(*PureWindowsPath(plan['mode']['output_folder']).parts)
-                no_links(output)
-                candidate=output/Path(*relative.parts)
-                no_links(candidate)
-                if not candidate.resolve().is_relative_to(output.resolve()):
-                    raise CSVPreviewError('Datei liegt ausserhalb des Ergebnisordners.')
-                return preview_csv(candidate,search=search,offset=offset,limit=limit)
-            except (ValueError,OSError,KeyError,TypeError) as exc:
-                raise HTTPException(422,'CSV-Vorschau nicht verfuegbar: '+str(exc)) from exc
+                   limit: int = Query(default=25,ge=1,le=50),
+                   format: Literal['csv','xlsx','all'] = 'csv', sheet_id: str = Query(default='s1',max_length=32),
+                   sort_column: int | None = Query(default=None,ge=0,le=63),
+                   sort_kind: Literal['text','number','time'] = 'text', descending: bool = False):
+        from forensic_app.csv_preview import preview_csv
+        from forensic_app.result_access import result_file
+        from forensic_app.xlsx_preview import preview_xlsx
+        extensions=('.csv','.xlsx') if format=='all' else ('.'+format,)
+        with result_file(service.store,ident,path,extensions) as (files,candidate):
+            if candidate is None:
+                return {'files':files[:200],'partial':len(files)>200,
+                        'note':'Maximal 200 Dateien aus der gespeicherten Ergebnisliste.'}
+            options={'search':search,'offset':offset,'limit':limit,'sort_column':sort_column,
+                     'sort_kind':sort_kind,'descending':descending}
+            if candidate.suffix.lower()=='.xlsx':
+                return preview_xlsx(candidate,sheet_id=sheet_id,**options)
+            return preview_csv(candidate,**options)
 
     @router.get('/{ident}/report')
     def report(ident: str, format: Literal['html','json'] = 'html'):

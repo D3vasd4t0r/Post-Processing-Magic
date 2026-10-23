@@ -39,6 +39,8 @@ jobs:
         run: .\.venv\Scripts\python.exe tests/smoke_static.py --exe dist/release/PostProcessingMagic.exe
       - name: Unified configuration EXE test
         run: .\.venv\Scripts\python.exe tests/smoke_unified.py --exe dist/release/PostProcessingMagic.exe
+      - name: CSV and XLSX result EXE test
+        run: .\.venv\Scripts\python.exe tests/smoke_results.py --exe dist/release/PostProcessingMagic.exe
       - name: Package executable and checksums
         run: .\.venv\Scripts\python.exe tools/package_release.py --exe dist/release/PostProcessingMagic.exe --output release-files
       - name: Publish versioned prerelease with Windows build

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from forensic_app.artifact_inventory import collect_inventory
+from forensic_app.artifact_inventory import GROUP_LABELS, collect_inventory
 
 
 def _file(root, relative, size=1):
@@ -38,14 +38,84 @@ def test_inventory_classifies_extracted_tree_without_reading_contents(tmp_path, 
     assert result["complete"] and result["source"] == "extracted_zip_tree"
     assert result["files"] == 9 and result["bytes"] == sum(range(11, 20))
     groups = result["groups"]
-    assert {key: group["files"] for key, group in groups.items()} == {
+    assert {key: group["files"] for key, group in groups.items() if group["files"]} == {
         "evtx": 1, "mft": 1, "prefetch": 1, "registry": 4, "other": 2,
     }
+    assert result["schema_version"] == 1 and result["classifier_version"] == 2
     assert groups["registry"]["bytes"] == 14 + 15 + 16 + 17
     assert "kein Nachweis" in result["scope_note"]
     for group in groups.values():
         assert len(group["samples"]) <= 5
         assert all(not Path(sample).is_absolute() and "original.zip" not in sample for sample in group["samples"])
+
+
+def test_windows_artifact_groups_are_path_bound_and_disjoint(tmp_path, monkeypatch):
+    root = tmp_path / "Targets"
+    positives = {
+        "recent": [
+            "C/Users/Alice/AppData/Roaming/Microsoft/Windows/Recent/file.LNK",
+            "G/Users/Bob/AppData/Roaming/Microsoft/Windows/Recent/AutomaticDestinations/a.automaticDestinations-ms",
+            "case/C/Users/Alice/AppData/Roaming/Microsoft/Windows/Recent/CustomDestinations/a.customDestinations-ms",
+            "C/Users/Alice/AppData/Roaming/Microsoft/Office/Recent/file.lnk",
+        ],
+        "srum": ["C/Windows/System32/SRU/SRUDB.dat"],
+        "recycle_bin": ["G/$Recycle.Bin/S-1-5-21-123/$Iabc", "C/$Recycle.Bin/S-1-5-21-123/$Rabc"],
+        "browser_profile": [
+            "C/Users/Alice/AppData/Roaming/Mozilla/Firefox/Profiles/abc.default/places.sqlite",
+            "C/Users/Alice/AppData/Roaming/Mozilla/Firefox/Profiles/abc.default/places.sqlite-wal",
+            "C/Users/Alice/AppData/Local/Google/Chrome/User Data/Default/History",
+            "G/Users/Bob/AppData/Local/Microsoft/Edge/User Data/Profile 1/Bookmarks",
+            "case/C/Users/Alice/AppData/Local/BraveSoftware/Brave-Browser/User Data/Default/Sessions/Session_123",
+            "Users/Carol/AppData/Local/Google/Chrome/User Data/Default/Preferences",
+        ],
+        "cloud_client": [
+            "C/Users/Alice/AppData/Local/Google/DriveFS/account/metadata_sqlite_db",
+            "C/Users/Alice/AppData/Local/Microsoft/OneDrive/logs/a.odl",
+            "C/Users/Alice/AppData/Local/Microsoft/OneDrive/settings/personal/a.ini",
+            "G/Users/Bob/AppData/Local/Dropbox/info.json",
+        ],
+        "remote_app": [
+            "C/Users/Alice/AppData/Roaming/AnyDesk/connection_trace.txt",
+            "C/ProgramData/AnyDesk/connection_trace.txt",
+            "G/Program Files (x86)/TeamViewer/Connections_incoming.txt",
+        ],
+        "setupapi": ["C/Windows/inf/setupapi.dev.log", "Windows/inf/setupapi.dev.log"],
+    }
+    negatives = [
+        "C/Users/Alice/Desktop/file.lnk",
+        "C/Users/Alice/AppData/Roaming/Microsoft/Windows/Recent/Nested/file.lnk",
+        "C/Windows/Temp/SRUDB.dat",
+        "C/$Recycle.Bin/not-a-sid/$Iabc",
+        "C/Users/Alice/AppData/Local/OtherApp/Profile/History",
+        "C/Users/Alice/AppData/Local/Google/Chrome/History",
+        "C/Users/Alice/OneDrive/History",
+        "C/Users/Alice/Google Drive/info.json",
+        "C/Users/Alice/AppData/Local/Dropbox/other.json",
+        "C/Users/Alice/AppData/Roaming/AnyDesk/other.txt",
+        "C/Program Files/Other/connections.txt",
+        "C/Windows/Temp/setupapi.dev.log",
+        "C/Archive/Windows/inf/setupapi.dev.log",
+        "C/Archive/G/Windows/inf/setupapi.dev.log",
+    ]
+    all_paths = [path for paths in positives.values() for path in paths] + negatives
+    for index, path in enumerate(all_paths):
+        _file(root, path, index + 1)
+
+    def reject_read(*args, **kwargs):
+        raise AssertionError("Inventory must not open evidence contents")
+
+    monkeypatch.setattr(Path, "open", reject_read)
+    result = collect_inventory(root, max_samples_per_group=2)
+    assert result["complete"]
+    assert result["files"] == len(all_paths)
+    assert result["bytes"] == sum(range(1, len(all_paths) + 1))
+    assert set(result["groups"]) == set(GROUP_LABELS)
+    for group_id, paths in positives.items():
+        assert result["groups"][group_id]["files"] == len(paths)
+        assert len(result["groups"][group_id]["samples"]) == min(2, len(paths))
+    assert result["groups"]["other"]["files"] == len(negatives)
+    assert sum(group["files"] for group in result["groups"].values()) == result["files"]
+    assert sum(group["bytes"] for group in result["groups"].values()) == result["bytes"]
 
 
 def test_entry_budget_is_partial_and_samples_are_bounded(tmp_path, monkeypatch):

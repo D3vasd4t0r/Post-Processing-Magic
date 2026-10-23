@@ -112,3 +112,18 @@ def test_link_and_hardlink_rejected(tmp_path):
         pytest.skip("Symlinks are unavailable in this test environment")
     with pytest.raises(ValueError, match="Verknüpfung"):
         csv_preview.preview_csv(shortcut)
+
+
+def test_sort_and_filter_apply_before_page_and_preserve_values(tmp_path):
+    path = tmp_path / "sort.csv"
+    path.write_text("Name,Value,Time\nC,10,2026-01-03\nA,2,2026-01-01\nB,no,invalid\nD,1,2026-01-02\n", encoding="utf-8")
+    result = csv_preview.preview_csv(path, sort_column=1, sort_kind="number", limit=2)
+    assert [row["values"][1] for row in result["rows"]] == ["1", "2"]
+    assert result["scanned_rows"] == 4
+    assert csv_preview.preview_csv(path, sort_column=1, sort_kind="number", offset=2)["rows"][0]["values"][1] == "10"
+    result = csv_preview.preview_csv(path, sort_column=2, sort_kind="time", descending=True)
+    assert [row["values"][0] for row in result["rows"]] == ["C", "D", "A", "B"]
+    assert len(csv_preview.preview_csv(path, search="2026", limit=2)["rows"]) == 2
+    for options in ({"sort_column": 4}, {"sort_column": True}, {"sort_kind": "eval"}):
+        with pytest.raises(csv_preview.CSVPreviewError):
+            csv_preview.preview_csv(path, **options)

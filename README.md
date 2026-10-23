@@ -2,16 +2,17 @@
 
 KI-gestütztes Entwicklungsprojekt für die lokale Nachbearbeitung von DFIR-Evidencen unter Windows.
 
-**Dieser Entwicklungszweig: 0.27.0, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
+**Dieser Entwicklungszweig: 0.28.0, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
 
-[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.27.0](docs/releases/0.27.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
+[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.28.0](docs/releases/0.28.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
 
-## Was ist neu in 0.27.0?
+## Was ist neu in 0.28.0?
 
-- Gemeinsames blau-rotes Serverfenster mit Schild, Totenkopf und dekorativem Riss; bestehende Steuerung, Status, Logs und Infobereich bleiben erhalten.
-- Begrenzte CSV-Ergebnisvorschau im Logs-Tab: Ergebnisdatei waehlen, als Tabelle anzeigen und im Vorschauausschnitt suchen. Maximal 1 MiB/2.000 Datenzeilen, 64 Spalten und 4.096 Zeichen pro Feld. Keine Formelauswertung oder Gesamtdateisuche.
-- Artefaktgruppen aus dem frisch entpackten ZIP vor den Befehlen: Anzahl und logische Groesse fuer EVTX, MFT, Prefetch, erkannte Registry-Hives und weitere Dateien. Persistenter Snapshot mit Scope/Teilerfassungsgruenden in Jobansicht und Berichten. Alte Auftraege werden nicht nachtraeglich gescannt.
-- Neue Windows-ZIPs enthalten die README. Vorhandene Releasepakete bleiben unveraendert.
+- Eigener Ergebnis-Reiter mit vergrößerbarer Tabelle, Datei-/XLSX-Blattwahl und Sortierung nach Text, Zahl oder ISO-Zeit. Filter und Sortierung vor Paginierung im begrenzten Ausschnitt; Originalwerte bleiben erhalten.
+- Begrenzte interne XLSX-Vorschau ohne Office, Formelberechnung oder Netzwerk. Nur gespeicherte Formelwerte; Excel-Datumsserien bleiben roh. CSV bleibt auf 1 MiB / 2.000 Datenzeilen begrenzt, XLSX auf 64 MiB Paket und 2.000 Datenzeilen, beide auf 64 Spalten.
+- Optionaler lokaler Start von Timeline Explorer für CSV und EZViewer für XLSX auf bewussten Klick. Gemeinsame editierbare Toolpfade, getesteter Datei-Aufruf für Build 2026.5.0; unbekannte EXE-/DLL-Versionen bleiben gesperrt. Kein automatischer Download oder Start, keine Sandbox.
+- Sieben weitere pfadgebundene Artefaktgruppen im frisch entpackten Eingang: LNK/Jump Lists, SRUM, Papierkorb, Browserprofile, Cloud-Client-Metadaten, Fernwartungslogs und Geräteinstallationslog. Keine Inhaltsbefunde und keine Nachinventur alter Aufträge.
+- HTML-Berichtsblöcke einzeln einklappbar, unabhängige vollständige Druckdarstellung. Hohe Komprimierung im Browser für neue Aufträge vorausgewählt und abwählbar; alte Snapshots und API-Standard bleiben unverändert.
 
 ## Funktionsumfang
 
@@ -39,9 +40,9 @@ KI-gestütztes Entwicklungsprojekt für die lokale Nachbearbeitung von DFIR-Evid
 - **Servereinstellungen im Desktopfenster:** Port und lokalen/LAN-Zugriff speichern. Änderungen nach bewusstem Server-Stopp und erneutem Start. LAN verwendet Anmeldung und automatisch erzeugtes selbstsigniertes HTTPS; keine automatische Firewalländerung.
 - **Technische Logrotation:** Größe pro Datei 0,1–100 MB und 1–20 ältere Dateien einstellen. Wirksam nach Serverneustart; ausschließlich technische Serverlogs. Auftragslogs, Audit und Evidencen bleiben getrennt.
 
-### Ergebnisvorschau und Eingangsuebersicht
+### Ergebnisvorschau und Eingangsübersicht
 
-- CSV-Dateien aus erfolgreichen Auftraegen direkt im Logs-Tab begrenzt durchsuchen. Alle Werte werden als Text angezeigt; kein Excel-Start, keine Formelauswertung. Suche gilt nur fuer den begrenzten Ausschnitt.
+- CSV- und XLSX-Dateien erfolgreicher Aufträge im eigenen Ergebnis-Reiter begrenzt filtern und sortieren; XLSX mit Blattwahl. Alle Werte werden als Text angezeigt; kein Excel-Start, keine Formelauswertung. Suche gilt nur fuer den begrenzten Ausschnitt.
 - Unveraenderliche Metadatenuebersicht des frisch entpackten Forensik-Eingangs, vor Toolbefehlen. Dateinamens-/Pfadheuristik, keine Aussage zur Vollstaendigkeit der Sicherung oder zum Ursprungssystem. Altauftraege zeigen Nicht erfasst.
 - Optionale Fallnummer und Geraetename je Auftrag, unveraenderlich gespeichert und in Suche/Details/Berichten angezeigt. Forensik-Blockzeitlimit pro Befehl, inklusive Konfigurationstransfer und Altbestandsschutz.
 

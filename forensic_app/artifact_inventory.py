@@ -5,6 +5,7 @@ This module neither opens file contents nor reads the original ZIP archive.
 """
 
 import os
+import re
 import stat
 import time
 from datetime import UTC, datetime
@@ -14,12 +15,20 @@ MAX_ENTRIES = 500_000
 MAX_SECONDS = 10.0
 MAX_SAMPLES_PER_GROUP = 5
 MAX_SAMPLE_PATH_LENGTH = 240
+CLASSIFIER_VERSION = 2
 
 GROUP_LABELS = {
     "evtx": "Windows-Ereignisprotokolle (.evtx)",
     "mft": "MFT ($MFT)",
     "prefetch": "Prefetch (.pf)",
     "registry": "Registry-Hives (bekannte Pfade)",
+    "recent": "LNK/Jump Lists (bekannte Benutzerpfade)",
+    "srum": "SRUM-Datenbank (Datei gefunden)",
+    "recycle_bin": "Papierkorb-Dateien (lokal)",
+    "browser_profile": "Browser-Profildaten (bekannte Pfade)",
+    "cloud_client": "Cloud-Client-Metadaten (bekannte Pfade)",
+    "remote_app": "Fernwartungs-App-Logs (bekannte Pfade)",
+    "setupapi": "Geräteinstallationslog",
     "other": "Weitere Dateien",
 }
 
@@ -52,9 +61,102 @@ def _registry_path(parts):
     return False
 
 
+def _windows_parts(parts):
+    """Strip a possible KAPE/case prefix, but require a Windows volume root."""
+    lowered = tuple(part.casefold() for part in parts)
+    roots = {"users", "documents and settings", "windows", "programdata", "program files", "program files (x86)", "$recycle.bin"}
+    if lowered and lowered[0] in roots:
+        return lowered
+    for index, part in enumerate(lowered[:-1]):
+        if index > 1:
+            break
+        if re.fullmatch(r"[a-z]:?", part) and lowered[index + 1] in roots:
+            return lowered[index + 1:]
+    return ()
+
+
+def _profile_tail(parts):
+    if len(parts) >= 3 and parts[0] in {"users", "documents and settings"}:
+        return parts[2:]
+    return ()
+
+
+def _known_windows_group(parts):
+    """Classify only path-bound file names, without opening the files."""
+    path = _windows_parts(parts)
+    if not path:
+        return None
+    name = path[-1]
+    profile = _profile_tail(path)
+
+    if profile[:4] == ("appdata", "roaming", "microsoft", "windows"):
+        recent = profile[4:]
+        if recent == ("recent", name) and name.endswith(".lnk"):
+            return "recent"
+        if len(recent) == 3 and recent[0] == "recent":
+            if recent[1] == "automaticdestinations" and name.endswith(".automaticdestinations-ms"):
+                return "recent"
+            if recent[1] == "customdestinations" and name.endswith(".customdestinations-ms"):
+                return "recent"
+    if (profile[:4] == ("appdata", "roaming", "microsoft", "office")
+            and len(profile) == 6 and profile[4] == "recent" and name.endswith(".lnk")):
+        return "recent"
+
+    if path == ("windows", "system32", "sru", "srudb.dat"):
+        return "srum"
+    if (len(path) == 3 and path[0] == "$recycle.bin"
+            and re.fullmatch(r"s-1-\d+(?:-\d+)+", path[1])
+            and re.fullmatch(r"\$[ir].+", name)):
+        return "recycle_bin"
+
+    if (profile[:5] == ("appdata", "roaming", "mozilla", "firefox", "profiles")
+            and len(profile) == 7
+            and name in {"places.sqlite", "places.sqlite-wal", "places.sqlite-shm"}):
+        return "browser_profile"
+    chromium_roots = {
+        ("google", "chrome"),
+        ("microsoft", "edge"),
+        ("bravesoftware", "brave-browser"),
+    }
+    if profile[:2] == ("appdata", "local") and tuple(profile[2:4]) in chromium_roots:
+        browser = profile[4:]
+        if (len(browser) == 3 and browser[0] == "user data"
+                and name in {"history", "history-wal", "history-shm", "bookmarks", "preferences"}):
+            return "browser_profile"
+        if (len(browser) == 4 and browser[0] == "user data" and browser[2] == "sessions"
+                and name.startswith(("session_", "tabs_"))):
+            return "browser_profile"
+
+    if (profile[:4] == ("appdata", "local", "google", "drivefs")
+            and len(profile) == 6 and name in {
+            "metadata_sqlite_db", "metadata_sqlite_db-wal", "metadata_sqlite_db-shm"
+        }):
+        return "cloud_client"
+    if (profile[:4] == ("appdata", "local", "microsoft", "onedrive")
+            and len(profile) >= 6 and profile[4] in {"logs", "settings"}):
+        return "cloud_client"
+    if profile == ("appdata", "local", "dropbox", "info.json"):
+        return "cloud_client"
+
+    if profile == ("appdata", "roaming", "anydesk", "connection_trace.txt"):
+        return "remote_app"
+    if path == ("programdata", "anydesk", "connection_trace.txt"):
+        return "remote_app"
+    if (len(path) == 3 and path[0] in {"program files", "program files (x86)"}
+            and path[1] == "teamviewer" and re.fullmatch(r"connections[^/]*\.txt", name)):
+        return "remote_app"
+
+    if path == ("windows", "inf", "setupapi.dev.log"):
+        return "setupapi"
+    return None
+
+
 def _group_for(relative):
     parts = relative.parts
     name = parts[-1].casefold()
+    specific = _known_windows_group(parts)
+    if specific is not None:
+        return specific
     if name == "$mft":
         return "mft"
     if name.endswith(".evtx"):
@@ -93,6 +195,7 @@ def collect_inventory(
     }
     result = {
         "schema_version": 1,
+        "classifier_version": CLASSIFIER_VERSION,
         "source": "extracted_zip_tree",
         "scope_note": (
             "Heuristische Übersicht der im entpackten ZIP erfassten Dateien; "

@@ -388,3 +388,41 @@ def test_inventory_snapshot_before_commands_and_csv_api(setup,tmp_path,drive,sou
     assert inventory['files']==5
     store.update(ident,status='running')
     assert client.get(endpoint).status_code==409
+
+
+def test_compression_preselection_does_not_rewrite_existing_job_snapshots(setup):
+    client,storage,mode,_=setup
+    old=upload(client,mode).json()['id']
+    before=plan_for(storage,old)
+    new=client.post('/api/jobs',params={'mode_id':mode,'filename':'own.zip','allow_high_compression':True},content=archive_bytes(),headers={'Content-Type':'application/zip'}).json()['id']
+    assert plan_for(storage,new)['allow_high_compression'] is True
+    assert before['allow_high_compression'] is False
+    assert plan_for(storage,old)==before
+    assert plan_for(storage,new)['limits']==before['limits']
+
+
+def test_result_workplace_xlsx_authorization_and_sorting(setup):
+    import runpy
+    client, storage, mode, _ = setup
+    ident = upload(client, mode).json()['id']
+    store = JobStore(storage)
+    def runner(plan, work, check, emit):
+        output = work/'PostMortem'
+        output.mkdir()
+        runpy.run_path('tests/test_xlsx_preview.py')['package'](output/'own.xlsx')
+        (output/'own.csv').write_text('Value\n10\n2\n1\n',encoding='utf-8')
+        return 0
+    endpoint='/api/jobs/'+ident+'/preview'
+    assert client.get(endpoint).status_code==409
+    process_job(store,ident,store.plan(ident),threading.Event(),runner=runner)
+    catalog=client.get(endpoint,params={'format':'all'}).json()
+    assert sorted(catalog['files'])==['own.csv','own.xlsx']
+    result=client.get(endpoint,params={'format':'xlsx','path':'own.xlsx','sort_column':1,'sort_kind':'number','limit':1})
+    assert result.status_code==200,result.text
+    assert result.json()['rows'][0]['values']==['Alpha','2']
+    assert result.json()['sheets'][0]['id']=='s1'
+    assert client.get(endpoint,params={'format':'xlsx','path':'own.xlsx','sheet_id':'missing'}).status_code==422
+    assert client.get(endpoint,params={'format':'xlsx','path':'own.xlsx'},headers={'Authorization':''}).status_code==401
+    with sqlite3.connect(storage.database) as c:
+        c.execute("INSERT INTO archive_requests(job_id,status) VALUES (?,'queued')",(ident,))
+    assert client.get(endpoint,params={'format':'all'}).status_code==409

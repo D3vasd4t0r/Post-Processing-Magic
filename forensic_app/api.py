@@ -18,6 +18,7 @@ from forensic_app.malware_modes import MalwareModes, malware_router
 from forensic_app.modes import ModeStore, modes_router
 from forensic_app.processing_settings import ProcessingSettings, processing_settings_router
 from forensic_app.queue_control import QueueControl, queue_router
+from forensic_app.result_viewers import viewer_router
 from forensic_app.server_control import ServerControl
 from forensic_app.storage import Storage
 from forensic_app.storage_overview import StorageOverview, storage_overview_router
@@ -99,6 +100,7 @@ def create_app(storage: Storage, token: str, *, lan: bool = False, processing: b
     app.include_router(modes_router(mode_store, authorize))
     app.include_router(configuration_router(transfer, authorize))
     app.include_router(jobs_router(jobs, authorize))
+    app.include_router(viewer_router(jobs, authorize))
     app.include_router(feedback_router(FeedbackStore(storage),authorize))
     app.include_router(diagnostics_router(Diagnostics(storage,lambda:{'server_running':True,'worker_running':jobs.available(),'administrator':is_admin(),**(runtime or {})}),authorize))
     app.include_router(results_router(jobs))
