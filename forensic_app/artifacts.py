@@ -58,6 +58,13 @@ def render_report(report):
         ('App-Version',report.get('app_version')),('Modus',mode.get('name')),
         ('Beginn (UTC)',report.get('created_at_utc')),('Abschluss (UTC)',report.get('completed_at_utc')),
         ('Exitcode',report.get('exit_code')),('Fehler',report.get('error') or 'Keine gemeldet')]))]
+    inventory=report.get('input_inventory')
+    if inventory:
+        groups=inventory.get('groups',{})
+        rows=[(group['label'],group['files'],group['bytes'],'; '.join(group['samples'])) for group in groups.values()]
+        parts.append(section('Eingangsarchiv: Artefaktgruppen', '<p>'+escape(inventory['scope_note'])+'</p><p>'+escape('Vollstaendig erfasst' if inventory['complete'] else 'Teilerfassung: '+', '.join(inventory['partial_reasons']))+'</p>'+table(['Gruppe','Dateien','Logische Bytes','Relative Beispiele'],rows)))
+    elif plan.get('workspace','forensics')=='forensics':
+        parts.append(section('Eingangsarchiv: Artefaktgruppen','<p>Nicht erfasst. Original wurde nicht nachtraeglich gelesen.</p>'))
     for summary in report.get('finding_summaries',[]):
         inspector=summary['inspector']
         parts.append(section(inspector['name'],table(['Pruefumfang','Status'],[(inspector['scope'],inspector['status'])])+ '<p>'+escape(' '.join(inspector['limitations']))+'</p>'+table(['Merkmal','Wert'],list(summary['coverage'].items()))))
@@ -105,6 +112,7 @@ def prepare_report(store,ident,plan,command_runs,*,error=None):
     report = {'report_schema_version':1,'app_version':__version__,'job_id':ident,'input_filename':plan.get('filename','Evidence.zip'),
               'input':{'sha1':state.get('input_sha1'),'sha256':state.get('input_sha256'),'bytes':state['input_size']},
               'case_number':plan.get('case_number',''),'device_name':plan.get('device_name',''),
+              'input_inventory':state.get('input_inventory'),
               'configuration':plan,'created_at_utc':state['created_at'],'completed_at_utc':utc(),
               'command_runs':command_runs,'exit_code':state['exit_code'],'error':error,
               'directories':[],'directories_scope':'Unterordner im Ergebnisordner', 'work_directories':[],

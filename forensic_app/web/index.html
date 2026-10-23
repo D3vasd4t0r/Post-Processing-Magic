@@ -125,6 +125,10 @@
     body.malware select option{background:#2a1420;color:#ffe7ef}body.malware .note{background:#431f2e;border-left-color:#fc92b0;color:#f5d7e1}body.malware .badge{background:#56243a;color:#ffd8e5;border-color:#ab5772}
     body.malware .terminal-bar{background:#492034;border-color:#8d4d64}body.malware .terminal-output{background:#10080d;border-color:#8d4d64;color:#f7d5e1}body.malware .terminal-output:focus-visible{outline:2px solid #ffb7d0}
     body.malware progress::-webkit-progress-value{background:linear-gradient(90deg,#b84066,#ffa4c0)}body.malware .result-card{background:#381a29;border-color:#8b435e;border-left-color:#fa99b7}body.malware #job-search-count{background:#50263b;color:#ffe4ef;border-color:#a95a77}
+      .result-preview-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.9rem}
+    .result-preview-table th,.result-preview-table td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid #35516d;overflow-wrap:anywhere;min-width:5rem}
+    .result-preview-table th{color:#c9e6ff;background:#132b43}
+    #csv-search-button,#csv-next{margin-right:.5rem;margin-top:.5rem}
   </style>
 </head>
 <body>
@@ -146,7 +150,7 @@
         <path d="m32 5 25 10v22c0 16-11 27-25 34C18 64 7 53 7 37V15Z" stroke="currentColor" stroke-width="2"/>
         <path d="M32 16v42M17 31h30" stroke="currentColor" stroke-opacity=".45"/><circle cx="32" cy="36" r="11" stroke="currentColor" stroke-width="1.5"/>
       </svg></span>
-      <div><div class="eyebrow">Digital Forensics · Workspace 0.26.0 · Entwicklung</div>
+      <div><div class="eyebrow">Digital Forensics · Workspace 0.27.0 · Entwicklung</div>
         <h1>Post-Processing-Magic</h1>
         <p>Dein Arbeitsbereich für die forensische Nachbearbeitung.</p></div>
     </div>
@@ -260,7 +264,7 @@
         <progress id="run-total-progress" value="0" max="1" aria-describedby="run-progress-note"></progress>
         <label id="run-command-label" for="run-command-progress">Aktueller Befehl: noch keiner gestartet</label>
         <progress id="run-command-progress" value="0" max="100"></progress>
-        <p id="run-progress-note" class="run-status" role="status">Noch keine Aufbereitung gestartet.</p>
+        <p id="run-progress-note" class="run-status" role="status">Noch keine Aufbereitung gestartet.</p><div id="run-inventory"></div>
         <details id="run-error-panel" hidden>
           <summary>Fehlerdetails</summary>
           <pre id="run-error-detail"></pre>
@@ -588,7 +592,7 @@
         <div class="actions"><button id="jobs-prev" class="secondary" disabled>Vorherige Seite</button><button id="jobs-next" class="secondary" disabled>Nächste Seite</button></div>
         <label for="log-job">Aufbereitung auswählen (50 je Seite)</label>
         <select id="log-job"></select>
-        <p id="log-job-status" role="status"></p>
+        <p id="log-job-status" role="status"></p><div id="log-inventory"></div><section class="panel"><h3>CSV-Ergebnisvorschau</h3><p>Suche nur im begrenzten Vorschauausschnitt: maximal 1 MiB und 2.000 Datenzeilen. Keine Gesamtdateisuche, keine Formelauswertung.</p><button id="csv-load" type="button" disabled>CSV-Dateien anzeigen</button><label for="csv-file">Ergebnisdatei</label><select id="csv-file"></select><label for="csv-search">Im Vorschauausschnitt suchen</label><input id="csv-search" maxlength="128" type="search"><button id="csv-search-button" type="button" disabled>Suchen</button><button id="csv-next" type="button" disabled>Weitere Treffer im Ausschnitt</button><p id="csv-note" role="status"></p><div id="csv-table" style="overflow:auto;max-height:420px"></div></section>
         <pre id="log-job-error" hidden></pre>
         <h3>Kommandozeile</h3><pre id="log-job-command" class="terminal-command"></pre>
         <div class="terminal-bar"><span>Terminal · gespeicherte Ausgabe</span></div>
@@ -700,6 +704,7 @@
       eventGeneration++; eventController?.abort(); uploadRequest?.abort(); clearTimeout(eventRefreshTimer);
       processingAvailable = false; activeJobId = null; runBusy = false;
       byId('run-live-command').textContent = 'Kein Befehl gestartet.'; byId('run-live-output').textContent = 'Noch keine Ausgabe.';
+      byId('run-inventory').replaceChildren(); byId('log-inventory').replaceChildren(); resetCSV(null);
       byId('run-status').textContent = 'Nicht gestartet'; byId('run-progress-note').textContent = 'Noch keine Aufbereitung gestartet.';
       byId('run-total-progress').value = 0; byId('run-command-progress').value = 0;
       byId('cancel-run').hidden = true; byId('download-evidences').disabled = true;
@@ -1311,6 +1316,7 @@
         state.phase.endsWith('läuft') ? 'Befehl '+(state.current_step+1)+'/'+state.total+': '+state.current_name+' — Fortschritt unbekannt' : 'Aktueller Befehl: noch nicht abgeschlossen';
       if (state.phase.endsWith('läuft') && !terminal) byId('run-command-progress').removeAttribute('value');
       else byId('run-command-progress').value = state.completed === state.total ? 100 : 0;
+      renderInputInventory(state,'run-inventory');
       byId('run-progress-note').textContent = state.error_detail?.message || state.error || (state.phase+' · '+state.filename+' · '+state.mode_name+' · '+[state.case_number,state.device_name].filter(Boolean).join(' · '));
       if (state.status === 'queued') {
         const queue = await api('/api/queue');
@@ -1417,6 +1423,7 @@
       eventGeneration++; eventController?.abort(); clearTimeout(eventRefreshTimer); eventRefreshTimer = null;
       activeJobId = null; sessionStorage.removeItem('ppm-job-id'); setRunBusy(false);
       byId('run-error-panel').hidden = true; byId('new-run').hidden = true;
+      byId('run-inventory').replaceChildren(); byId('log-inventory').replaceChildren(); resetCSV(null);
       byId('run-status').textContent = 'Nicht gestartet'; byId('run-progress-note').textContent = 'Bereit für einen neuen Lauf. Frühere Läufe bleiben im Tab Logs erhalten.';
       byId('run-total-progress').value = 0; byId('run-command-progress').value = 0;
       byId('run-command-label').textContent = 'Aktueller Befehl: noch keiner gestartet';
@@ -1499,7 +1506,52 @@
       document.body.append(link); link.click(); link.remove();
     }));
     byId('log-report-json').addEventListener('click',() => run(() => downloadLogFile('/api/jobs/'+byId('log-job').value+'/report?format=json','Abschlussbericht.json')));
+    function renderInputInventory(state,target) {
+      const box=byId(target); box.replaceChildren();
+      if (state.workspace==='malware') return;
+      const inventory=state.input_inventory, heading=document.createElement('h3'), note=document.createElement('p');
+      heading.textContent='Eingangsarchiv: Artefaktgruppen'; box.append(heading,note);
+      if (!inventory) { note.textContent='Nicht erfasst. Die Ansicht liest keine Original-Evidence erneut.'; return; }
+      note.textContent=inventory.scope_note+' '+(inventory.complete?'Erfassungsumfang abgeschlossen.':'Teilerfassung: '+inventory.partial_reasons.join(', '));
+      const table=document.createElement('table');table.className='result-preview-table';const header=document.createElement('tr');
+      for (const value of ['Gruppe','Dateien','Logische Bytes','Relative Beispiele']) {const cell=document.createElement('th');cell.textContent=value;header.append(cell);} table.append(header);
+      for (const group of Object.values(inventory.groups)) {const row=document.createElement('tr');for (const value of [group.label,group.files,group.bytes,group.samples.join('; ')]) {const cell=document.createElement('td');cell.textContent=String(value);row.append(cell);}table.append(row);}
+      const scroll=document.createElement('div');scroll.style.overflowX='auto';scroll.append(table);box.append(scroll);
+    }
+    let csvJob=null, csvGeneration=0, csvNext=null;
+    function resetCSV(state) {
+      csvGeneration++; csvJob=state?.id || null; csvNext=null;
+      byId('csv-file').replaceChildren();byId('csv-table').replaceChildren();byId('csv-note').textContent='';
+      byId('csv-load').disabled=state?.status!=='succeeded';byId('csv-search-button').disabled=true;byId('csv-next').disabled=true;
+    }
+    async function showCSV(offset=0) {
+      const ident=csvJob, generation=++csvGeneration, path=byId('csv-file').value;
+      if (!ident || !path) return;
+      byId('csv-next').disabled=true;byId('csv-table').replaceChildren();byId('csv-note').textContent='Vorschauausschnitt wird geladen...';
+      const result=await api('/api/jobs/'+ident+'/csv?path='+encodeURIComponent(path)+'&search='+encodeURIComponent(byId('csv-search').value)+'&offset='+offset);
+      if (generation!==csvGeneration || ident!==csvJob) return;
+      const table=document.createElement('table');table.className='result-preview-table';const head=document.createElement('tr');
+      for (const title of ['Quellzeile',...result.columns]) {const cell=document.createElement('th');cell.textContent=title;head.append(cell);}table.append(head);
+      for (const item of result.rows) {const row=document.createElement('tr');for(const value of [item.line,...item.values]) {const cell=document.createElement('td');cell.textContent=String(value);row.append(cell);}table.append(row);}
+      byId('csv-table').replaceChildren(table);csvNext=result.next_offset;
+      byId('csv-next').disabled=!result.has_more;
+      byId('csv-note').textContent=result.note+' Kodierung: '+result.encoding+'; Trennzeichen: '+JSON.stringify(result.delimiter)+'; gelesene Datenzeilen: '+result.scanned_rows+'. '+(result.partial?'Begrenzte Vorschau: '+result.partial_reason:'Pruefumfang dieses Ausschnitts abgeschlossen.');
+    }
+    byId('csv-load').addEventListener('click',()=>run(async()=>{
+      const ident=csvJob,generation=++csvGeneration;
+      if(!ident)return;
+      const result=await api('/api/jobs/'+ident+'/csv');if(generation!==csvGeneration || ident!==csvJob)return;
+      byId('csv-file').replaceChildren(...result.files.map(path=>new Option(path,path)));
+      byId('csv-search-button').disabled=!result.files.length;
+      byId('csv-note').textContent=result.files.length?result.note:'Keine CSV-Ergebnisdatei erfasst.';
+      if(result.files.length)await showCSV();
+    },byId('csv-load')));
+    byId('csv-search-button').addEventListener('click',()=>run(()=>showCSV()));
+    byId('csv-file').addEventListener('change',()=>run(()=>showCSV()));
+    byId('csv-next').addEventListener('click',()=>run(()=>showCSV(csvNext ?? 0)));
     function renderLogState(state) {
+      resetCSV(state);
+      renderInputInventory(state,'log-inventory');
       byId('log-job-status').textContent = state.phase+' · '+state.created_at+' · '+state.filename+' · '+state.id+' · '+[state.case_number,state.device_name].filter(Boolean).join(' · ');
       byId('log-job-error').hidden = !state.error_detail;
       byId('log-job-error').textContent = state.error_detail ? JSON.stringify(state.error_detail,null,2) : '';
@@ -1510,7 +1562,7 @@
     async function loadSelectedLog() {
       const id = byId('log-job').value, generation = ++logsRequest;
       for (const card of byId('job-results').children) card.classList.toggle('selected',card.dataset.job === id);
-      resetExplorer('log');
+      resetExplorer('log'); resetCSV(null); byId('log-inventory').replaceChildren();
       if (!id) return;
       const state = await api('/api/jobs/'+id);
       if (generation === logsRequest) {
@@ -1551,7 +1603,7 @@
       }
       if (data.jobs.some(state => state.id === previous)) byId('log-job').value = previous;
       if (!data.jobs.length) {
-        resetExplorer('log');
+        resetExplorer('log'); resetCSV(null); byId('log-inventory').replaceChildren();
         byId('log-job-status').textContent = 'Keine Aufbereitungen für diese Filter gefunden.';
         for (const id of ['log-job-error','log-job-command','log-job-output']) byId(id).textContent = '';
         byId('log-job-error').hidden = true;

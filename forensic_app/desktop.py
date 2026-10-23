@@ -18,6 +18,37 @@ from forensic_app.windows_tray import TrayIcon
 BG, PANEL, EDGE, TEXT, MUTED, BLUE = '#07111f','#10233b','#294d70','#e7f0fc','#a7bdd6','#81c6ff'
 
 
+def draw_server_banner(canvas,administrator):
+    """Decorative approved two-area header; live status stays below the banner."""
+    canvas.delete('all')
+    width=max(1,canvas.winfo_width()); scale=width/1008
+    def points(values):
+        return [value*scale for value in values]
+    def text(x,y,value,size,color=TEXT,bold=False,wrap=None):
+        options={'anchor':'nw','fill':color,'font':('Segoe UI',-max(9,round(size*scale)),'bold' if bold else 'normal')}
+        if wrap is not None: options['width']=wrap*scale
+        canvas.create_text(x*scale,y*scale,text=value,**options)
+    canvas.configure(height=max(130,round(158*scale)))
+    canvas.create_rectangle(0,0,width,180*scale,fill='#102b48',outline='')
+    canvas.create_polygon(points([539,0,1008,0,1008,180,522,180,543,129,522,104,546,76,525,51]),fill='#451d2d',outline='')
+    canvas.create_line(points([539,0,525,51,546,76,522,104,543,129,522,158]),fill='#e3e8f0',width=max(2,3*scale))
+    canvas.create_polygon(points([50,28,85,41,82,81,70,100,50,115,30,100,18,81,15,41]),fill='#193f63',outline=BLUE,width=max(2,3*scale))
+    canvas.create_line(points([50,49,50,91]),fill=BLUE,width=2*scale)
+    canvas.create_line(points([33,70,67,70]),fill=BLUE,width=2*scale)
+    text(109,27,'DIGITALE FORENSIK',13,BLUE)
+    text(109,61,'Post-Processing-Magic',27,bold=True)
+    text(109,101,'Gemeinsame Serversteuerung',14,MUTED)
+    text(584,27,'STATISCHE MALWARE-ANALYSE',13,'#ff9cac')
+    text(584,64,'Zwei Bereiche. Ein Server.',18)
+    text(584,104,'Version '+__version__,13,'#e0b7c1')
+    text(584,124,'Administratorrechte aktiv' if administrator else 'Synthetischer Test ohne Administratorrechte',12,'#e0b7c1',wrap=290)
+    canvas.create_oval(points([891,31,966,100]),outline='#ff9cac',width=3*scale)
+    canvas.create_rectangle(points([905,82,951,111]),fill='#451d2d',outline='#ff9cac',width=3*scale)
+    for x in [916,940]:canvas.create_oval(points([x-7,59,x+7,73]),fill='#ff9cac',outline='')
+    canvas.create_polygon(points([928,78,922,89,934,89]),fill='#ff9cac',outline='')
+    for x in [917,928,939]:canvas.create_line(points([x,99,x,111]),fill='#ff9cac',width=2*scale)
+
+
 class ServerWindow:
     def __init__(self,root,args):
         self.root,self.args = root,args
@@ -51,18 +82,9 @@ class ServerWindow:
         outer.columnconfigure(0,weight=1)
         # Only the terminal yields height; footer controls keep their requested size.
         outer.rowconfigure(7,weight=1)
-        hero = tk.Frame(outer,bg=PANEL,padx=24,pady=18,highlightthickness=1,highlightbackground=EDGE)
+        hero = tk.Canvas(outer,bg='#102b48',height=158,highlightthickness=1,highlightbackground=EDGE,takefocus=False)
         hero.grid(row=0,column=0,sticky='ew')
-        shield = tk.Canvas(hero,width=62,height=72,bg=PANEL,highlightthickness=0)
-        shield.pack(side='left',padx=(0,20))
-        shield.create_polygon(31,4,57,15,55,43,45,58,31,69,17,58,7,43,5,15,fill='#183c60',outline=BLUE,width=2)
-        shield.create_line(31,21,31,48,fill=BLUE,width=2)
-        shield.create_line(18,34,44,34,fill=BLUE,width=2)
-        branding = tk.Frame(hero,bg=PANEL)
-        branding.pack(side='left',fill='x',expand=True)
-        self.label(branding,'DIGITAL FORENSICS  ·  SERVER CONTROL',size=9,color=BLUE).pack(anchor='w')
-        self.label(branding,'Post-Processing-Magic',size=24,bold=True).pack(anchor='w')
-        self.label(branding,'Version '+__version__+'  ·  '+('Administratorrechte aktiv' if is_admin() else 'Synthetischer Test ohne Administratorrechte'),color=MUTED).pack(anchor='w',pady=(4,0))
+        hero.bind('<Configure>',lambda event: draw_server_banner(hero,is_admin()))
         status_frame = tk.Frame(outer,bg=BG)
         status_frame.grid(row=1,column=0,sticky='ew',pady=(18,12))
         self.server_status = self.label(status_frame,'● Server startet…',bg=BG,size=14,bold=True)

@@ -337,3 +337,54 @@ def test_case_device_snapshot_search_report_and_legacy(setup,tmp_path,source):
     assert 'Nicht angegeben' in render_report(prepare_report(store,ident,plan,[]))
     assert client.post('/api/jobs',params={'mode_id':mode,'filename':'own.zip','case_number':'x'*121},content=archive_bytes(),headers={'Content-Type':'application/zip'}).status_code==422
     assert client.post('/api/jobs/local',json={'mode_id':mode,'path':'own.zip','device_name':'x'*121}).status_code==422
+
+
+@pytest.mark.parametrize('drive',['C','G'])
+@pytest.mark.parametrize('source',['upload','local'])
+def test_inventory_snapshot_before_commands_and_csv_api(setup,tmp_path,drive,source):
+    client,storage,mode,_=setup
+    content=archive_bytes(((drive+'/Windows/test&.evtx',b'EVTX'),(drive+'/$MFT',b'MFT'),(drive+'/Windows/Prefetch/a.pf',b'PF'),(drive+'/Windows/System32/config/SYSTEM',b'HIVE'),(drive+'/own.txt',b'own')))
+    if source=='local':
+        path=tmp_path/'own.zip';path.write_bytes(content)
+        response=client.post('/api/jobs/local',json={'mode_id':mode,'path':str(path)})
+    else:
+        response=upload(client,mode,content)
+    assert response.status_code==200,response.text
+    ident=response.json()['id'];store=JobStore(storage)
+    def runner(plan,work,check,emit):
+        # Deliberately alter the extracted tree after inventory capture.
+        (work/'Targets'/drive/'late.evtx').write_text('late tool output')
+        output=work/'PostMortem';output.mkdir()
+        (output/'own.csv').write_text('name,value\n<script>,=1+1\nOwn,42\n',encoding='utf-8')
+        return 0
+    process_job(store,ident,store.plan(ident),threading.Event(),runner=runner)
+    state=store.get(ident)
+    assert state['status']=='succeeded',state.get('error')
+    inventory=state['input_inventory']
+    assert inventory['source']=='extracted_zip_tree' and inventory['complete']
+    assert inventory['files']==5 and inventory['bytes']==16
+    assert all(inventory['groups'][key]['files']==1 for key in ['evtx','mft','prefetch','registry','other'])
+    report=client.get('/api/jobs/'+ident+'/report?format=json').json()
+    assert report['input_inventory']==inventory
+    assert 'test&amp;.evtx' in client.get('/api/jobs/'+ident+'/report').text
+    endpoint='/api/jobs/'+ident+'/csv'
+    assert client.get(endpoint).json()['files']==['own.csv']
+    preview=client.get(endpoint,params={'path':'own.csv'}).json()
+    assert preview['columns']==['name','value']
+    assert preview['rows'][0]['values']==['<script>','=1+1']
+    found=client.get(endpoint,params={'path':'own.csv','search':'own'}).json()
+    assert len(found['rows'])==1 and found['rows'][0]['values'][1]=='42'
+    assert client.get(endpoint,headers={'Authorization':''}).status_code==401
+    for path in ['../own.csv','C:/own.csv','own.csv:stream','/own.csv','a/./own.csv']:
+        assert client.get(endpoint,params={'path':path}).status_code==422
+    assert client.get(endpoint,params={'path':'missing.csv'}).status_code==404
+    assert client.get(endpoint,params={'path':'own.csv','search':'x'*129}).status_code==422
+    with sqlite3.connect(storage.database) as c:c.execute('UPDATE cleanup_state SET active=1 WHERE id=1')
+    assert client.get(endpoint).status_code==409
+    with sqlite3.connect(storage.database) as c:
+        c.execute('UPDATE cleanup_state SET active=0 WHERE id=1')
+        c.execute('UPDATE jobs SET input_inventory_json=NULL WHERE id=?',(ident,))
+    assert store.get(ident)['input_inventory'] is None
+    assert inventory['files']==5
+    store.update(ident,status='running')
+    assert client.get(endpoint).status_code==409

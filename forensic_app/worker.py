@@ -164,6 +164,10 @@ def process_job(store: JobStore, ident: str, plan: dict, stop, runner=execute):
                     extract(archive_path)
             else:
                 extract(root / "evidence" / ident / "Evidence.zip")
+            from forensic_app.artifact_inventory import collect_inventory
+            # Capture only the freshly extracted tree before any configured command.
+            inventory = collect_inventory(target,check=check)
+            store.update(ident,input_inventory_json=json.dumps(inventory,ensure_ascii=False))
             source = work / relative_path(plan["source"])
             if not source.is_dir():
                 configured = PureWindowsPath(plan["source"])

@@ -2,15 +2,16 @@
 
 KI-gestütztes Entwicklungsprojekt für die lokale Nachbearbeitung von DFIR-Evidencen unter Windows.
 
-**Dieser Entwicklungszweig: 0.26.0, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
+**Dieser Entwicklungszweig: 0.27.0, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
 
-[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.26.0](docs/releases/0.26.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
+[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.27.0](docs/releases/0.27.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
 
-## Was ist neu in 0.26.0?
+## Was ist neu in 0.27.0?
 
-- Optionale Fallnummer und Gerätename (je 120 Zeichen) pro Auftrag in beiden Bereichen, unveränderlicher Snapshot, Suche/Details und HTML-/JSON-Berichte. Keine Verwendung als Pfad.
-- Forensik: Zeitlimit pro Befehlsblock in ganzen Sekunden von 1 bis 604800; Standard und Altaufträge 24 Stunden. Konfigurationstransfer und Bericht erhalten das Limit.
-- Statische Analyse: lesbare Zusammenfassung von Prüfumfang, Bytes und erreichten Byte-/Treffer-/Tokenlimits auf der Auftragsseite, im Abschlussbericht und Einzelpruefungs-HTML/JSON. Rohbefunde bleiben erhalten. Keine Malware-Diagnose oder Entwarnung.
+- Gemeinsames blau-rotes Serverfenster mit Schild, Totenkopf und dekorativem Riss; bestehende Steuerung, Status, Logs und Infobereich bleiben erhalten.
+- Begrenzte CSV-Ergebnisvorschau im Logs-Tab: Ergebnisdatei waehlen, als Tabelle anzeigen und im Vorschauausschnitt suchen. Maximal 1 MiB/2.000 Datenzeilen, 64 Spalten und 4.096 Zeichen pro Feld. Keine Formelauswertung oder Gesamtdateisuche.
+- Artefaktgruppen aus dem frisch entpackten ZIP vor den Befehlen: Anzahl und logische Groesse fuer EVTX, MFT, Prefetch, erkannte Registry-Hives und weitere Dateien. Persistenter Snapshot mit Scope/Teilerfassungsgruenden in Jobansicht und Berichten. Alte Auftraege werden nicht nachtraeglich gescannt.
+- Neue Windows-ZIPs enthalten die README. Vorhandene Releasepakete bleiben unveraendert.
 
 ## Funktionsumfang
 
@@ -37,6 +38,12 @@ KI-gestütztes Entwicklungsprojekt für die lokale Nachbearbeitung von DFIR-Evid
 - **Lokales Feedback:** Button oben in der Web-Leiste für Bugs, Wünsche und allgemeines Feedback. Lokal speichern, letzte 100 Einträge ansehen, bis zu 1.000 Einträge als JSON exportieren. Eingegebene Texte bleiben unverändert; keine automatischen Anhänge oder Übermittlung.
 - **Servereinstellungen im Desktopfenster:** Port und lokalen/LAN-Zugriff speichern. Änderungen nach bewusstem Server-Stopp und erneutem Start. LAN verwendet Anmeldung und automatisch erzeugtes selbstsigniertes HTTPS; keine automatische Firewalländerung.
 - **Technische Logrotation:** Größe pro Datei 0,1–100 MB und 1–20 ältere Dateien einstellen. Wirksam nach Serverneustart; ausschließlich technische Serverlogs. Auftragslogs, Audit und Evidencen bleiben getrennt.
+
+### Ergebnisvorschau und Eingangsuebersicht
+
+- CSV-Dateien aus erfolgreichen Auftraegen direkt im Logs-Tab begrenzt durchsuchen. Alle Werte werden als Text angezeigt; kein Excel-Start, keine Formelauswertung. Suche gilt nur fuer den begrenzten Ausschnitt.
+- Unveraenderliche Metadatenuebersicht des frisch entpackten Forensik-Eingangs, vor Toolbefehlen. Dateinamens-/Pfadheuristik, keine Aussage zur Vollstaendigkeit der Sicherung oder zum Ursprungssystem. Altauftraege zeigen Nicht erfasst.
+- Optionale Fallnummer und Geraetename je Auftrag, unveraenderlich gespeichert und in Suche/Details/Berichten angezeigt. Forensik-Blockzeitlimit pro Befehl, inklusive Konfigurationstransfer und Altbestandsschutz.
 
 ## Windows starten
 

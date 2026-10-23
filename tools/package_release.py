@@ -23,12 +23,13 @@ def main():
     with ZipFile(archive,'w',compression=ZIP_DEFLATED) as target:
         target.write(args.exe,'PostProcessingMagic.exe')
         target.write(root/'LICENSE','LICENSE')
+        target.write(root/'README.md','README.md')
         target.writestr('EXE-SHA256.txt',hashlib.sha256(args.exe.read_bytes()).hexdigest()+'  PostProcessingMagic.exe\n')
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     (args.output/f'PostProcessingMagic-{version}-Windows.sha256.txt').write_text(digest+'  '+archive.name+'\n',encoding='utf-8')
     with ZipFile(archive) as target:
         assert target.testzip() is None
-        assert target.namelist() == ['PostProcessingMagic.exe','LICENSE','EXE-SHA256.txt']
+        assert target.namelist() == ['PostProcessingMagic.exe','LICENSE','README.md','EXE-SHA256.txt']
     print(archive)
     print(digest)
 

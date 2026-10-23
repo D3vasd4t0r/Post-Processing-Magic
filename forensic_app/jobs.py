@@ -75,7 +75,7 @@ class JobStore:
                 CREATE INDEX IF NOT EXISTS job_event_cursor ON job_events(job_id,id);
             """)
             columns = {row[1] for row in connection.execute("PRAGMA table_info(jobs)")}
-            for name in ("error_detail", "effective_json", "input_sha1", "result_sha1"):
+            for name in ("error_detail", "effective_json", "input_sha1", "result_sha1", "input_inventory_json"):
                 if name not in columns:
                     connection.execute(f"ALTER TABLE jobs ADD COLUMN {name} TEXT")
             if "current_step" not in columns:
@@ -168,6 +168,7 @@ class JobStore:
         result['workspace'] = config.get('workspace','forensics')
         result["local_path"] = config.get("local_input", {}).get("path")
         result["source_resolution"] = effective.get("source_resolution")
+        result["input_inventory"] = json.loads(result.pop("input_inventory_json") or "null")
         result['storage_error'] = None
         result['output_available'] = False
         try:
@@ -191,7 +192,7 @@ class JobStore:
         return result
 
     def update(self, ident: str, **values):
-        allowed = {"status", "phase", "completed", "input_size", "input_sha256", "result_sha256", "error", "exit_code", "error_detail", "effective_json", "current_step", "input_sha1", "result_sha1"}
+        allowed = {"status", "phase", "completed", "input_size", "input_sha256", "result_sha256", "error", "exit_code", "error_detail", "effective_json", "current_step", "input_sha1", "result_sha1", "input_inventory_json"}
         assert values.keys() <= allowed
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.execute("UPDATE jobs SET "+",".join(key+"=?" for key in values)+
@@ -451,6 +452,50 @@ def jobs_router(service: JobService, authorize):
         if not service.available():
             raise HTTPException(503,'Worker ist nicht verfügbar.')
         return ArchiveQueue(service.store).request(ident)
+
+    @router.get('/{ident}/csv')
+    def csv_result(ident: str, path: str | None = Query(default=None,max_length=240),
+                   search: str = Query(default='',max_length=128), offset: int = Query(default=0,ge=0,le=2000),
+                   limit: int = Query(default=25,ge=1,le=50)):
+        from forensic_app.csv_preview import CSVPreviewError, preview_csv
+        # Hold the same transaction domain as cleanup admission while reading.
+        with closing(sqlite3.connect(service.storage.database)) as connection:
+            connection.execute('BEGIN IMMEDIATE')
+            if connection.execute('SELECT active FROM cleanup_state WHERE id=1').fetchone()[0]:
+                raise HTTPException(409,'Eine Bereinigung laeuft. Vorschau danach erneut laden.')
+            if connection.execute("SELECT 1 FROM archive_requests WHERE job_id=? AND status IN ('queued','running')",(ident,)).fetchone():
+                raise HTTPException(409,'Archivierung laeuft. Vorschau danach erneut laden.')
+            state=service.store.get(ident)
+            if state['status']!='succeeded':
+                raise HTTPException(409,'CSV-Vorschau nur fuer abgeschlossene erfolgreiche Auftraege.')
+            plan=service.store.plan(ident)
+            root,work,_=job_paths(service.storage,plan,ident)
+            report=root/'results'/ident/'Abschlussbericht.json'
+            try:
+                no_links(report)
+                with report.open('rb') as manifest:
+                    payload=manifest.read(16*1024**2+1)
+                if len(payload)>16*1024**2:
+                    raise CSVPreviewError('Ergebnisdateiliste zu gross fuer die begrenzte Vorschau.')
+                entries=json.loads(payload).get('files',[])
+                csv_files=[item['path'] for item in entries if str(item.get('path','')).lower().endswith('.csv')]
+                if path is None:
+                    return {'files':csv_files[:200],'partial':len(csv_files)>200,
+                            'note':'Maximal 200 CSV-Dateien aus der gespeicherten Ergebnisliste.'}
+                relative=PureWindowsPath(path)
+                if relative.drive or relative.root or any(part in ('','.','..') for part in path.replace('\\','/').split('/')) or any(c in path for c in ':\x00'):
+                    raise CSVPreviewError('Ungueltiger relativer Ergebnisdateipfad.')
+                if path not in csv_files:
+                    raise HTTPException(404,'CSV nicht in der gespeicherten Ergebnisliste dieses Auftrags.')
+                output=work/Path(*PureWindowsPath(plan['mode']['output_folder']).parts)
+                no_links(output)
+                candidate=output/Path(*relative.parts)
+                no_links(candidate)
+                if not candidate.resolve().is_relative_to(output.resolve()):
+                    raise CSVPreviewError('Datei liegt ausserhalb des Ergebnisordners.')
+                return preview_csv(candidate,search=search,offset=offset,limit=limit)
+            except (ValueError,OSError,KeyError,TypeError) as exc:
+                raise HTTPException(422,'CSV-Vorschau nicht verfuegbar: '+str(exc)) from exc
 
     @router.get('/{ident}/report')
     def report(ident: str, format: Literal['html','json'] = 'html'):

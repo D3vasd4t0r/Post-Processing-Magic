@@ -2,7 +2,7 @@ name: Windows release
 on:
   push:
     branches: [main, codex/malware-025]
-    paths: [build.ps1, pyproject.toml, 'forensic_app/**', 'tests/**', 'docs/releases/**', '.github/workflows/release.yml']
+    paths: [build.ps1, pyproject.toml, 'forensic_app/**', 'tests/**', 'tools/**', 'docs/releases/**', '.github/workflows/release.yml']
   workflow_dispatch:
 permissions:
   contents: write

@@ -71,7 +71,7 @@ def run_upload(client,storage,kind,content=None):
 def test_static_end_to_end_reports_hashes_and_original_not_exported(setup,kind):
     client,storage=setup
     content=fixture_bytes(kind)
-    ident,store=run_upload(client,storage,kind)
+    ident,store=run_upload(client,storage,kind,content)
     state=store.get(ident)
     assert state['status']=='succeeded',state
     assert state['workspace']=='malware' and state['completed']==3
