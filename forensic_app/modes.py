@@ -13,6 +13,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from forensic_app.storage import Storage
 
 EFFORTS = ("schnell", "Medium", "langsam")
+DEFAULT_COMMAND_TIMEOUT_SECONDS = 24 * 60 * 60
+MAX_COMMAND_TIMEOUT_SECONDS = 7 * 24 * 60 * 60
 
 
 def canonical_effort(value: str) -> str:
@@ -47,6 +49,8 @@ class CommandStep(BaseModel):
     type: Literal["tool", "powershell"] = "tool"
     script: str = Field(default="", max_length=8000)
     working_directory: str = Field(default=".", max_length=240)
+    timeout_seconds: int = Field(default=DEFAULT_COMMAND_TIMEOUT_SECONDS, strict=True,
+                                 ge=1, le=MAX_COMMAND_TIMEOUT_SECONDS)
 
     @field_validator("script")
     @classmethod

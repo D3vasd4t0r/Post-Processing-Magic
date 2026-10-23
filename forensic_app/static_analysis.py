@@ -8,6 +8,7 @@ import struct
 from collections import Counter
 from pathlib import Path, PureWindowsPath
 
+from forensic_app.finding_summary import summarize_finding
 from forensic_app.malware_modes import MAX_SAMPLE_BYTES
 from forensic_app.windows_access import input_identity, locked_input
 from forensic_app.zip_safety import ensure_space
@@ -203,10 +204,17 @@ def run_static(plan,work,check,emit):
     output=work/Path(*PureWindowsPath(plan['mode']['output_folder']).parts)
     output.mkdir(parents=True,exist_ok=True)
     name='Pruefung-'+plan['id']
+    result['summary']=summarize_finding(result)
     encoded=json.dumps(result,ensure_ascii=False,indent=2)
     ensure_space(output,len(encoded.encode('utf-8'))*3)
     (output/(name+'.json')).write_text(encoded,encoding='utf-8')
-    rendered='<!doctype html><html lang="de"><meta charset="utf-8"><title>Statische Prüfung</title><style>body{background:#1b0e14;color:#f4dce2;font:16px/1.5 system-ui;padding:30px;max-width:1100px;margin:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#2c1720;padding:24px;border:1px solid #9b4157;border-radius:12px}h1{color:#ff8fa9}</style><h1>Statische Prüfung: '+html.escape(kind)+'</h1><p>'+html.escape(SCOPE)+'</p><pre>'+html.escape(encoded)+'</pre></html>'
+    summary=result['summary']; inspector=summary['inspector']
+    statuses={'completed':'Pruefumfang abgeschlossen','limited':'Grenze erreicht','unsupported':'Nicht unterstuetzt','error':'Fehler','unknown':'Umfang unbekannt'}
+    def pair(label,value):
+        return '<tr><th>'+html.escape(label)+'</th><td>'+html.escape(str(value) if value is not None else 'Unbekannt')+'</td></tr>'
+    coverage=summary['coverage']
+    overview='<section><h2>'+html.escape(inspector['name'])+'</h2><p>'+html.escape(statuses[inspector['status']])+'</p><p>'+html.escape(inspector['scope'])+'</p><table>'+pair('Gelesene Bytes',coverage['inspected_bytes'])+pair('Eingangsgroesse in Bytes',coverage['file_bytes'])+pair('Bytefenster begrenzt',coverage['byte_partial'])+pair('Trefferlimit erreicht',coverage['entry_limit_reached'])+pair('PDF-Tokenlimit erreicht',coverage['name_token_limit_reached'])+'</table><ul>'+''.join('<li>'+html.escape(value)+'</li>' for value in inspector['limitations'])+'</ul><p>Abgeschlossen gilt nur fuer den benannten Pruefumfang. Keine Malware-Diagnose oder Entwarnung. Hashwerte beziehen sich auf die ganze Eingangsdatei, Entropie auf das erste MiB.</p><h3>Beobachtungen</h3><pre>'+html.escape(json.dumps(summary['observations'],ensure_ascii=False,indent=2))+'</pre></section>'
+    rendered='<!doctype html><html lang="de"><meta charset="utf-8"><title>Statische Prüfung</title><style>body{background:#1b0e14;color:#f4dce2;font:16px/1.5 system-ui;padding:30px;max-width:1100px;margin:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#2c1720;padding:24px;border:1px solid #9b4157;border-radius:12px}h1{color:#ff8fa9}</style><h1>Statische Prüfung: '+html.escape(kind)+'</h1><p>'+html.escape(SCOPE)+'</p>'+overview+'<h2>Rohbefund</h2><pre>'+html.escape(encoded)+'</pre></html>'
     (output/(name+'.html')).write_text(rendered,encoding='utf-8')
     emit('Statische Prüfung abgeschlossen: '+kind+'; Ergebnisdateien gespeichert. Keine Datei ausgeführt.\n')
     return 0

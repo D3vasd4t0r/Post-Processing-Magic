@@ -178,3 +178,16 @@ def test_database_failure_rolls_back_entire_import(setup):
     assert exported(client)["modes"] == before["modes"]
     with sqlite3.connect(storage.database) as connection:
         assert connection.execute("SELECT count(*) FROM configuration_import_events").fetchone()[0] == 0
+
+
+def test_command_timeouts_roundtrip_and_preview_validation(setup):
+    client,_=setup
+    document=exported(client)
+    document['modes'][0]['steps'][0]['timeout_seconds']=90
+    result=preview(client,document,'replace')
+    assert result['valid']
+    assert client.post(BASE+'/apply',json={'ticket':result['ticket'],'confirm_replace':True}).status_code==200
+    assert exported(client)['modes'][0]['steps'][0]['timeout_seconds']==90
+    document['modes'][0]['steps'][0]['timeout_seconds']=0
+    assert client.post(BASE+'/preview',json={'document':document,'strategy':'replace'}).status_code==422
+    assert exported(client)['modes'][0]['steps'][0]['timeout_seconds']==90

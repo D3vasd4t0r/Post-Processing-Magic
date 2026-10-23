@@ -301,3 +301,39 @@ def test_launcher_requests_uac_before_starting_server(tmp_path, monkeypatch):
     monkeypatch.setattr(launcher, "elevate", refuse)
     assert launcher.main(arguments) == 1
     assert not target.exists()
+
+
+@pytest.mark.parametrize('source',['upload','local'])
+def test_case_device_snapshot_search_report_and_legacy(setup,tmp_path,source):
+    from forensic_app.artifacts import prepare_report, render_report
+    client,storage,mode,_ = setup
+    metadata = {'case_number':'CASE-Ä<script>','device_name':'DEVICE-42&test'}
+    if source=='local':
+        path=tmp_path/'own.zip'
+        path.write_bytes(archive_bytes())
+        response=client.post('/api/jobs/local',json={'mode_id':mode,'path':str(path),**metadata})
+    else:
+        response=client.post('/api/jobs',params={'mode_id':mode,'filename':'own.zip',**metadata},content=archive_bytes(),headers={'Content-Type':'application/zip'})
+    assert response.status_code==200,response.text
+    ident=response.json()['id']
+    plan=plan_for(storage,ident)
+    assert {k:plan[k] for k in metadata}==metadata
+    store=JobStore(storage)
+    assert store.get(ident)['case_number']==metadata['case_number']
+    for text in metadata.values():
+        assert store.search(q=text)['jobs'][0]['id']==ident
+    (storage.root/"work"/ident/"PostMortem").mkdir(parents=True)
+    (storage.root/"work"/ident/"PostMortem"/"own.txt").write_text("synthetic")
+    report=prepare_report(store,ident,plan,[])
+    assert report['device_name']==metadata['device_name']
+    html=render_report(report)
+    assert 'CASE-Ä&lt;script&gt;' in html and '<script>' not in html
+    assert 'DEVICE-42&amp;test' in html
+    for key in metadata:plan.pop(key)
+    with sqlite3.connect(storage.database) as c:
+        c.execute('UPDATE jobs SET config_json=? WHERE id=?',(json.dumps(plan),ident))
+    assert JobStore(storage).get(ident)['case_number']==''
+    assert store.search(q='CASE-Ä')['total']==0
+    assert 'Nicht angegeben' in render_report(prepare_report(store,ident,plan,[]))
+    assert client.post('/api/jobs',params={'mode_id':mode,'filename':'own.zip','case_number':'x'*121},content=archive_bytes(),headers={'Content-Type':'application/zip'}).status_code==422
+    assert client.post('/api/jobs/local',json={'mode_id':mode,'path':'own.zip','device_name':'x'*121}).status_code==422

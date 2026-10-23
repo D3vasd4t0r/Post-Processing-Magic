@@ -14,6 +14,7 @@ from pathlib import Path, PureWindowsPath
 from forensic_app.artifacts import ArchiveQueue, make_archive, prepare_report, utc
 from forensic_app.jobs import JobStore
 from forensic_app.kape_plan import sha256_file
+from forensic_app.modes import MAX_COMMAND_TIMEOUT_SECONDS
 from forensic_app.process_guard import ProcessGuard
 from forensic_app.processing_settings import ProcessingLimits
 from forensic_app.queue_control import QueueControl
@@ -41,6 +42,9 @@ def relative_path(value):
 
 
 def execute(plan, work: Path, check, emit):
+    timeout_seconds = plan.get("timeout_seconds", MAX_RUN_SECONDS)
+    if type(timeout_seconds) is not int or not 1 <= timeout_seconds <= MAX_COMMAND_TIMEOUT_SECONDS:
+        raise ValueError("Ungültiges Zeitlimit im Auftragssnapshot.")
     if not is_admin() and not plan.get("test_no_admin"):
         raise PermissionError("KAPE benötigt Administratorrechte. App neu starten und Windows-UAC bestätigen.")
     if sha256_file(Path(plan["tool"]["path"])) != plan["tool"]["sha256"]:
@@ -77,8 +81,8 @@ def execute(plan, work: Path, check, emit):
         ended, length, truncated = False, 0, False
         while True:
             check()
-            if time.monotonic()-started > MAX_RUN_SECONDS:
-                raise ValueError("Zeitlimit von 24 Stunden überschritten.")
+            if time.monotonic()-started > timeout_seconds:
+                raise ValueError(f"Zeitlimit von {timeout_seconds} Sekunden für diesen Befehl überschritten.")
             try:
                 chunk = chunks.get(timeout=0.25)
                 if chunk is None:

@@ -146,7 +146,7 @@
         <path d="m32 5 25 10v22c0 16-11 27-25 34C18 64 7 53 7 37V15Z" stroke="currentColor" stroke-width="2"/>
         <path d="M32 16v42M17 31h30" stroke="currentColor" stroke-opacity=".45"/><circle cx="32" cy="36" r="11" stroke="currentColor" stroke-width="1.5"/>
       </svg></span>
-      <div><div class="eyebrow">Digital Forensics · Workspace 0.25.2 · Entwicklung</div>
+      <div><div class="eyebrow">Digital Forensics · Workspace 0.26.0 · Entwicklung</div>
         <h1>Post-Processing-Magic</h1>
         <p>Dein Arbeitsbereich für die forensische Nachbearbeitung.</p></div>
     </div>
@@ -194,6 +194,7 @@
           <option value="upload">Upload</option>
           <option value="local">Lokale Datei auf dem Server</option>
         </select>
+        <div class="grid"><div><label for="run-case">Fallnummer (optional)</label><input id="run-case" maxlength="120" type="text"></div><div><label for="run-device">Gerätename (optional)</label><input id="run-device" maxlength="120" type="text"></div></div>
         <div id="upload-source">
         <label for="run-file">1. ZIP-Datei auswählen</label>
         <input id="run-file" type="file" accept=".zip,application/zip" aria-describedby="run-file-message">
@@ -287,6 +288,7 @@
         <p class="note">Eine einzelne PDF-, Office- oder Windows-PE-Datei als Daten untersuchen. Interne Prüfungen lesen Rohdaten; sie starten keine Samples, Makros oder eingebetteten Inhalte. Kein Cloud-Upload.</p>
         <p class="help">0.25 ist eine erste statische Triage, keine Sandbox und keine Malware-Erkennung. Befunde und Grenzen stehen im Bericht. Maximal 256 MiB pro Datei.</p>
         <label for="static-source">1. Quelle</label><select id="static-source"><option value="upload">Upload</option><option value="local">Lokale Datei auf dem Server</option></select>
+        <div class="grid"><div><label for="static-case">Fallnummer (optional)</label><input id="static-case" maxlength="120" type="text"></div><div><label for="static-device">Gerätename (optional)</label><input id="static-device" maxlength="120" type="text"></div></div>
         <div id="static-upload"><label for="static-file">Einzeldatei auswählen</label><input id="static-file" type="file" accept=".pdf,.exe,.dll,.sys,.scr,.doc,.docx,.docm,.xls,.xlsx,.xlsm,.ppt,.pptx,.pptm"></div>
         <div id="static-local" hidden><label for="static-path">Absoluter Dateipfad auf dem Server</label><div class="path-input"><input id="static-path" maxlength="4096" spellcheck="false"><button id="static-browse" class="secondary">Durchsuchen…</button></div><p class="help">Das Original bleibt erhalten. Eine lesend geprüfte Arbeitskopie wird unter neutralem Dateinamen erstellt.</p></div>
         <div class="fields"><div><label for="static-format">2. Dateiformat</label><select id="static-format"><option value="PDF">PDF</option><option value="OFFICE">Office-Dokument</option><option value="EXE">Windows Executable / PE</option></select></div>
@@ -296,7 +298,7 @@
         <div class="actions"><button id="static-run" disabled>Statische Analyse starten</button><button id="static-reload" class="secondary">Module aktualisieren</button><button id="static-configure" class="secondary">Module einrichten</button></div>
         <details><summary>Geplanter Ablauf</summary><pre id="static-plan">Noch kein Modul gewählt.</pre></details>
       </section>
-      <section class="panel"><h2 id="static-status">Noch keine Analyse gestartet</h2><p id="static-detail" role="status"></p>
+      <section class="panel"><h2 id="static-status">Noch keine Analyse gestartet</h2><p id="static-detail" role="status"></p><div id="static-findings"></div>
         <label id="static-progress-label" for="static-progress">0 Schritte abgeschlossen</label><progress id="static-progress" max="1" value="0"></progress>
         <details><summary>Aktuelle Prüfung und Terminal anzeigen</summary><pre id="static-command" class="terminal-command">Kein Schritt gestartet.</pre>
         <div class="terminal-bar"><span>Statische Prüfungen · Live-Ausgabe</span><button id="static-follow" class="secondary">Live folgen: an</button></div><pre id="static-terminal" class="terminal-output" tabindex="0" aria-label="Ausgabe der statischen Analyse">Noch keine Ausgabe.</pre></details>
@@ -566,7 +568,7 @@
       <section class="panel">
         <div class="heading"><h2>Logs und Fehlerdiagnose</h2><button id="reload-job-logs" class="secondary">Aktualisieren</button></div>
         <form id="job-search">
-          <label for="job-query">Dateiname oder Modus suchen</label>
+          <label for="job-query">Dateiname, Modus, Fallnummer oder Gerätename suchen</label>
           <input id="job-query" type="search" maxlength="200" placeholder="Zum Beispiel C-low.zip">
           <div class="fields">
             <div><label for="job-status-filter">Status</label><select id="job-status-filter">
@@ -780,7 +782,7 @@
       const mode = selectedPreparationMode();
       byId('preview-run').disabled = runBusy || !validFile || !mode || byId('run-format').value !== 'ZIP';
       byId('run-start').disabled = byId('preview-run').disabled || !processingAvailable;
-      for (const id of ['run-file','run-format','run-effort','run-source-kind','local-zip-path','browse-evidence','allow-high-compression','create-result-zip']) byId(id).disabled = runBusy;
+      for (const id of ['run-case','run-device','run-file','run-format','run-effort','run-source-kind','local-zip-path','browse-evidence','allow-high-compression','create-result-zip']) byId(id).disabled = runBusy;
     }
     async function loadPreparation() {
       const previous = byId('run-effort').value, request = ++preparationRequest;
@@ -997,7 +999,7 @@
     }
     function newModeStep(index=modeSteps.length) {
       if (modeSteps.length >= 50) {message('Maximal 50 Befehle pro Modus.',true); return;}
-      modeSteps.splice(index,0,{id:crypto.randomUUID(),name:'Tool-Aufruf',type:'tool',script:'',working_directory:'.',tool_id:null,tool_hint:'',parameters:''});
+      modeSteps.splice(index,0,{id:crypto.randomUUID(),name:'Tool-Aufruf',type:'tool',script:'',working_directory:'.',timeout_seconds:86400,tool_id:null,tool_hint:'',parameters:''});
       renderModeSteps(); modePreview();
     }
     function renderModeSteps() {
@@ -1043,6 +1045,16 @@
         cwd.id = 'step-cwd-'+step.id; cwdLabel.htmlFor = cwd.id; cwdLabel.textContent = 'Arbeitsordner für Befehl '+(index+1)+' (relativ zur Aufbereitung)';
         cwd.value = step.working_directory || '.'; cwd.maxLength = 240;
         cwd.addEventListener('input', () => {step.working_directory = cwd.value;});
+        const timeoutLabel = document.createElement('label'), timeout = document.createElement('input'), timeoutHint = document.createElement('p');
+        timeout.id = 'step-timeout-'+step.id; timeoutLabel.htmlFor = timeout.id;
+        timeoutLabel.textContent = 'Zeitlimit in Sekunden'; timeout.type = 'number'; timeout.min = '1'; timeout.max = '604800'; timeout.step = '1'; timeout.required = true;
+        timeout.value = step.timeout_seconds ?? 86400; step.timeout_seconds = Number(timeout.value);
+        timeoutHint.className = 'help';
+        function updateTimeout() {
+          const seconds = Number(timeout.value); step.timeout_seconds = seconds;
+          timeoutHint.textContent = '1 bis 604800 Sekunden (7 Tage). Standard: 86400 Sekunden (24 Stunden). Aktuell: '+(Number.isInteger(seconds) && seconds > 0 ? (seconds/3600).toLocaleString('de-DE',{maximumFractionDigits:4})+' Stunden' : 'bitte ganze Sekunden eingeben')+'.';
+        }
+        timeout.addEventListener('input',updateTimeout); updateTimeout();
         const powershell = step.type === 'powershell';
         for (const node of [toolLabel,select,parametersLabel,parameters]) node.hidden = powershell;
         for (const node of [scriptLabel,script]) node.hidden = !powershell;
@@ -1075,7 +1087,7 @@
         actions.append(up,down,action('Davor einfügen',async () => newModeStep(index)),
           action('Danach einfügen',async () => newModeStep(index+1)),
           action('Befehl entfernen',async () => {modeSteps.splice(index,1); renderModeSteps(); modePreview();},'danger'));
-        card.append(heading,typeLabel,typeSelect,nameLabel,name,toolLabel,select,parametersLabel,parameters,scriptLabel,script,cwdLabel,cwd,warning,preview,actions); list.append(card);
+        card.append(heading,typeLabel,typeSelect,nameLabel,name,toolLabel,select,parametersLabel,parameters,scriptLabel,script,cwdLabel,cwd,timeoutLabel,timeout,timeoutHint,warning,preview,actions); list.append(card);
       });
     }
     function editMode(mode, copy=false) {
@@ -1299,7 +1311,7 @@
         state.phase.endsWith('läuft') ? 'Befehl '+(state.current_step+1)+'/'+state.total+': '+state.current_name+' — Fortschritt unbekannt' : 'Aktueller Befehl: noch nicht abgeschlossen';
       if (state.phase.endsWith('läuft') && !terminal) byId('run-command-progress').removeAttribute('value');
       else byId('run-command-progress').value = state.completed === state.total ? 100 : 0;
-      byId('run-progress-note').textContent = state.error_detail?.message || state.error || (state.phase+' · '+state.filename+' · '+state.mode_name);
+      byId('run-progress-note').textContent = state.error_detail?.message || state.error || (state.phase+' · '+state.filename+' · '+state.mode_name+' · '+[state.case_number,state.device_name].filter(Boolean).join(' · '));
       if (state.status === 'queued') {
         const queue = await api('/api/queue');
         if (ident !== activeJobId) return;
@@ -1371,9 +1383,9 @@
       byId('run-progress-note').textContent = local ? 'Lokale ZIP wird referenziert…' : 'ZIP wird hochgeladen…';
       byId('upload-label').hidden = local; byId('upload-progress').hidden = local; byId('upload-progress').value = 0;
       try {
-        const result = local ? await api('/api/jobs/local','POST',{mode_id:mode.id,path:byId('local-zip-path').value.trim(),allow_high_compression:allowCompression,create_zip:byId('create-result-zip').checked}) : await new Promise((resolve,reject) => {
+        const result = local ? await api('/api/jobs/local','POST',{case_number:byId('run-case').value,device_name:byId('run-device').value,mode_id:mode.id,path:byId('local-zip-path').value.trim(),allow_high_compression:allowCompression,create_zip:byId('create-result-zip').checked}) : await new Promise((resolve,reject) => {
           const xhr = new XMLHttpRequest(); uploadRequest = xhr;
-          xhr.open('POST','/api/jobs?mode_id='+encodeURIComponent(mode.id)+'&filename='+encodeURIComponent(file.name)+'&allow_high_compression='+allowCompression+'&create_zip='+byId('create-result-zip').checked);
+          xhr.open('POST','/api/jobs?case_number='+encodeURIComponent(byId('run-case').value)+'&device_name='+encodeURIComponent(byId('run-device').value)+'&mode_id='+encodeURIComponent(mode.id)+'&filename='+encodeURIComponent(file.name)+'&allow_high_compression='+allowCompression+'&create_zip='+byId('create-result-zip').checked);
           xhr.setRequestHeader('Authorization','Bearer '+token); xhr.setRequestHeader('Content-Type','application/zip');
           xhr.upload.onprogress = event => {if (event.lengthComputable) byId('upload-progress').value = 100*event.loaded/event.total;};
           xhr.onerror = () => reject(new Error('Upload-Verbindung fehlgeschlagen.'));
@@ -1488,7 +1500,7 @@
     }));
     byId('log-report-json').addEventListener('click',() => run(() => downloadLogFile('/api/jobs/'+byId('log-job').value+'/report?format=json','Abschlussbericht.json')));
     function renderLogState(state) {
-      byId('log-job-status').textContent = state.phase+' · '+state.created_at+' · '+state.filename+' · '+state.id;
+      byId('log-job-status').textContent = state.phase+' · '+state.created_at+' · '+state.filename+' · '+state.id+' · '+[state.case_number,state.device_name].filter(Boolean).join(' · ');
       byId('log-job-error').hidden = !state.error_detail;
       byId('log-job-error').textContent = state.error_detail ? JSON.stringify(state.error_detail,null,2) : '';
       byId('log-job-command').textContent = state.command;
@@ -1531,7 +1543,7 @@
         byId('log-job').append(new Option(state.created_at+' · '+state.filename+' · '+state.phase,state.id));
         const card = document.createElement('div'); card.className = 'result-card'; card.dataset.job = state.id;
         const info = document.createElement('div'), title = document.createElement('strong'), details = document.createElement('p');
-        title.textContent = state.filename; details.textContent = state.phase+' · '+state.mode_name+' · '+state.created_at;
+        title.textContent = state.filename; details.textContent = state.phase+' · '+state.mode_name+' · '+state.created_at+' · '+[state.case_number,state.device_name].filter(Boolean).join(' · ');
         info.append(title,details);
         const button = document.createElement('button'); button.className = 'secondary'; button.textContent = 'Anzeigen';
         button.addEventListener('click',() => run(async () => {byId('log-job').value = state.id; await loadSelectedLog(); byId('log-job-status').scrollIntoView({block:'center'});}));

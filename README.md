@@ -2,9 +2,15 @@
 
 KI-gestütztes Entwicklungsprojekt für die lokale Nachbearbeitung von DFIR-Evidencen unter Windows.
 
-**Dieser Entwicklungszweig: 0.25.2, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
+**Dieser Entwicklungszweig: 0.26.0, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
 
-[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.25.2](docs/releases/0.25.2.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
+[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.26.0](docs/releases/0.26.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
+
+## Neu in 0.26.0
+
+- Optionale Fallnummer und Geraetename (je120 Zeichen) pro Auftrag in beiden Bereichen, unveraenderlicher Snapshot, Suche/Details und HTML-/JSON-Berichte. Keine Verwendung als Pfad.
+- Forensik: Zeitlimit pro Befehlsblock in ganzen Sekunden1..604800; Standard und Altauftraege24 Stunden. Konfigurationstransfer und Bericht erhalten das Limit.
+- Statische Analyse: lesbare Zusammenfassung von Pruefumfang, Bytes und erreichten Byte-/Treffer-/Tokenlimits auf der Auftragsseite, im Abschlussbericht und Einzelpruefungs-HTML/JSON. Rohbefunde bleiben erhalten. Keine Malware-Diagnose oder Entwarnung.
 
 ## Korrekturen in 0.25.2
 
@@ -95,3 +101,5 @@ Siehe [AGENTS.md](AGENTS.md) für Entwicklungsgrenzen und [VALIDATION.md](docs/V
 Buildhinweis: build.ps1 übernimmt bei Python-Distributionen mit zusätzlicher SSL-Policydatei diese Datei ins EXE-Paket, damit auch das Desktopfenster SSL korrekt initialisieren kann.
 
 Desktop-Hotfix: Der Beenden-Button behält seine volle Höhe; beim Verkleinern schrumpft der Logbereich und der Fußzeilentext bricht um.
+
+

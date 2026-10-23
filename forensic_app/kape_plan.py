@@ -144,7 +144,8 @@ def compile_plan(mode: dict, tools: list[dict], *, capture: bool = False) -> dic
                 raise ValueError("PowerShell-Block ist zu lang für die Windows-Kommandozeile.")
             command = {"kind": "powershell", "tool": dict(engine), "argv": argv,
                        "command": 'PowerShell -NoProfile -NonInteractive\n'+step.script}
-        command.update(id=step.id, name=step.name, working_directory=step.working_directory)
+        command.update(id=step.id, name=step.name, working_directory=step.working_directory,
+                       timeout_seconds=step.timeout_seconds)
         commands.append(command)
     primary = next((command for command in commands if command["kind"] == "kape"), commands[0])
     return {"mode": {"id": mode["id"], **draft.model_dump()}, "commands": commands,

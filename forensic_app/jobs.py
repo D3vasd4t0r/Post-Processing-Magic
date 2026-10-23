@@ -38,7 +38,12 @@ MAX_UPLOAD = 50 * 1024**3
 TERMINAL = ("succeeded", "failed", "cancelled", "interrupted")
 
 
-class LocalJob(BaseModel):
+class JobMetadata(BaseModel):
+    case_number: str = Field(default="",max_length=120)
+    device_name: str = Field(default="",max_length=120)
+
+
+class LocalJob(JobMetadata):
     model_config = ConfigDict(extra="forbid")
     mode_id: str = Field(min_length=1, max_length=80)
     path: str = Field(min_length=1, max_length=4096)
@@ -93,7 +98,7 @@ class JobStore:
             conditions.append("COALESCE(json_extract(config_json,'$.workspace'),'forensics')=?")
             values.append(workspace)
         if q.strip():
-            conditions.append("instr(casefold(COALESCE(json_extract(config_json,'$.filename'),'Evidence.zip') || ' ' || json_extract(config_json,'$.mode.name')),?)>0")
+            conditions.append("instr(casefold(COALESCE(json_extract(config_json,'$.filename'),'Evidence.zip') || ' ' || json_extract(config_json,'$.mode.name') || ' ' || COALESCE(json_extract(config_json,'$.case_number'),'') || ' ' || COALESCE(json_extract(config_json,'$.device_name'),'')),?)>0")
             values.append(q.strip().casefold())
         for condition, value in (("status=?",status), ("json_extract(config_json,'$.mode.id')=?",mode_id),
                                  ("substr(created_at,1,10)>=?",date_from.isoformat() if date_from else None),
@@ -112,6 +117,8 @@ class JobStore:
             rows = connection.execute("SELECT id,status,phase,created_at,error,"
                 "COALESCE(json_extract(config_json,'$.filename'),'Evidence.zip') AS filename,"
                 "COALESCE(json_extract(config_json,'$.source_kind'),'upload') AS source_kind,"
+                "COALESCE(json_extract(config_json,'$.case_number'),'') AS case_number,"
+                "COALESCE(json_extract(config_json,'$.device_name'),'') AS device_name,"
                 "json_extract(config_json,'$.mode.name') AS mode_name FROM jobs"+where+
                 ' ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?',(*values,limit,offset)).fetchall()
             modes = connection.execute("SELECT DISTINCT json_extract(config_json,'$.mode.id') AS id,"
@@ -152,6 +159,7 @@ class JobStore:
         if result["status"] == "failed" and not result["error_detail"]:
             exc = PermissionError("KAPE meldet fehlende Administratorrechte, auch bei Exitcode 0.") if "administrator privileges not found" in result["log_tail"].casefold() else ValueError(result["error"] or "Vorgang ohne gespeicherte Fehlerdetails fehlgeschlagen.")
             result["error_detail"] = describe_error(exc, result["phase"])
+        result.update(case_number=config.get("case_number",""),device_name=config.get("device_name",""))
         result.update(command=current["command"], requested_command=config["command"], mode_name=config["mode"]["name"], total=len(commands),
                       filename=config.get("filename", "Evidence.zip"), tool=current["tool"])
         result["current_name"] = current.get("name", "KAPE")
@@ -270,7 +278,8 @@ class JobService:
         return {"worker": self.available(), "administrator": is_admin(), "test_no_admin": self.test_no_admin,
                 "modes": result, "max_upload_bytes": limits["max_upload_bytes"], "limits": limits}
 
-    def begin(self, mode_id: str, filename: str, *, local_input: dict | None = None, allow_high_compression: bool = False, create_zip: bool = True, workspace='forensics'):
+    def begin(self, mode_id: str, filename: str, *, local_input: dict | None = None, allow_high_compression: bool = False, create_zip: bool = True, workspace='forensics', case_number='', device_name=''):
+        metadata = JobMetadata(case_number=case_number,device_name=device_name).model_dump()
         if not self.available():
             raise HTTPException(503, "Ausführungsprozess ist nicht verfügbar. Server neu starten.")
         if not is_admin() and not self.test_no_admin:
@@ -292,6 +301,7 @@ class JobService:
             ensure_space(Path(destination))
         except (ValueError, OSError) as exc:
             raise HTTPException(422, str(exc)) from exc
+        plan.update(metadata)
         plan["data_root"] = destination
         plan['workspace'] = workspace
         plan["create_zip"] = create_zip
@@ -330,7 +340,7 @@ class JobService:
                 if value.workspace=='malware' and identity['size']>MAX_SAMPLE_BYTES:
                     raise ValueError('Malware-Erstversion: maximal 256 MiB pro Einzeldatei.')
             ident = self.begin(value.mode_id, path.name, local_input={"path": str(path), **identity},
-                               allow_high_compression=value.allow_high_compression,create_zip=value.create_zip,workspace=value.workspace)
+                               allow_high_compression=value.allow_high_compression,create_zip=value.create_zip,workspace=value.workspace,case_number=value.case_number,device_name=value.device_name)
             self.store.update(ident, status="queued", phase="Lokale ZIP wartet", input_size=identity["size"])
             return {"id": ident}
         except (ValueError, OSError) as exc:
@@ -372,7 +382,7 @@ def jobs_router(service: JobService, authorize):
         return result
 
     @router.post("")
-    async def upload(request: Request, mode_id: str, filename: str = "Evidence.zip", allow_high_compression: bool = False, create_zip: bool = True,workspace:Literal['forensics','malware']='forensics'):
+    async def upload(request: Request, mode_id: str, filename: str = "Evidence.zip", allow_high_compression: bool = False, create_zip: bool = True,workspace:Literal['forensics','malware']='forensics', case_number: str = Query(default='',max_length=120), device_name: str = Query(default='',max_length=120)):
         if workspace=='forensics' and not filename.lower().endswith(".zip"):
             raise HTTPException(422, "Nur ZIP (KAPE-Target) wird unterstützt.")
         if request.headers.get("content-type", "").split(";")[0] != ('application/zip' if workspace=='forensics' else 'application/octet-stream'):
@@ -383,7 +393,7 @@ def jobs_router(service: JobService, authorize):
             max_upload = min(max_upload,MAX_SAMPLE_BYTES)
         if declared and (not declared.isdecimal() or int(declared) > max_upload):
             raise HTTPException(413, f"Uploadlimit überschritten: maximal {max_upload:,} Bytes. Unter Einstellungen → Verarbeitung änderbar.")
-        ident = await run_in_threadpool(service.begin, mode_id, filename, allow_high_compression=allow_high_compression,create_zip=create_zip,workspace=workspace)
+        ident = await run_in_threadpool(service.begin, mode_id, filename, allow_high_compression=allow_high_compression,create_zip=create_zip,workspace=workspace,case_number=case_number,device_name=device_name)
         with closing(sqlite3.connect(service.storage.database)) as connection:
             plan = json.loads(connection.execute("SELECT config_json FROM jobs WHERE id=?", (ident,)).fetchone()[0])
         max_upload = plan["limits"]["max_upload_bytes"]

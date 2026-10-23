@@ -185,3 +185,64 @@ def test_local_change_abort_and_workspace_mismatch(setup,tmp_path):
     process_job(store,ident,store.plan(ident),stop)
     assert store.get(ident)['status']=='interrupted' and file.read_bytes().endswith(b'changed')
     assert compile_static(mode)['commands'][0]['argv']==[]
+
+
+@pytest.mark.parametrize('source',['upload','local'])
+def test_static_case_device_snapshot(setup,tmp_path,source):
+    client,storage=setup
+    mode=client.post('/api/settings/malware',json=mode_document()).json()['id']
+    metadata={'case_number':'Static case','device_name':'Own device'}
+    if source=='local':
+        path=tmp_path/'own.pdf'
+        path.write_bytes(fixture_bytes('PDF'))
+        response=client.post('/api/jobs/local',json={'workspace':'malware','mode_id':mode,'path':str(path),**metadata})
+    else:
+        response=client.post('/api/jobs',params={'workspace':'malware','mode_id':mode,'filename':'own.pdf',**metadata},content=fixture_bytes('PDF'),headers={'Content-Type':'application/octet-stream'})
+    assert response.status_code==200,response.text
+    store=JobStore(storage)
+    ident=response.json()['id']
+    assert store.plan(ident)['case_number']=='Static case'
+    assert store.get(ident)['device_name']=='Own device'
+    assert store.search(q='Own device',workspace='malware')['total']==1
+
+
+def test_static_result_includes_readable_summary(tmp_path):
+    from forensic_app.static_analysis import run_static
+    folder=tmp_path/'Sample'
+    folder.mkdir()
+    (folder/'input.bin').write_bytes(fixture_bytes('PDF'))
+    plan={'id':'own','inspector':'pdf','static_input':{'bytes':len(fixture_bytes('PDF'))},'mode':{'output_folder':'Analysis','evidence_format':'PDF'}}
+    run_static(plan,tmp_path,lambda:None,lambda text:None)
+    result=json.loads((tmp_path/'Analysis/Pruefung-own.json').read_text(encoding='utf-8'))
+    assert result['summary']['inspector']['id']=='pdf'
+    assert 'findings' in result
+    page=(tmp_path/'Analysis/Pruefung-own.html').read_text(encoding='utf-8')
+    assert 'PDF-Tokenlimit erreicht' in page and 'Rohbefund' in page
+    assert '<script>' not in page
+
+
+@pytest.mark.parametrize('kind',['PDF','OFFICE','EXE'])
+def test_aggregated_summary_in_authorized_report_and_archive(setup,kind):
+    client,storage=setup
+    ident,store=run_upload(client,storage,kind)
+    endpoint='/api/jobs/'+ident+'/report'
+    response=client.get(endpoint+'?format=json')
+    assert response.status_code==200
+    report=response.json()
+    summaries=report['finding_summaries']
+    assert len(summaries)==3
+    assert {item['inspector']['id'] for item in summaries}=={'metadata','strings',{'PDF':'pdf','OFFICE':'office','EXE':'pe'}[kind]}
+    assert all('scope' in item['inspector'] and item['inspector']['limitations'] for item in summaries)
+    assert all('strings' not in item['observations'] for item in summaries)
+    metadata=next(item for item in summaries if item['inspector']['id']=='metadata')
+    assert metadata['input']['hash_scope']=='whole_input'
+    assert metadata['input']['sha256']==store.get(ident)['input_sha256']
+    assert metadata['observations']['entropy_scope']=='first_1_mib'
+    html=client.get(endpoint).text
+    assert 'PDF-Tokenlimit' not in html or kind=='PDF'
+    assert '<script>alert(1)</script>' not in html
+    assert 'inspected_bytes' in html
+    assert client.get(endpoint+'?format=json',headers={'Authorization':''}).status_code==401
+    with ZipFile(io.BytesIO(client.get('/api/jobs/'+ident+'/download').content)) as archive:
+        embedded=json.loads(archive.read('Aufbereitungsprotokoll.json'))
+        assert embedded['finding_summaries']==summaries

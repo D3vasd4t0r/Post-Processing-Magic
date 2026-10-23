@@ -53,10 +53,14 @@ def render_report(report):
     plan = report.get('configuration',{})
     mode = plan.get('mode',{})
     parts = [section('Auftrag',table(['Angabe','Wert'],[
+        ('Fallnummer',plan.get('case_number') or 'Nicht angegeben'),('Gerätename',plan.get('device_name') or 'Nicht angegeben'),
         ('Auftrags-ID',report.get('job_id')),('Eingangsdatei',report.get('input_filename')),
         ('App-Version',report.get('app_version')),('Modus',mode.get('name')),
         ('Beginn (UTC)',report.get('created_at_utc')),('Abschluss (UTC)',report.get('completed_at_utc')),
         ('Exitcode',report.get('exit_code')),('Fehler',report.get('error') or 'Keine gemeldet')]))]
+    for summary in report.get('finding_summaries',[]):
+        inspector=summary['inspector']
+        parts.append(section(inspector['name'],table(['Pruefumfang','Status'],[(inspector['scope'],inspector['status'])])+ '<p>'+escape(' '.join(inspector['limitations']))+'</p>'+table(['Merkmal','Wert'],list(summary['coverage'].items()))))
     input_data,archive = report.get('input',{}),report.get('archive',{})
     parts.append(section('Hashwerte',table(['Datei','SHA-1','SHA-256'],[
         ('Eingangsdatei',input_data.get('sha1'),input_data.get('sha256')),
@@ -69,8 +73,8 @@ def render_report(report):
         rows.append((index+1,command.get('type',command.get('kind','Tool')),
                      command.get('tool',{}).get('path',''),
                      command.get('command',''),
-                     command.get('working_directory','.'),timing.get('started_at_utc'),timing.get('ended_at_utc'),timing.get('exit_code')))
-    parts.append(section('Ausgeführte Befehle',table(['Nr.','Typ','Programm','Parameter / PowerShell-Code','Arbeitsordner','Beginn (UTC)','Ende (UTC)','Exitcode'],rows)))
+                     command.get('working_directory','.'),command.get('timeout_seconds',86400),timing.get('started_at_utc'),timing.get('ended_at_utc'),timing.get('exit_code')))
+    parts.append(section('Ausgeführte Befehle',table(['Nr.','Typ','Programm','Parameter / PowerShell-Code','Arbeitsordner','Zeitlimit (Sekunden)','Beginn (UTC)','Ende (UTC)','Exitcode'],rows)))
     parts.append(section('Toolversionen',table(['Befehl','Tool','Version','SHA-256'],[
         (index+1,command.get('tool',{}).get('name'),command.get('tool',{}).get('version'),command.get('tool',{}).get('sha256'))
         for index,command in enumerate(commands)])))
@@ -100,6 +104,7 @@ def prepare_report(store,ident,plan,command_runs,*,error=None):
     state = store.get(ident)
     report = {'report_schema_version':1,'app_version':__version__,'job_id':ident,'input_filename':plan.get('filename','Evidence.zip'),
               'input':{'sha1':state.get('input_sha1'),'sha256':state.get('input_sha256'),'bytes':state['input_size']},
+              'case_number':plan.get('case_number',''),'device_name':plan.get('device_name',''),
               'configuration':plan,'created_at_utc':state['created_at'],'completed_at_utc':utc(),
               'command_runs':command_runs,'exit_code':state['exit_code'],'error':error,
               'directories':[],'directories_scope':'Unterordner im Ergebnisordner', 'work_directories':[],
@@ -126,6 +131,20 @@ def prepare_report(store,ident,plan,command_runs,*,error=None):
         for current,subdirs,_ in os.walk(output,followlinks=False):
             directories.extend((Path(current)/name).relative_to(output).as_posix() for name in subdirs)
         report['directories'] = sorted(directories)
+    if plan.get('workspace')=='malware' and output.is_dir():
+        from forensic_app.finding_summary import summarize_finding
+        summaries=[]
+        no_links(output)
+        for path in sorted(output.glob('Pruefung-*.json'))[:64]:
+            no_links(path)
+            if path.stat().st_size > 4*1024**2:
+                continue
+            try:
+                data=json.loads(path.read_text(encoding='utf-8'))
+                summaries.append(summarize_finding(data))
+            except (ValueError,OSError):
+                continue
+        report['finding_summaries']=summaries
     save_report(store,ident,report)
     return report
 
