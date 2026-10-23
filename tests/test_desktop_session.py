@@ -94,3 +94,29 @@ def test_force_waits_for_own_async_lock_release(tmp_path,monkeypatch):
     session.force()
     assert len(attempts) == 3 and len(recovered) == 1
     assert 'Force Shutdown' in recovered[0]
+
+
+@pytest.mark.parametrize('identity',['-leading-dash','--leading-two-dashes'])
+def test_control_identifier_starting_with_dash_reaches_server(tmp_path,monkeypatch,identity):
+    with socket.socket() as sock:
+        sock.bind(('127.0.0.1',0))
+        port = sock.getsockname()[1]
+    args = parser().parse_args(['--test-no-admin','--data-dir',str(tmp_path),'--port',str(port)])
+    session = DesktopSession(args)
+    monkeypatch.setattr('forensic_app.desktop_session.secrets.token_urlsafe',lambda size:identity)
+    try:
+        session.start()
+        deadline = time.monotonic()+20
+        while time.monotonic()<deadline:
+            state = session.poll()
+            if state['ready'] or not state['alive']:
+                break
+            time.sleep(.1)
+        assert state['ready'], state['problem']
+        assert session.api('/api/system')['control_id']==identity
+        session.stop()
+        session.process.wait(timeout=10)
+    finally:
+        if session.guard:
+            session.force()
+            session.guard.close() if session.guard else None

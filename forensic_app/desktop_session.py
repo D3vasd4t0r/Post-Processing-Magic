@@ -56,7 +56,7 @@ class DesktopSession:
         if not self.executable and not getattr(sys,'frozen',False):
             command += ['-m','forensic_app']
         command += ['--headless','--no-browser','--data-dir',str(self.root),'--port',str(self.args.port),
-                    '--control-id',self.control_id]
+                    '--control-id='+self.control_id]
         if self.args.lan:
             command += ['--lan']
         else:
