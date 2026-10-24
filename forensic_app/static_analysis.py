@@ -140,14 +140,18 @@ def pe_headers(source,size):
             'sections':sections,'limitation':'Kein Laden von DLLs, keine Imports-Auflösung, Signaturvalidierung oder Disassemblierung. Zeitstempel kann manipuliert sein.'}
 
 
-def inspect_sample(kind,path,format,check):
+def inspect_sample(kind,path,format,check,*,extended_pe=False):
     with locked_input(path) as source:
         size = input_identity(source)['size']
         identify(source,format)
         if kind=='office':
             return office_directory(source,size,check)
         if kind=='pe':
-            return pe_headers(source,size)
+            result=pe_headers(source,size)
+            if extended_pe:
+                from forensic_app.pe_details import analyze_pe
+                result['pe_details']=analyze_pe(source,size,check)
+            return result
         source.seek(0)
         chunks=[]
         budget = 16*1024**2 if kind=='pdf' else 8*1024**2 if kind=='strings' else 1024**2
@@ -203,7 +207,8 @@ def run_static(plan,work,check,emit):
     kind=plan['inspector']
     check()
     result={'scope':SCOPE,'inspection':kind,'input':plan['static_input'],
-            'findings':inspect_sample(kind,work/'Sample/input.bin',plan['mode']['evidence_format'],check)}
+            'findings':inspect_sample(kind,work/'Sample/input.bin',plan['mode']['evidence_format'],check,
+                                      extended_pe=plan.get('report_features',{}).get('pe_details')==1)}
     output=work/Path(*PureWindowsPath(plan['mode']['output_folder']).parts)
     output.mkdir(parents=True,exist_ok=True)
     name='Pruefung-'+plan['id']
@@ -232,5 +237,10 @@ def render_static_report(result, locale='de'):
                              json.dumps(value,ensure_ascii=False) if isinstance(value,(dict,list)) else t('observation.first_1_mib') if key=='entropy_scope' and value=='first_1_mib' else value)
                          for key,value in summary['observations'].items())
     overview='<p>'+escape(inspector['status'])+'</p><p>'+escape(inspector['scope'])+'</p><table>'+''.join(pair(label,value) for label,value in t.coverage(summary))+'</table><ul>'+''.join('<li>'+escape(value)+'</li>' for value in inspector['limitations'])+'</ul><p>'+escape(t('static_notice'))+'</p><h3>'+escape(t('observations'))+'</h3><table>'+observations+'</table>'
+    from forensic_app.extended_presentation import render_extended
+    def table(headers,rows):
+        return '<table><thead><tr>'+''.join('<th>'+escape(value)+'</th>' for value in headers)+'</tr></thead><tbody>'+''.join('<tr>'+''.join('<td>'+escape(t.value(value))+'</td>' for value in row)+'</tr>' for row in rows)+'</tbody></table>'
+    details=result.get('findings',{}).get('pe_details')
+    extended=''.join(render_extended({'pe_details':[details]} if isinstance(details,dict) else {},t,section,table))
     encoded=json.dumps(result,ensure_ascii=False,indent=2)
-    return '<!doctype html><html lang="'+t.locale+'"><meta charset="utf-8"><title>'+escape(t('static_title'))+'</title><style>body{background:#1b0e14;color:#f4dce2;font:16px/1.5 system-ui;padding:30px;max-width:1100px;margin:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#2c1720;padding:24px;border:1px solid #9b4157;border-radius:12px}h1{color:#ff8fa9}th,td{text-align:left;vertical-align:top;padding:8px;overflow-wrap:anywhere}summary{cursor:pointer}summary h2{display:inline}.print-content{display:none}@media print{details{display:none}.print-content{display:block}body{background:white;color:black}pre{background:white;color:black}section{break-inside:avoid}}</style><h1>'+escape(t('static_heading',inspector=inspector['name']))+'</h1><p>'+escape(t.known_text(result.get('scope',SCOPE),prefix='limitation.'))+'</p>'+section(inspector['name'],overview)+section(t('raw'),'<pre>'+escape(encoded)+'</pre>')+'</html>'
+    return '<!doctype html><html lang="'+t.locale+'"><meta charset="utf-8"><title>'+escape(t('static_title'))+'</title><style>body{background:#1b0e14;color:#f4dce2;font:16px/1.5 system-ui;padding:30px;max-width:1100px;margin:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#2c1720;padding:24px;border:1px solid #9b4157;border-radius:12px}h1{color:#ff8fa9}th,td{text-align:left;vertical-align:top;padding:8px;overflow-wrap:anywhere}summary{cursor:pointer}summary h2{display:inline}.print-content{display:none}@media print{details{display:none}.print-content{display:block}body{background:white;color:black}pre{background:white;color:black}section{break-inside:avoid}}</style><h1>'+escape(t('static_heading',inspector=inspector['name']))+'</h1><p>'+escape(t.known_text(result.get('scope',SCOPE),prefix='limitation.'))+'</p>'+section(inspector['name'],overview)+extended+section(t('raw'),'<pre>'+escape(encoded)+'</pre>')+'</html>'

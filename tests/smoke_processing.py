@@ -58,6 +58,8 @@ def main():
     compiler = Path(os.environ["WINDIR"])/"Microsoft.NET"/"Framework64"/"v4.0.30319"/"csc.exe"
     subprocess.run([str(compiler), "/nologo", "/target:exe", "/out:"+str(executable), str(source)], check=True,
                    capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+    (folder/'Modules').mkdir()
+    (folder/'Modules'/'Synthetic.mkape').write_text('Description: Own synthetic module\n',encoding='utf-8')
     storage = Storage(folder/"state")
     storage.initialize()
     modes = ModeStore(storage)
@@ -151,6 +153,10 @@ def main():
                     assert state["exit_code"] == 7
                 else:
                     state = wait_for(ident, ("succeeded",))
+                    if module == 'Synthetic':
+                        captured=request('/api/jobs/'+ident+'/report?format=json')['configuration']['commands'][0]['module_manifest']
+                        assert captured['files'][0]['relative_path']=='Modules/Synthetic.mkape'
+                        assert captured['files'][0]['sha256']
                     explorer = request("/api/jobs/"+ident+"/explorer")
                     assert explorer["local"] and isinstance(explorer["available"], bool) and explorer["reason"]
                     ticket = request("/api/jobs/"+ident+"/download-ticket", "POST")
@@ -180,6 +186,21 @@ def main():
             assert overview['volume']['free_bytes'] >= 0 and overview['scan'] is None
             measured = request('/api/settings/storage/scan', 'POST')['scan']
             assert measured['complete'] and measured['bytes'] > 0 and len(measured['areas']) == 3
+            changed=folder/'Modules'/'Tampered.mkape'
+            changed.write_text('Description: Before capture\n',encoding='utf-8')
+            draft=KAPE_TEMPLATE.model_copy(deep=True)
+            draft.steps[0].tool_id='synthetic'
+            draft.steps[0].parameters=r'--msource .\Targets\C --mdest .\PostMortem --module Tampered --gui'
+            modes.save(mode_id,draft,create=False)
+            request('/api/queue','PUT',b'{"paused":true}')
+            ident=request('/api/jobs?'+urlencode({'mode_id':mode_id,'filename':'own-tampered.zip'}),'POST',payload.getvalue(),'application/zip')['id']
+            assert request('/api/jobs/'+ident)['status']=='queued'
+            changed.write_text('Description: Changed after snapshot\n',encoding='utf-8')
+            request('/api/queue','PUT',b'{"paused":false}')
+            state=wait_for(ident,('failed',))
+            assert state['error_detail']['error_code']=='error.kape_manifest_changed'
+            assert 'SYNTHETIC STUB ONLY' not in state['log_tail']
+            reports.append({'id':ident,'test':'Frozen module mutation blocked before process','status':state['status']})
             (folder/"report.json").write_text(json.dumps(reports, indent=2), encoding="utf-8")
             print(json.dumps({"passed": reports, "report": str(folder/"report.json")}))
         finally:

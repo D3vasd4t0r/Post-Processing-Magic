@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 from zipfile import ZipFile
 
 from smoke_support import wait_ready
+from test_extended_evidence import synthetic_pe
 from test_static_analysis import fixture_bytes, mode_document
 
 from forensic_app import __version__
@@ -54,7 +55,7 @@ def main():
         assert api('/api/system')['version']==__version__
         assert len(api('/api/jobs/catalog?workspace=malware')['modes'])==3
         for kind in ('PDF','OFFICE','EXE'):
-            content=fixture_bytes(kind)
+            content=synthetic_pe() if kind=='EXE' else fixture_bytes(kind)
             extension={'PDF':'pdf','OFFICE':'docm','EXE':'exe'}[kind]
             path=folder/('own.'+extension);path.write_bytes(content)
             if kind=='PDF':
@@ -68,6 +69,16 @@ def main():
             assert path.read_bytes()==content
             report=api('/api/jobs/'+ident+'/report',raw=True).decode()
             assert 'Statische Malware-Analyse' in report
+            if kind=='EXE':
+                details=api('/api/jobs/'+ident+'/summary')
+                assert details['pe_details'][0]['imports']['function_count']==2
+                assert details['pe_details'][0]['resources']['entries'][0]['bytes']==3
+                assert details['pe_details'][0]['overlay']['signature_verification']=='not_performed'
+                assert details['pe_details'][0]['overlay']['certificate_entries']
+                indicators=api('/api/jobs/'+ident+'/indicators')
+                assert any(item['value']=='http://evidence.invalid/test' for item in indicators['indicators'])
+                assert 'Deklarierte PE-Importe' in report and 'EXAMPLE.dll' in report
+
             archive=api('/api/jobs/'+ident+'/download',raw=True)
             with ZipFile(io.BytesIO(archive)) as z:
                 assert z.testzip() is None
@@ -97,7 +108,7 @@ def main():
         assert len(api('/api/settings/malware')['modes'])==3
         session.stop();wait(lambda:not session.poll()['alive'])
         report={'passed':True,'version':__version__,'checks':['PDF local static run','Office upload static run','PE upload static run',
-            'originals and hashes','HTML reports and sample-free ZIPs','separate histories and schema 3 configuration','restart persistence','offline DE/EN catalogs and frozen English report with unchanged raw JSON']}
+            'originals and hashes','HTML reports and sample-free ZIPs','separate histories and schema 3 configuration','restart persistence','offline DE/EN catalogs and frozen English report with unchanged raw JSON','PE imports/resources/overlay and indicator provenance export']}
         (folder/'report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
         print(json.dumps({'passed':True,'report':str(folder/'report.json'),'checks':len(report['checks'])}))
     finally:

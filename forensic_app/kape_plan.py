@@ -106,6 +106,8 @@ def compile_kape(mode: dict, tools: list[dict], *, capture: bool = False) -> dic
     if capture:
         result["tool"]["sha256"] = sha256_file(executable)
         result["tool"]["version"] = file_version(str(executable))
+        from forensic_app.kape_manifest import capture_manifest
+        result['module_manifest'] = capture_manifest(executable, options['--module'])
     return result
 
 
@@ -123,6 +125,8 @@ def compile_plan(mode: dict, tools: list[dict], *, capture: bool = False) -> dic
             compiled = compile_kape(single, tools, capture=capture)
             command = {key: compiled[key] for key in ("tool", "argv", "command", "source")}
             command["kind"] = "kape"
+            if 'module_manifest' in compiled:
+                command['module_manifest']=compiled['module_manifest']
         else:
             if not step.script.strip():
                 raise AppValueError('error.637e83bc5e94', p0=f'{step.name}')

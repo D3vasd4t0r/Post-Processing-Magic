@@ -210,5 +210,7 @@
   "config.slot_conflict": "{format} / {effort} ist mehrfach belegt.",
   "config.missing_tool": "{name}: Toolreferenz für '{step}' fehlt.",
   "config.missing_path": "{name}: {status}. Pfad nach Import prüfen.",
-  "config.incomplete": "{name}: unvollständiger Entwurf; es wird nichts ausgeführt."
+  "config.incomplete": "{name}: unvollständiger Entwurf; es wird nichts ausgeführt.",
+  "error.indicators_missing": "Für diesen Auftrag wurden keine Indikatorenquellen erfasst. Ältere Aufträge werden nicht erneut gelesen.",
+  "error.kape_manifest_changed": "Eine erfasste KAPE-Modul- oder Hilfsdatei wurde geändert oder ist nicht mehr sicher erreichbar ({reason}). Neuen Auftrag erst nach Prüfung starten."
 }

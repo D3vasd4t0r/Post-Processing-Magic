@@ -307,6 +307,8 @@ class JobService:
             raise HTTPException(422, error_detail(exc)) from exc
         from forensic_app.interface_preferences import InterfacePreferences
         plan['locale'] = InterfacePreferences(self.storage).get()['locale']
+        if workspace == 'malware':
+            plan['report_features'] = {'pe_details':1, 'indicators':1}
         plan.update(metadata)
         plan["data_root"] = destination
         plan['workspace'] = workspace
@@ -480,9 +482,8 @@ def jobs_router(service: JobService, authorize):
                 return preview_xlsx(candidate,sheet_id=sheet_id,**options)
             return preview_csv(candidate,**options)
 
-    @router.get('/{ident}/summary')
-    def summary(ident: str):
-        # A UI projection separate from the original report download.
+    def ui_report(ident: str):
+        # Separate bounded UI projection; original report downloads remain unchanged.
         from forensic_app.workspaces import no_links
         service.store.get(ident)
         path = service.store.paths(ident)[0] / 'results' / ident / 'Abschlussbericht.json'
@@ -494,10 +495,25 @@ def jobs_router(service: JobService, authorize):
                 payload = source.read(16 * 1024**2 + 1)
             if len(payload) > 16 * 1024**2:
                 raise ValueError('Report exceeds the preview limit.')
-            report_data = json.loads(payload)
-            return {'finding_summaries': report_data.get('finding_summaries', [])}
+            return json.loads(payload)
         except (ValueError, OSError) as exc:
             raise HTTPException(404, ErrorText('error.45e10e99bf67')) from exc
+
+    @router.get('/{ident}/summary')
+    def summary(ident: str):
+        report_data = ui_report(ident)
+        return {'finding_summaries': report_data.get('finding_summaries', []),
+                'pe_details':report_data.get('pe_details',[]),
+                'pe_details_partial':bool(report_data.get('pe_details_partial')),
+                'indicators':report_data.get('indicators')}
+
+    @router.get('/{ident}/indicators')
+    def indicators(ident: str):
+        from fastapi.responses import JSONResponse
+        data = ui_report(ident).get('indicators')
+        if not isinstance(data,dict):
+            raise HTTPException(409, ErrorText('error.indicators_missing'))
+        return JSONResponse(data,headers={'Content-Disposition':'attachment; filename="Indikatoren-'+ident+'.json"'})
 
     @router.get('/{ident}/report')
     def report(ident: str, format: Literal['html','json'] = 'html'):

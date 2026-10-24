@@ -73,6 +73,8 @@ def render_report(report):
     for summary in report.get('finding_summaries',[]):
         inspector=t.inspector(summary['inspector'])
         parts.append(section(inspector['name'],table([t('scope'),t('status')],[(inspector['scope'],inspector['status'])])+ '<p>'+escape(' '.join(inspector['limitations']))+'</p>'+table([t('feature'),t('value')],t.coverage(summary))))
+    from forensic_app.extended_presentation import render_extended
+    parts.extend(render_extended(report,t,section,table))
     input_data,archive = report.get('input',{}),report.get('archive',{})
     parts.append(section(t('hashes'),table([t('file'),'SHA-1','SHA-256'],[
         (t('input'),input_data.get('sha1'),input_data.get('sha256')),
@@ -147,6 +149,10 @@ def prepare_report(store,ident,plan,command_runs,*,error=None):
     if plan.get('workspace')=='malware' and output.is_dir():
         from forensic_app.finding_summary import summarize_finding
         summaries=[]
+        indicator_inputs=[]
+        pe_details=[]
+        pe_detail_bytes=0
+        pe_details_partial=False
         no_links(output)
         for path in sorted(output.glob('Pruefung-*.json'))[:64]:
             no_links(path)
@@ -155,9 +161,25 @@ def prepare_report(store,ident,plan,command_runs,*,error=None):
             try:
                 data=json.loads(path.read_text(encoding='utf-8'))
                 summaries.append(summarize_finding(data))
+                step_id=path.stem.removeprefix('Pruefung-')
+                indicator_inputs.append({**data,'step_id':step_id} if data.get('inspection')=='strings' else {'inspection':data.get('inspection'),'step_id':step_id})
+                if isinstance(data.get('findings',{}).get('pe_details'),dict):
+                    detail={'step_id':step_id,**data['findings']['pe_details']}
+                    detail_bytes=len(json.dumps(detail,ensure_ascii=False).encode('utf-8'))
+                    if len(pe_details)<8 and pe_detail_bytes+detail_bytes<=2*1024**2:
+                        pe_details.append(detail)
+                        pe_detail_bytes+=detail_bytes
+                    else:
+                        pe_details_partial=True
             except (ValueError,OSError):
                 continue
         report['finding_summaries']=summaries
+        if plan.get('report_features',{}).get('indicators')==1:
+            from forensic_app.indicator_sources import collect_indicators
+            report['indicators']=collect_indicators(indicator_inputs)
+        if plan.get('report_features',{}).get('pe_details')==1:
+            report['pe_details']=pe_details
+            report['pe_details_partial']=pe_details_partial
     save_report(store,ident,report)
     return report
 

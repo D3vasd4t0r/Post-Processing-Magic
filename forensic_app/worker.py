@@ -50,6 +50,12 @@ def execute(plan, work: Path, check, emit):
         raise PermissionError("KAPE benötigt Administratorrechte. App neu starten und Windows-UAC bestätigen.")
     if sha256_file(Path(plan["tool"]["path"])) != plan["tool"]["sha256"]:
         raise AppValueError('error.2031fed8cf82')
+    if plan.get('kind','kape') == 'kape' and plan.get('module_manifest') is not None:
+        from forensic_app.kape_manifest import ManifestVerificationError, verify_manifest
+        try:
+            verify_manifest(plan['module_manifest'])
+        except ManifestVerificationError as exc:
+            raise AppValueError('error.kape_manifest_changed', reason=str(exc)) from exc
     guard, process = ProcessGuard(), None
     chunks, started = queue.Queue(maxsize=256), time.monotonic()
     reader_stop, reader_thread = threading.Event(), None

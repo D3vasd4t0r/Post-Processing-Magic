@@ -2,15 +2,16 @@
 
 KI-gestütztes Entwicklungsprojekt für die lokale Nachbearbeitung von DFIR-Evidencen unter Windows.
 
-**Dieser Entwicklungszweig: 0.30.0, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
+**Dieser Entwicklungszweig: 0.31.0, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
 
-[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.30.0](docs/releases/0.30.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
+[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.31.0](docs/releases/0.31.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
 
-## Was ist neu in 0.30.0?
+## Was ist neu in 0.31.0?
 
-- **Deutsch/Englisch offline:** Sprachwahl für beide Webbereiche und das Serverfenster, einschließlich Dialogen und bekannten App-Fehlermeldungen. Gemeinsam pro Instanz gespeichert; offene Formulare behalten ihre Eingaben.
-- **Toolhinweis beim ersten Start:** fehlende Zuordnungen/Programme unterstützter Forensikabläufe und getrennte optionale Ergebnis-Viewer, mit Links zu den Einstellungen. Schließen wird gemerkt; keine Installation oder Ausführung.
-- **Berichte in Auftragssprache:** neue Aufträge frieren die Sprache beim Start ein. HTML und Druckansicht folgen diesem Snapshot; historische Aufträge bleiben standardmäßig deutsch. JSON, Befehle, Rohbefunde, Nutzernamen und Logs unverändert.
+- **PE-Importe:** deklarierte DLLs, Funktionsnamen und Ordinalimporte für PE32/PE32+, mit begrenzten Lese-/Eintragsbudgets und sichtbaren Fehler-/Teilumfangsgründen. Keine DLL wird geladen, keine Abhängigkeit aufgelöst.
+- **PE-Ressourcen und Overlay:** begrenzte Ressourcenbaum-Metadaten und Dateibereiche hinter dem Image. Strukturelle Zertifikatbereiche werden getrennt; keine Aussage über Signaturgültigkeit oder Vertrauen.
+- **Indikatoren mit Quellen:** URLs, Domains, IPs und Windows-/UNC-Pfade aus bereits erfassten begrenzten Rohtexten, dedupliziert mit Quellschritt und Byteoffset, soweit präzise bestimmbar. Textansicht, Kopieren und geschützter JSON-Export, keine Netzwerkauflösung oder anklickbaren Ziele.
+- **Direkte KAPE-Dateinachweise:** ausgewählte, eindeutig auflösbare Moduldateien sowie bekannte direkte Helper-/RECmd-Regeldateien mit SHA-256 im Auftragssnapshot. Änderungen erfasster Dateien stoppen vor dem Toolstart. Ungeklärte Abhängigkeiten bleiben sichtbar und sind kein neuer Pflicht-Preflight.
 
 ## Funktionsumfang
 
@@ -24,6 +25,9 @@ KI-gestütztes Entwicklungsprojekt für die lokale Nachbearbeitung von DFIR-Evid
 - Ein Export enthält immer Tools, gemeinsame Verarbeitungslimits, Forensik-Modi und Malware-Module als Schema 3, auch bei leeren Bereichen. Import mit Vorschau, Bereichszählern und atomarem Anwenden; ältere Dateien bleiben lesbar.
 
 ### Statische Malware-Analyse
+
+- Zusätzliche PE32/PE32+-Importtabellen, Ressourcenmetadaten und Overlay-/Zertifikatbereichsstruktur. Harte Lese-, Knoten- und Eintragsgrenzen, keine Ressourcenextraktion und keine Signaturvalidierung.
+- Gespeicherte Indikatorenquellen aus vorhandenen Rohtexten: begrenzte Deduplizierung, Text/Kopieren/JSON-Export ohne Netzwerkaktionen. Heuristische Erkennung, keine Diagnose. Anzeige höchstens200Indikatoren/500Importfunktionen/200Ressourcen; begrenzte Rohdetails im JSON-Bericht. Neue PE-Detailsnapshots höchstens8Schritte/2MiB; Einzelberichte behalten ihre Rohdetails. Altaufträge werden nicht nachgescannt.
 
 - Bereichswechsel: blaue Forensik mit Schild und rote statische Analyse mit Totenkopf. Eigene Formulare, Module und Auftragshistorien, gemeinsame Toolverwaltung und serieller Worker.
 - Einzeldateien PDF, Office (Legacy OLE und OOXML) sowie Windows PE. Upload oder lokale Dateireferenz mit Picker, maximal 256 MiB. Signaturprüfung und neutrale Arbeitskopie, Original unverändert.
@@ -60,6 +64,8 @@ Das Fenster zeigt Server-/Workerstatus und Live-Serverlogs; Adresse und Access T
 Nach jedem Serverstart neuer Access Token; **Browser öffnen** verwendet automatisch den aktuellen Schlüssel. Daten standardmäßig unter `%LOCALAPPDATA%/PostProcessingMagic`, außerhalb des EXE-Entpackverzeichnisses.
 
 ## Evidence-Aufbereitung
+
+Direkte KAPE-Nachweise sind bewusst unvollständig: nur ausgewählte eindeutig gefundene `.mkape`-Dateien, einfache literale `Executable`-Referenzen unter `Modules/bin` und bekannte RECmd-`--bn`-Regeldateien. Variablen, zusammengesetzte Module, weitere Kommandoabhängigkeiten und DLLs werden nicht vollständig aufgelöst. Fehlende/unklare Einträge werden dokumentiert. Erfasste Dateien werden vor dem Start erneut geprüft; nach Rückgabe werden Dateihandles freigegeben, daher keine dauerhafte Isolation während KAPE. Alte Jobs ohne Manifest behalten ihr Verhalten.
 
 Der Forensik-Bereich konzentriert sich weiterhin auf **ZIP-Dateien mit KAPE-Targets**. E01/VMDK erscheinen höchstens deaktiviert als geplant. Eigene ZIP wählen oder eine lokale ZIP auf dem Server referenzieren, Aufwand auswählen und **Run** klicken. Nur vollständig konfigurierte Modi sind auswählbar.
 

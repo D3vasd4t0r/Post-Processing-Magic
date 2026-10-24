@@ -210,5 +210,7 @@
   "config.slot_conflict": "{format} / {effort} is assigned more than once.",
   "config.missing_tool": "{name}: tool reference for '{step}' is missing.",
   "config.missing_path": "{name}: {status}. Check the path after importing.",
-  "config.incomplete": "{name}: incomplete draft; nothing will be executed."
+  "config.incomplete": "{name}: incomplete draft; nothing will be executed.",
+  "error.indicators_missing": "No indicator sources were captured for this job. Earlier jobs are not read again.",
+  "error.kape_manifest_changed": "A captured KAPE module or helper file changed or is no longer safely accessible ({reason}). Review the files before starting a new job."
 }

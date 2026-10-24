@@ -163,6 +163,10 @@ def create_app(storage: Storage, token: str, *, lan: bool = False, processing: b
     def malware_script():
         return FileResponse(Path(__file__).parent/'web'/'malware.js',media_type='text/javascript')
 
+    @app.get('/evidence-details.js',include_in_schema=False)
+    def evidence_script():
+        return FileResponse(Path(__file__).parent/'web'/'evidence-details.js',media_type='text/javascript')
+
     @app.get('/i18n.js',include_in_schema=False)
     def i18n_script():
         return FileResponse(Path(__file__).parent/'web'/'i18n.js',media_type='text/javascript')
