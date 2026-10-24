@@ -1,4 +1,5 @@
 """Bounded technical snapshots: allowlisted events instead of raw log redaction."""
+
 import hashlib
 import io
 import json
@@ -19,6 +20,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from forensic_app import __version__
+from forensic_app.app_errors import ErrorText
 from forensic_app.server_preferences import PreferenceStore
 from forensic_app.workspaces import no_links
 
@@ -137,7 +139,7 @@ class Diagnostics:
         with self.lock:
             record = self.tickets.pop(ticket,None)
         if not record or record[0] <= time.monotonic():
-            raise HTTPException(410,'Vorschau abgelaufen oder bereits exportiert. Bitte neu erstellen.')
+            raise HTTPException(410,ErrorText('error.fe2b26905bd9'))
         return record[1]
 
 

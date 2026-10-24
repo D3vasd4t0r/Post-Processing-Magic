@@ -241,8 +241,20 @@ def test_aggregated_summary_in_authorized_report_and_archive(setup,kind):
     html=client.get(endpoint).text
     assert 'PDF-Tokenlimit' not in html or kind=='PDF'
     assert '<script>alert(1)</script>' not in html
-    assert 'inspected_bytes' in html
+    assert 'Gelesene Bytes' in html
     assert client.get(endpoint+'?format=json',headers={'Authorization':''}).status_code==401
     with ZipFile(io.BytesIO(client.get('/api/jobs/'+ident+'/download').content)) as archive:
         embedded=json.loads(archive.read('Aufbereitungsprotokoll.json'))
         assert embedded['finding_summaries']==summaries
+    from forensic_app.interface_preferences import InterfacePreferences
+    InterfacePreferences(storage).update(locale='en')
+    ui_endpoint='/api/jobs/'+ident+'/summary'
+    assert client.get(ui_endpoint,headers={'Authorization':''}).status_code==401
+    localized=client.get(ui_endpoint).json()['finding_summaries']
+    assert localized[0]['inspector']['name']!=summaries[0]['inspector']['name']
+    for translated,original in zip(localized,summaries,strict=True):
+        assert translated['observations']==original['observations']
+        assert translated['input']==original['input']
+    assert client.get(endpoint+'?format=json').json()==report
+    assert '<html lang="de">' in client.get(endpoint).text  # Frozen locale, not current UI preference.
+

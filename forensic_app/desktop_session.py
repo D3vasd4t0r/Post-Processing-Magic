@@ -11,6 +11,8 @@ from collections import deque
 from threading import Lock, Thread
 from urllib.request import Request, urlopen
 
+from forensic_app.app_errors import AppValueError, ErrorText
+from forensic_app.desktop_i18n import DesktopError, DesktopTranslations
 from forensic_app.process_guard import ProcessGuard
 from forensic_app.server_preferences import PreferenceStore
 from forensic_app.storage import Storage
@@ -28,11 +30,32 @@ class DesktopSession:
         self.verified = False
         self.started_at = 0
         self.problem = ''
+        self.problem_i18n = None
         self.output = deque(maxlen=100)
         self.reader = None
         self.output_lock = Lock()
         self.preferences = PreferenceStore(Storage(self.root))
         self.preference_revision = self.preferences.get()[1]
+
+    def set_problem(self,key,**parameters):
+        self.problem = DesktopTranslations().t(key,**parameters)
+        self.problem_i18n = {'key':key,'parameters':parameters,'original':self.problem,'catalog':'desktop'}
+
+    def set_exception(self,exc):
+        self.problem,self.problem_i18n = str(exc),None
+        if isinstance(exc,DesktopError):
+            self.set_problem(exc.key,**exc.parameters)
+        else:
+            detail = exc.text if isinstance(exc,AppValueError) else getattr(exc,'detail',None)
+            if isinstance(detail,ErrorText):
+                self.problem_i18n = {'key':detail.code,'parameters':detail.params,
+                                     'original':self.problem,'catalog':'shared'}
+
+    def problem_description(self):
+        # A raw exception assigned by the owner must never inherit an older message.
+        if self.problem_i18n and self.problem_i18n['original'] == self.problem:
+            return {key:value for key,value in self.problem_i18n.items() if key != 'original'}
+        return None
 
     def configure(self,value):
         self.preferences.save(value)
@@ -111,14 +134,24 @@ class DesktopSession:
             self.token = ''
             self.ready = False
             if self.process and self.process.returncode and not self.problem:
-                self.problem = 'Server beendet (Exitcode '+str(self.process.returncode)+'). '+self.startup_log()[-1000:]
+                self.set_problem('problem.exited',code=self.process.returncode,detail=self.startup_log()[-1000:])
                 try:
                     failure = json.loads((self.root/'logs/desktop-startup-error.json').read_text(encoding='utf-8'))
                     if failure.get('control_id') == self.control_id:
-                        self.problem = 'Serverstart fehlgeschlagen: '+failure['message']
+                        self.set_problem('problem.startup',detail=failure['message'])
+                        if isinstance(failure.get('error_code'),str) and isinstance(failure.get('error_params'),dict):
+                            # Only known structured app errors are translated;
+                            # older files and raw OS failure details stay intact.
+                            try:
+                                detail = ErrorText(failure['error_code'],**failure['error_params'])
+                            except (KeyError,TypeError,ValueError):
+                                pass  # Unknown/malformed metadata keeps canonical detail.
+                            else:
+                                self.problem_i18n['detail_i18n'] = {'key':detail.code,'parameters':detail.params}
                 except (OSError,ValueError,KeyError):
                     pass
             state['problem'] = self.problem
+            state['problem_i18n'] = self.problem_description()
             return state
         try:
             self.token = (self.root/'config/access-token.txt').read_text(encoding='utf-8').strip()
@@ -141,12 +174,15 @@ class DesktopSession:
             except OSError:
                 pass
             if time.monotonic()-self.started_at > 30:
-                state['problem'] = 'Server noch nicht erreichbar: '+str(exc)
+                state['problem'] = DesktopTranslations().t('problem.unreachable',detail=str(exc))
+                state['problem_i18n'] = {'key':'problem.unreachable','parameters':{'detail':str(exc)}}
+        if 'problem_i18n' not in state:
+            state['problem_i18n'] = self.problem_description()
         return state
 
     def stop(self):
         if not self.ready:
-            raise RuntimeError('Server noch nicht bereit. Bitte warten oder Force Shutdown verwenden.')
+            raise DesktopError('problem.not_ready')
         self.api('/api/system/stop','POST')
         self.stopping = True
 
@@ -182,9 +218,9 @@ class DesktopSession:
                     if time.monotonic()<deadline:
                         time.sleep(.05)
                         continue
-                    self.problem = 'Eigener Serverprozess beendet; Datenordner bereits wieder belegt. Keine fremden Aufträge verändert.'
+                    self.set_problem('problem.folder_busy')
                     return
-        self.problem = 'Force Shutdown ausgeführt. Unterbrochene Aufträge werden nicht automatisch wiederholt.'
+        self.set_problem('problem.forced')
 
     def startup_log(self):
         with self.output_lock:

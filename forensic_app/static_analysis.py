@@ -1,4 +1,5 @@
 """Bounded read-only byte inspection. No sample loading, extraction or subprocess calls."""
+
 import hashlib
 import html
 import json
@@ -8,8 +9,10 @@ import struct
 from collections import Counter
 from pathlib import Path, PureWindowsPath
 
+from forensic_app.app_errors import AppValueError
 from forensic_app.finding_summary import summarize_finding
 from forensic_app.malware_modes import MAX_SAMPLE_BYTES
+from forensic_app.report_i18n import ReportText
 from forensic_app.windows_access import input_identity, locked_input
 from forensic_app.zip_safety import ensure_space
 
@@ -21,7 +24,7 @@ SCOPE = ('Nur statische Rohdatenprüfung. Keine Ausführung, kein Rendering, kei
 
 def validate_name(name,kind):
     if Path(name.replace('\\','/')).suffix.casefold() not in EXTENSIONS[kind]:
-        raise ValueError('Dateiendung passt nicht zum gewählten Malware-Modul. Einzeldatei PDF, Office oder PE wählen; kein ZIP-Eingang.')
+        raise AppValueError('error.3ade4315cdf5')
 
 
 def identify(source,kind):
@@ -39,7 +42,7 @@ def identify(source,kind):
             source.seek(offset)
             if source.read(4) == b'PE\0\0':
                 return 'Windows Portable Executable (PE)'
-    raise ValueError('Dateisignatur passt nicht zum gewählten Format oder Header ist beschädigt. Datei wird nicht ausgeführt.')
+    raise AppValueError('error.025ad51b3e6d')
 
 
 def prepare_sample(store,ident,plan,work,check):
@@ -53,9 +56,9 @@ def prepare_sample(store,ident,plan,work,check):
     with locked_input(path) as source:
         identity = input_identity(source)
         if not 0 < identity['size'] <= MAX_SAMPLE_BYTES:
-            raise ValueError('Statische Erstversion: Einzeldateien von 1 Byte bis 256 MiB.')
+            raise AppValueError('error.f2f1045bb3ce')
         if plan['source_kind']=='local' and identity != {k:plan['local_input'][k] for k in identity}:
-            raise ValueError('Lokale Eingangsdatei wurde seit der Auswahl verändert.')
+            raise AppValueError('error.a44063670d97')
         signature = identify(source,plan['mode']['evidence_format'])
         source.seek(0)
         sha1,sha256 = hashlib.sha1(),hashlib.sha256()
@@ -65,13 +68,13 @@ def prepare_sample(store,ident,plan,work,check):
                 check()
                 copied += len(chunk)
                 if copied > MAX_SAMPLE_BYTES:
-                    raise ValueError('Samplelimit überschritten.')
+                    raise AppValueError('error.2d879d3a7352')
                 ensure_space(work,len(chunk))
                 target.write(chunk)
                 sha1.update(chunk)
                 sha256.update(chunk)
         if copied != identity['size'] or (state['input_sha256'] and state['input_sha256'] != sha256.hexdigest()):
-            raise ValueError('Eingangsdatei hat sich verändert oder ist unvollständig.')
+            raise AppValueError('error.ea0f3c06b17c')
     store.update(ident,input_sha1=sha1.hexdigest(),input_sha256=sha256.hexdigest(),input_size=copied)
     return {'signature':signature,'bytes':copied,'sha1':sha1.hexdigest(),'sha256':sha256.hexdigest()}
 
@@ -84,10 +87,10 @@ def office_directory(source,size,check):
     tail = source.read(65557)
     index = tail.rfind(b'PK\x05\x06')
     if index < 0 or index+22 > len(tail):
-        raise ValueError('Office-ZIP-Endverzeichnis fehlt oder ist beschädigt.')
+        raise AppValueError('error.7f93e12d6e9a')
     disk,start_disk,disk_count,count,length,offset,comment = struct.unpack_from('<4H2IH',tail,index+4)
     if disk or start_disk or disk_count!=count or count>10000 or length>4*1024**2 or offset+length>size or index+22+comment!=len(tail):
-        raise ValueError('Office-Containergrenzen verletzt oder ZIP64/mehrteiliges Archiv nicht unterstützt.')
+        raise AppValueError('error.d201a3fb9643')
     source.seek(offset)
     data = source.read(length)
     entries,position = [],0
@@ -95,21 +98,21 @@ def office_directory(source,size,check):
         if entry_index%64==0:
             check()
         if position+46>len(data) or data[position:position+4]!=b'PK\x01\x02':
-            raise ValueError('Office-Zentralverzeichnis beschädigt.')
+            raise AppValueError('error.18f63161528b')
         flags = struct.unpack_from('<H',data,position+8)[0]
         compressed,expanded = struct.unpack_from('<II',data,position+20)
         n,e,c = struct.unpack_from('<HHH',data,position+28)
         end = position+46+n+e+c
         if n>2048 or end>len(data):
-            raise ValueError('Office-Verzeichniseintrag überschreitet Grenzen.')
+            raise AppValueError('error.f7d65aa5ed99')
         name = data[position+46:position+46+n].decode('utf-8' if flags&2048 else 'cp437',errors='replace')
         entries.append({'name':name,'compressed_bytes':compressed,'declared_bytes':expanded,'encrypted':bool(flags&1)})
         position = end
     if position!=len(data):
-        raise ValueError('Unerwartete Daten im Office-Zentralverzeichnis.')
+        raise AppValueError('error.0bd8b81cfea9')
     names = [e['name'].replace('\\','/').casefold() for e in entries]
     if '[content_types].xml' not in names or not any(n.startswith(('word/','xl/','ppt/')) for n in names):
-        raise ValueError('ZIP enthält keine erkennbare Office-Open-XML-Verzeichnisstruktur.')
+        raise AppValueError('error.51be14d9faff')
     return {'container':'OOXML','entries':entries,'macro_named_entries':[e['name'] for e in entries if 'vbaproject' in e['name'].casefold()],
             'embedded_named_entries':[e['name'] for e in entries if '/embeddings/' in e['name'].casefold()],
             'limitation':'Nur Verzeichnisnamen und deklarierte Größen; keine Entpackung, XML-, Makro- oder Beziehungsanalyse. Namen sind unbestätigte Metadaten.'}
@@ -121,10 +124,10 @@ def pe_headers(source,size):
     source.seek(offset)
     data = source.read(24)
     if len(data)!=24 or data[:4]!=b'PE\0\0':
-        raise ValueError('PE-Header beschädigt.')
+        raise AppValueError('error.0490ebd65470')
     machine,count,timestamp,_ptr,_symbols,optional,characteristics = struct.unpack_from('<HHIIIHH',data,4)
     if not 0<count<=96 or optional>4096 or offset+24+optional+count*40>size:
-        raise ValueError('PE-Sektionstabelle liegt außerhalb der Datei oder überschreitet das Limit.')
+        raise AppValueError('error.140b1bf98b31')
     source.seek(offset+24+optional)
     sections=[]
     for _ in range(count):
@@ -192,7 +195,7 @@ def inspect_sample(kind,path,format,check):
                           name_token_limit_reached=token_count>=100000,
                           limitation='Wörtliche Namen, auch Kommentare/Strings können zählen. Komprimierte/verschlüsselte Inhalte nicht ausgewertet. Kein PDFID-Ersatz, keine Malware-Bewertung.')
         else:
-            raise ValueError('Unbekannte interne statische Prüfung.')
+            raise AppValueError('error.58566b822bc8')
         return result
 
 
@@ -208,13 +211,26 @@ def run_static(plan,work,check,emit):
     encoded=json.dumps(result,ensure_ascii=False,indent=2)
     ensure_space(output,len(encoded.encode('utf-8'))*3)
     (output/(name+'.json')).write_text(encoded,encoding='utf-8')
-    summary=result['summary']; inspector=summary['inspector']
-    statuses={'completed':'Pruefumfang abgeschlossen','limited':'Grenze erreicht','unsupported':'Nicht unterstuetzt','error':'Fehler','unknown':'Umfang unbekannt'}
-    def pair(label,value):
-        return '<tr><th>'+html.escape(label)+'</th><td>'+html.escape(str(value) if value is not None else 'Unbekannt')+'</td></tr>'
-    coverage=summary['coverage']
-    overview='<section><h2>'+html.escape(inspector['name'])+'</h2><p>'+html.escape(statuses[inspector['status']])+'</p><p>'+html.escape(inspector['scope'])+'</p><table>'+pair('Gelesene Bytes',coverage['inspected_bytes'])+pair('Eingangsgroesse in Bytes',coverage['file_bytes'])+pair('Bytefenster begrenzt',coverage['byte_partial'])+pair('Trefferlimit erreicht',coverage['entry_limit_reached'])+pair('PDF-Tokenlimit erreicht',coverage['name_token_limit_reached'])+'</table><ul>'+''.join('<li>'+html.escape(value)+'</li>' for value in inspector['limitations'])+'</ul><p>Abgeschlossen gilt nur fuer den benannten Pruefumfang. Keine Malware-Diagnose oder Entwarnung. Hashwerte beziehen sich auf die ganze Eingangsdatei, Entropie auf das erste MiB.</p><h3>Beobachtungen</h3><pre>'+html.escape(json.dumps(summary['observations'],ensure_ascii=False,indent=2))+'</pre></section>'
-    rendered='<!doctype html><html lang="de"><meta charset="utf-8"><title>Statische Prüfung</title><style>body{background:#1b0e14;color:#f4dce2;font:16px/1.5 system-ui;padding:30px;max-width:1100px;margin:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#2c1720;padding:24px;border:1px solid #9b4157;border-radius:12px}h1{color:#ff8fa9}</style><h1>Statische Prüfung: '+html.escape(kind)+'</h1><p>'+html.escape(SCOPE)+'</p>'+overview+'<h2>Rohbefund</h2><pre>'+html.escape(encoded)+'</pre></html>'
+    rendered=render_static_report(result,plan.get('locale','de'))
     (output/(name+'.html')).write_text(rendered,encoding='utf-8')
     emit('Statische Prüfung abgeschlossen: '+kind+'; Ergebnisdateien gespeichert. Keine Datei ausgeführt.\n')
     return 0
+
+
+def render_static_report(result, locale='de'):
+    """Localized HTML projection of saved findings; raw JSON is never translated."""
+    t=ReportText(locale)
+    summary=result.get('summary') or summarize_finding(result)
+    inspector=t.inspector(summary['inspector'])
+    def escape(value):
+        return html.escape(str(value))
+    def pair(label,value):
+        return '<tr><th>'+escape(label)+'</th><td>'+escape(t.value(value))+'</td></tr>'
+    def section(title,content):
+        return '<section><details open><summary><h2>'+escape(title)+'</h2></summary>'+content+'</details><div class="print-content"><h2>'+escape(title)+'</h2>'+content+'</div></section>'
+    observations=''.join(pair(t('observation.'+key) if 'observation.'+key in t.de else key,
+                             json.dumps(value,ensure_ascii=False) if isinstance(value,(dict,list)) else t('observation.first_1_mib') if key=='entropy_scope' and value=='first_1_mib' else value)
+                         for key,value in summary['observations'].items())
+    overview='<p>'+escape(inspector['status'])+'</p><p>'+escape(inspector['scope'])+'</p><table>'+''.join(pair(label,value) for label,value in t.coverage(summary))+'</table><ul>'+''.join('<li>'+escape(value)+'</li>' for value in inspector['limitations'])+'</ul><p>'+escape(t('static_notice'))+'</p><h3>'+escape(t('observations'))+'</h3><table>'+observations+'</table>'
+    encoded=json.dumps(result,ensure_ascii=False,indent=2)
+    return '<!doctype html><html lang="'+t.locale+'"><meta charset="utf-8"><title>'+escape(t('static_title'))+'</title><style>body{background:#1b0e14;color:#f4dce2;font:16px/1.5 system-ui;padding:30px;max-width:1100px;margin:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#2c1720;padding:24px;border:1px solid #9b4157;border-radius:12px}h1{color:#ff8fa9}th,td{text-align:left;vertical-align:top;padding:8px;overflow-wrap:anywhere}summary{cursor:pointer}summary h2{display:inline}.print-content{display:none}@media print{details{display:none}.print-content{display:block}body{background:white;color:black}pre{background:white;color:black}section{break-inside:avoid}}</style><h1>'+escape(t('static_heading',inspector=inspector['name']))+'</h1><p>'+escape(t.known_text(result.get('scope',SCOPE),prefix='limitation.'))+'</p>'+section(inspector['name'],overview)+section(t('raw'),'<pre>'+escape(encoded)+'</pre>')+'</html>'

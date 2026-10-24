@@ -3,10 +3,13 @@ import ctypes
 import threading
 from ctypes import wintypes as w
 
+from forensic_app.desktop_i18n import DesktopTranslations
+
 
 class TrayIcon:
-    def __init__(self,icon_path,dispatch):
+    def __init__(self,icon_path,dispatch,*,translate=None):
         self.icon_path,self.dispatch = str(icon_path),dispatch
+        self.translate = translate or DesktopTranslations().t
         self.ready = threading.Event()
         self.hwnd = None
         self.error = ''
@@ -66,6 +69,10 @@ class TrayIcon:
         data = NotifyData()
 
         def proc(hwnd,message,wp,lp):
+            if message == 0x8002:
+                data.tip = self.translate('tray.tooltip')
+                shell.Shell_NotifyIconW(1,ctypes.byref(data))
+                return 0
             if message == taskbar_message:
                 shell.Shell_NotifyIconW(0,ctypes.byref(data))
                 return 0
@@ -77,8 +84,8 @@ class TrayIcon:
                     user.GetCursorPos(ctypes.byref(point))
                     menu = user.CreatePopupMenu()
                     try:
-                        user.AppendMenuW(menu,0,1,'Serverfenster öffnen')
-                        user.AppendMenuW(menu,0,2,'Server stoppen und beenden…')
+                        user.AppendMenuW(menu,0,1,self.translate('tray.open'))
+                        user.AppendMenuW(menu,0,2,self.translate('tray.exit'))
                         user.SetForegroundWindow(hwnd)
                         chosen = user.TrackPopupMenu(menu,0x100|0x2,point.x,point.y,0,hwnd,None)
                         if chosen:
@@ -108,9 +115,9 @@ class TrayIcon:
                 raise ctypes.WinError(ctypes.get_last_error())
             icon = user.LoadImageW(None,self.icon_path,1,32,32,0x10)
             data.size,data.window,data.id,data.flags,data.message,data.icon = ctypes.sizeof(data),self.hwnd,1,7,0x8001,icon
-            data.tip = 'Post-Processing-Magic – Serverfenster öffnen'
+            data.tip = self.translate('tray.tooltip')
             if not shell.Shell_NotifyIconW(0,ctypes.byref(data)):
-                raise RuntimeError('Infobereich-Symbol konnte nicht angelegt werden.')
+                raise RuntimeError(self.translate('tray.create_failed'))
             self.ready.set()
             message = w.MSG()
             while user.GetMessageW(ctypes.byref(message),None,0,0) > 0:
@@ -123,6 +130,13 @@ class TrayIcon:
             user.UnregisterClassW.argtypes = [w.LPCWSTR,w.HINSTANCE]
             user.UnregisterClassW(name,instance)
             self.hwnd = None
+
+    def refresh_language(self):
+        """Only update the existing icon; native calls stay on its message thread."""
+        if self.hwnd:
+            user = ctypes.WinDLL('user32')
+            user.PostMessageW.argtypes = [w.HWND,w.UINT,w.WPARAM,w.LPARAM]
+            user.PostMessageW(self.hwnd,0x8002,0,0)
 
     def close(self):
         if self.hwnd:

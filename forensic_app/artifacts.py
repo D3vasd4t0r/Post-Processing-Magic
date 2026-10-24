@@ -1,4 +1,5 @@
 """Completion reports and explicitly requested serial result archives."""
+
 import hashlib
 import html
 import json
@@ -13,7 +14,9 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from fastapi import HTTPException
 
 from forensic_app import __version__
+from forensic_app.app_errors import AppValueError, ErrorText
 from forensic_app.processing_settings import ProcessingLimits
+from forensic_app.report_i18n import ReportText
 from forensic_app.server_control import accepting, draining
 from forensic_app.windows_access import locked_input
 from forensic_app.workspaces import job_paths, no_links
@@ -40,8 +43,11 @@ def report_folder(store,ident):
 
 def render_report(report):
     """Readable, self-contained report; every value is untrusted text."""
+    plan = report.get('configuration',{})
+    t = ReportText(plan.get('locale','de'))
+
     def escape(value):
-        return html.escape(str(value) if value is not None else 'Nicht vorhanden')
+        return html.escape(str(value) if value is not None else t('absent'))
 
     def table(headers,rows):
         return '<div class="table"><table><thead><tr>'+''.join('<th>'+escape(h)+'</th>' for h in headers)+'</tr></thead><tbody>'+''.join(
@@ -50,53 +56,52 @@ def render_report(report):
     def section(title,content):
         return '<section><details open><summary><h2>'+escape(title)+'</h2></summary>'+content+'</details><div class="print-content"><h2>'+escape(title)+'</h2>'+content+'</div></section>'
 
-    plan = report.get('configuration',{})
     mode = plan.get('mode',{})
-    parts = [section('Auftrag',table(['Angabe','Wert'],[
-        ('Fallnummer',plan.get('case_number') or 'Nicht angegeben'),('Gerätename',plan.get('device_name') or 'Nicht angegeben'),
-        ('Auftrags-ID',report.get('job_id')),('Eingangsdatei',report.get('input_filename')),
-        ('App-Version',report.get('app_version')),('Modus',mode.get('name')),
-        ('Beginn (UTC)',report.get('created_at_utc')),('Abschluss (UTC)',report.get('completed_at_utc')),
-        ('Exitcode',report.get('exit_code')),('Fehler',report.get('error') or 'Keine gemeldet')]))]
+    parts = [section(t('job'),table([t('field'),t('value')],[
+        (t('case'),plan.get('case_number') or t('unspecified')),(t('device'),plan.get('device_name') or t('unspecified')),
+        (t('job_id'),report.get('job_id')),(t('input'),report.get('input_filename')),
+        (t('app_version'),report.get('app_version')),(t('mode'),mode.get('name')),
+        (t('start'),report.get('created_at_utc')),(t('completed'),report.get('completed_at_utc')),
+        (t('exit_code'),report.get('exit_code')),(t('error'),report.get('error') or t('no_error'))]))]
     inventory=report.get('input_inventory')
     if inventory:
         groups=inventory.get('groups',{})
-        rows=[(group['label'],group['files'],group['bytes'],'; '.join(group['samples'])) for group in groups.values()]
-        parts.append(section('Eingangsarchiv: Artefaktgruppen', '<p>'+escape(inventory['scope_note'])+'</p><p>'+escape('Vollstaendig erfasst' if inventory['complete'] else 'Teilerfassung: '+', '.join(inventory['partial_reasons']))+'</p>'+table(['Gruppe','Dateien','Logische Bytes','Relative Beispiele'],rows)))
+        rows=[(t.known_text(group['label'],prefix='inventory.group.'),group['files'],group['bytes'],'; '.join(group['samples'])) for group in groups.values()]
+        parts.append(section(t('inventory'), '<p>'+escape(t.known_text(inventory['scope_note'],prefix='inventory.scope'))+'</p><p>'+escape(t('inventory_complete') if inventory['complete'] else t('inventory_partial',reasons=', '.join(t('inventory.reason.'+reason) if 'inventory.reason.'+reason in t.de else reason for reason in inventory['partial_reasons'])))+'</p>'+table([t('group'),t('files'),t('logical_bytes'),t('examples')],rows)))
     elif plan.get('workspace','forensics')=='forensics':
-        parts.append(section('Eingangsarchiv: Artefaktgruppen','<p>Nicht erfasst. Original wurde nicht nachtraeglich gelesen.</p>'))
+        parts.append(section(t('inventory'),'<p>'+escape(t('inventory_missing'))+'</p>'))
     for summary in report.get('finding_summaries',[]):
-        inspector=summary['inspector']
-        parts.append(section(inspector['name'],table(['Pruefumfang','Status'],[(inspector['scope'],inspector['status'])])+ '<p>'+escape(' '.join(inspector['limitations']))+'</p>'+table(['Merkmal','Wert'],list(summary['coverage'].items()))))
+        inspector=t.inspector(summary['inspector'])
+        parts.append(section(inspector['name'],table([t('scope'),t('status')],[(inspector['scope'],inspector['status'])])+ '<p>'+escape(' '.join(inspector['limitations']))+'</p>'+table([t('feature'),t('value')],t.coverage(summary))))
     input_data,archive = report.get('input',{}),report.get('archive',{})
-    parts.append(section('Hashwerte',table(['Datei','SHA-1','SHA-256'],[
-        ('Eingangsdatei',input_data.get('sha1'),input_data.get('sha256')),
-        ('Ergebnis-ZIP' if archive.get('created') else 'Ergebnis-ZIP (nicht erstellt)',archive.get('sha1'),archive.get('sha256'))])+
-        '<p>'+escape(archive.get('note') or 'Hashwerte des fertiggestellten Archivs, sofern vorhanden.')+'</p>'))
+    parts.append(section(t('hashes'),table([t('file'),'SHA-1','SHA-256'],[
+        (t('input'),input_data.get('sha1'),input_data.get('sha256')),
+        (t('archive') if archive.get('created') else t('archive_missing'),archive.get('sha1'),archive.get('sha256'))])+
+        '<p>'+escape(t.known_text(archive.get('note'),prefix='archive_') if archive.get('note') else t('archive_note'))+'</p>'))
     commands = plan.get('commands',[])
     rows = []
     for index,command in enumerate(commands):
         timing = next((run for run in report.get('command_runs',[]) if run.get('index') == index+1),{})
-        rows.append((index+1,command.get('type',command.get('kind','Tool')),
+        rows.append((index+1,command.get('type',command.get('kind',t('tool'))),
                      command.get('tool',{}).get('path',''),
                      command.get('command',''),
                      command.get('working_directory','.'),command.get('timeout_seconds',86400),timing.get('started_at_utc'),timing.get('ended_at_utc'),timing.get('exit_code')))
-    parts.append(section('Ausgeführte Befehle',table(['Nr.','Typ','Programm','Parameter / PowerShell-Code','Arbeitsordner','Zeitlimit (Sekunden)','Beginn (UTC)','Ende (UTC)','Exitcode'],rows)))
-    parts.append(section('Toolversionen',table(['Befehl','Tool','Version','SHA-256'],[
+    parts.append(section(t('commands'),table([t('number'),t('type'),t('program'),t('parameters'),t('work_folder'),t('timeout'),t('start'),t('end'),t('exit_code')],rows)))
+    parts.append(section(t('tool_versions'),table([t('command'),t('tool'),t('version'),'SHA-256'],[
         (index+1,command.get('tool',{}).get('name'),command.get('tool',{}).get('version'),command.get('tool',{}).get('sha256'))
         for index,command in enumerate(commands)])))
-    for key,title in [('work_directories','Unterordner im Arbeitsordner'),('directories','Unterordner im Ergebnisordner')]:
-        parts.append(section(title,table(['Relativer Pfad'],[(value,) for value in report.get(key,[])[:2000]])))
-    parts.append(section('Ergebnisdateien',table(['Relativer Pfad','Bytes'],[(item['path'],item['bytes']) for item in report.get('files',[])[:2000]])))
-    heading = 'Statische Malware-Analyse' if plan.get('workspace')=='malware' else 'Forensische Aufbereitung'
-    return '<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Abschlussbericht</title><style>body{font:16px/1.5 system-ui;max-width:1200px;margin:40px auto;background:#eef3fa;color:#10223a;padding:20px}section{background:white;padding:24px;margin:20px 0;border:1px solid #c3d3e4;border-radius:12px}h1,h2{color:#174a83}.print-content{display:none}summary{cursor:pointer}summary h2{display:inline;margin:0}summary:focus-visible{outline:2px solid #174a83;outline-offset:4px}details[open]>summary{margin-bottom:16px}.table{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;vertical-align:top;padding:10px;border-bottom:1px solid #c3d3e4;overflow-wrap:anywhere;white-space:pre-wrap}th{background:#e6eff9}@media print{details{display:none}.print-content{display:block}body{background:white;margin:0}section{break-inside:avoid}}</style><h1>'+heading+' – Abschlussbericht</h1><p>Lokale Hashwerte dokumentieren den Dateistand. Fachliche Ergebnisse manuell prüfen.</p>'+''.join(parts)+'<p>HTML zeigt höchstens 2.000 Einträge je Dateiliste. Die zusätzliche JSON-Datei enthält die vollständigen erfassten Daten.</p></html>'
+    for key,title in [('work_directories',t('work_dirs')),('directories',t('result_dirs'))]:
+        parts.append(section(title,table([t('relative_path')],[(value,) for value in report.get(key,[])[:2000]])))
+    parts.append(section(t('result_files'),table([t('relative_path'),t('bytes')],[(item['path'],item['bytes']) for item in report.get('files',[])[:2000]])))
+    heading = t('heading_malware') if plan.get('workspace')=='malware' else t('heading_forensics')
+    return '<!doctype html><html lang="'+t.locale+'"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+escape(t('title'))+'</title><style>body{font:16px/1.5 system-ui;max-width:1200px;margin:40px auto;background:#eef3fa;color:#10223a;padding:20px}section{background:white;padding:24px;margin:20px 0;border:1px solid #c3d3e4;border-radius:12px}h1,h2{color:#174a83}.print-content{display:none}summary{cursor:pointer}summary h2{display:inline;margin:0}summary:focus-visible{outline:2px solid #174a83;outline-offset:4px}details[open]>summary{margin-bottom:16px}.table{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;vertical-align:top;padding:10px;border-bottom:1px solid #c3d3e4;overflow-wrap:anywhere;white-space:pre-wrap}th{background:#e6eff9}@media print{details{display:none}.print-content{display:block}body{background:white;margin:0}section{break-inside:avoid}}</style><h1>'+escape(t('heading',workspace=heading))+'</h1><p>'+escape(t('hash_notice'))+'</p>'+''.join(parts)+'<p>'+escape(t('list_notice'))+'</p></html>'
 
 
 def save_report(store,ident,report):
     folder = report_folder(store,ident)
     folder.mkdir(exist_ok=True)
     if folder.is_symlink() or folder.is_junction():
-        raise ValueError('Berichtsordner ist eine Verknüpfung.')
+        raise AppValueError('error.6320d7a26e6c')
     encoded = json.dumps(report,ensure_ascii=False,indent=2)
     body = render_report(report)
     for name,content in [('Abschlussbericht.json',encoded),('Abschlussbericht.html',body)]:
@@ -132,7 +137,7 @@ def prepare_report(store,ident,plan,command_runs,*,error=None):
     if error is None:
         no_links(output)
         if not output.resolve().is_relative_to(work.resolve()):
-            raise ValueError('Ergebnisordner liegt außerhalb des Auftrags.')
+            raise AppValueError('error.89045519c588')
         files = output_files(output,max_bytes=ProcessingLimits.model_validate(plan.get('limits',{})).max_extract_bytes)
         report['files'] = [{'path':p.relative_to(output).as_posix(),'bytes':p.stat().st_size} for p in files]
         directories = ['.']
@@ -161,12 +166,12 @@ def make_archive(store,ident,plan,report,check):
     root,work,result = job_paths(store.storage,plan,ident)
     output = work/Path(*PureWindowsPath(plan['mode']['output_folder']).parts)
     if not output.resolve().is_relative_to(work.resolve()):
-        raise ValueError('Ergebnisordner liegt außerhalb des Auftrags.')
+        raise AppValueError('error.89045519c588')
     files = output_files(output,max_bytes=ProcessingLimits.model_validate(plan.get('limits',{})).max_extract_bytes)
     ensure_space(root,sum(p.stat().st_size for p in files))
     temporary = result.with_suffix('.part')
     if result.exists():
-        raise ValueError('Ergebnisarchiv existiert bereits; kein Überschreiben.')
+        raise AppValueError('error.cebc3390dbde')
     embedded = dict(report,archive={'created':True,'sha1':None,'sha256':None,
         'note':'Hash des fertigen ZIP steht im separat herunterladbaren Abschlussbericht; kein selbstreferenzieller Archivhash.'})
     try:
@@ -202,18 +207,18 @@ class ArchiveQueue:
     def request(self,ident):
         state = self.store.get(ident)
         if state['status'] != 'succeeded' or state['result_available']:
-            raise HTTPException(409,'Nur erfolgreiche Aufträge ohne vorhandenes Archiv können gezippt werden.')
+            raise HTTPException(409,ErrorText('error.5e9534a3c737'))
         from forensic_app.explorer import ResultExplorer
         ResultExplorer(self.storage,self.store).folder(ident)
         with closing(sqlite3.connect(self.storage.database)) as c,c:
             c.execute('BEGIN IMMEDIATE')
             accepting(c)
             if c.execute('SELECT active FROM cleanup_state WHERE id=1').fetchone()[0]:
-                raise HTTPException(409,'Eine Bereinigung läuft.')
+                raise HTTPException(409,ErrorText('error.ebe88a997f31'))
             if c.execute("SELECT count(*) FROM archive_requests WHERE status IN ('queued','running')").fetchone()[0] >= 16:
-                raise HTTPException(409,'Maximal 16 offene Archivierungen. Bitte erst abschließen.')
+                raise HTTPException(409,ErrorText('error.4afff115c0a7'))
             if c.execute("SELECT 1 FROM archive_requests WHERE job_id=? AND status IN ('queued','running')",(ident,)).fetchone():
-                raise HTTPException(409,'Archivierung ist bereits angefordert.')
+                raise HTTPException(409,ErrorText('error.3e6ef8eddf18'))
             c.execute("INSERT INTO archive_requests(job_id,status) VALUES (?,'queued') ON CONFLICT(job_id) DO UPDATE SET status='queued',error=NULL,cancel_requested=0,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')",(ident,))
             c.execute("INSERT INTO job_events(job_id,kind,payload) VALUES (?,'archive',?)",(ident,json.dumps({'status':'queued','actor':'authenticated-user'})))
         return {'queued':True}

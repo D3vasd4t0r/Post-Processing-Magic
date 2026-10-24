@@ -145,426 +145,434 @@
       <path d="m128 40 80 31v63c0 46-31 82-80 107-49-25-80-61-80-107V71Z" stroke="currentColor"/>
       <path d="M128 41v199M48 134h160" stroke="currentColor"/><circle cx="128" cy="132" r="39" stroke="currentColor"/>
     </svg>
-    <span class="scope-label">FORENSIK</span>
+    <span class="scope-label" data-i18n="web.s000">FORENSIK</span>
     <div class="brand">
       <span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 64 76" fill="none" focusable="false">
         <path d="m32 5 25 10v22c0 16-11 27-25 34C18 64 7 53 7 37V15Z" stroke="currentColor" stroke-width="2"/>
         <path d="M32 16v42M17 31h30" stroke="currentColor" stroke-opacity=".45"/><circle cx="32" cy="36" r="11" stroke="currentColor" stroke-width="1.5"/>
       </svg></span>
-      <div><div class="eyebrow">Digital Forensics · Workspace 0.29.0 · Entwicklung</div>
-        <h1>Post-Processing-Magic</h1>
-        <p>Dein Arbeitsbereich für die forensische Nachbearbeitung.</p></div>
+      <div><div class="eyebrow" data-i18n="web.s001">Digital Forensics · Workspace 0.30.0 · Entwicklung</div>
+        <h1 data-i18n="web.s002">Post-Processing-Magic</h1>
+        <p data-i18n="web.s003">Dein Arbeitsbereich für die forensische Nachbearbeitung.</p></div>
     </div>
   </header>
+  <div class="actions" style="justify-content:flex-end"><label for="interface-locale" data-i18n="interface.language">Sprache</label><select id="interface-locale" style="width:auto"><option value="de">Deutsch</option><option value="en">English</option></select></div>
   <section class="panel" id="login">
-    <h2>Mit dem Dienst verbinden</h2>
-    <p>Der Access Token ist dein Zugangsschlüssel. Beim automatischen Browserstart
+    <h2 data-i18n="web.s004">Mit dem Dienst verbinden</h2>
+    <p data-i18n="web.s005">Der Access Token ist dein Zugangsschlüssel. Beim automatischen Browserstart
       meldet dich die App direkt an.</p>
     <form id="login-form">
-      <label for="token">Access Token</label>
+      <label for="token" data-i18n="web.s006">Access Token</label>
       <input id="token" type="password" autocomplete="off" required aria-describedby="token-help">
-      <p class="help" id="token-help">Bei manuell geöffneter Adresse: Token-Datei auf dem
+      <p class="help" id="token-help" data-i18n="web.s007">Bei manuell geöffneter Adresse: Token-Datei auf dem
         Server öffnen und den Inhalt hier einfügen. Der Schlüssel ändert sich nach jedem Serverneustart.</p>
-      <button type="submit">Verbinden</button>
+      <button type="submit" data-i18n="web.s008">Verbinden</button>
     </form>
     <details style="margin-top:20px">
-      <summary>Wo finde ich die Token-Datei?</summary>
-      <p>Im Windows-Explorer auf dem Server diesen Pfad in die Adresszeile einfügen:</p>
+      <summary data-i18n="web.s009">Wo finde ich die Token-Datei?</summary>
+      <p data-i18n="web.s010">Im Windows-Explorer auf dem Server diesen Pfad in die Adresszeile einfügen:</p>
       <p><code>%LOCALAPPDATA%\PostProcessingMagic\config\access-token.txt</code></p>
-      <p class="help">Bei einem eigenen Datenverzeichnis: <code>config\access-token.txt</code>
-        darin öffnen. Den vollständigen Pfad zeigt auch das Serverfenster an.</p>
+      <p class="help"><span data-i18n="web.s011">Bei einem eigenen Datenverzeichnis:</span> <code>config\access-token.txt</code>
+        <span data-i18n="web.s012">darin öffnen. Den vollständigen Pfad zeigt auch das Serverfenster an.</span></p>
     </details>
   </section>
   <main id="workspace" hidden>
-    <div class="area-switch" role="group" aria-label="Arbeitsbereich">
-      <button id="area-forensics" aria-pressed="true">♢ Forensik</button>
-      <button id="area-malware" aria-pressed="false">☠ Statische Malware-Analyse</button>
-      <span id="area-note" class="help">Getrennte Module und Aufträge · gemeinsame Tools</span>
+    <aside id="onboarding" class="panel" hidden aria-labelledby="onboarding-title">
+      <div class="heading"><h2 id="onboarding-title" data-i18n="onboarding.title">Tools einrichten</h2><button id="onboarding-close" class="secondary" aria-label="Hinweis schließen" data-i18n-aria-label="onboarding.close">×</button></div>
+      <p data-i18n="onboarding.intro">Benötigte Tools richten sich nach deinen gespeicherten unterstützten Abläufen. Speichern und Sprachwechsel starten kein Programm und laden nichts herunter.</p>
+      <ul id="onboarding-required"></ul><p id="onboarding-empty"></p>
+      <h3 data-i18n="onboarding.optional">Optionale Ergebnis-Viewer</h3><ul id="onboarding-optional"></ul><p id="onboarding-scope" class="help"></p>
+      <div class="actions"><button id="onboarding-tools" class="secondary" data-i18n="onboarding.tools">Toolverwaltung öffnen</button><button id="onboarding-modes" class="secondary" data-i18n="onboarding.modes">Forensik-Modi öffnen</button></div>
+    </aside>
+    <div class="area-switch" role="group" aria-label="Arbeitsbereich" data-i18n-aria-label="label.x000">
+      <button id="area-forensics" aria-pressed="true" data-i18n="web.s013">♢ Forensik</button>
+      <button id="area-malware" aria-pressed="false" data-i18n="web.s014">☠ Statische Malware-Analyse</button>
+      <span id="area-note" class="help" data-i18n="web.s015">Getrennte Module und Aufträge · gemeinsame Tools</span>
     </div>
-    <p id="admin-status" class="badge" role="status">Administratorstatus wird geprüft…</p>
-    <nav aria-label="Hauptnavigation">
-      <button id="nav-overview" aria-current="page">Aufbereitung</button>
-      <button id="nav-settings">Einstellungen</button>
-      <button id="nav-logs">Logs</button><button id="nav-results">Ergebnisse</button>
-      <button id="open-feedback">Feedback</button>
-      <button id="logout" class="secondary" style="margin-left:auto">Abmelden</button>
+    <p id="admin-status" class="badge" role="status" data-i18n="web.s016">Administratorstatus wird geprüft…</p>
+    <nav aria-label="Hauptnavigation" data-i18n-aria-label="label.x001">
+      <button id="nav-overview" aria-current="page" data-i18n="web.s017">Aufbereitung</button>
+      <button id="nav-settings" data-i18n="web.s018">Einstellungen</button>
+      <button id="nav-logs" data-i18n="web.s019">Logs</button><button id="nav-results" data-i18n="web.s020">Ergebnisse</button>
+      <button id="open-feedback" data-i18n="web.s021">Feedback</button>
+      <button id="logout" class="secondary" style="margin-left:auto" data-i18n="web.s022">Abmelden</button>
     </nav>
     <div id="overview">
       <section class="panel">
-        <h2>Evidence aufbereiten</h2>
-        <p id="run-intro" class="note">ZIP/KAPE-Test: Run lädt deine ZIP hoch und führt den ausgewählten
+        <h2 data-i18n="web.s023">Evidence aufbereiten</h2>
+        <p id="run-intro" class="note" data-i18n="web.s024">ZIP/KAPE-Test: Run lädt deine ZIP hoch und führt den ausgewählten
           KAPE-Befehl aus. Das Original-ZIP bleibt erhalten.</p>
-        <label for="run-source-kind">Quelle</label>
+        <label for="run-source-kind" data-i18n="web.s025">Quelle</label>
         <select id="run-source-kind">
-          <option value="upload">Upload</option>
-          <option value="local">Lokale Datei auf dem Server</option>
+          <option value="upload" data-i18n="web.s026">Upload</option>
+          <option value="local" data-i18n="web.s027">Lokale Datei auf dem Server</option>
         </select>
-        <div class="grid"><div><label for="run-case">Fallnummer (optional)</label><input id="run-case" maxlength="120" type="text"></div><div><label for="run-device">Gerätename (optional)</label><input id="run-device" maxlength="120" type="text"></div></div>
+        <div class="grid"><div><label for="run-case" data-i18n="web.s028">Fallnummer (optional)</label><input id="run-case" maxlength="120" type="text"></div><div><label for="run-device" data-i18n="web.s029">Gerätename (optional)</label><input id="run-device" maxlength="120" type="text"></div></div>
         <div id="upload-source">
-        <label for="run-file">1. ZIP-Datei auswählen</label>
+        <label for="run-file" data-i18n="web.s030">1. ZIP-Datei auswählen</label>
         <input id="run-file" type="file" accept=".zip,application/zip" aria-describedby="run-file-message">
-        <p id="run-file-message" class="help" role="status">Noch keine Datei ausgewählt.</p>
+        <p id="run-file-message" class="help" role="status" data-i18n="web.s031">Noch keine Datei ausgewählt.</p>
         </div>
         <div id="local-source" hidden>
-          <label for="local-zip-path">1. Lokale ZIP-Datei auf dem Server</label>
+          <label for="local-zip-path" data-i18n="web.s032">1. Lokale ZIP-Datei auf dem Server</label>
           <div class="path-input"><input id="local-zip-path" maxlength="4096" spellcheck="false" placeholder="D:\Sicherungen\KAPE-Target.zip">
-            <button id="browse-evidence" class="secondary">Durchsuchen…</button></div>
-          <p class="help">ZIP direkt referenzieren, auch über 50 GiB. Kein Upload und keine zusätzliche Eingangskopie.
+            <button id="browse-evidence" class="secondary" data-i18n="web.s033">Durchsuchen…</button></div>
+          <p class="help" data-i18n="web.s034">ZIP direkt referenzieren, auch über 50 GiB. Kein Upload und keine zusätzliche Eingangskopie.
             Das Original wird ausschließlich gelesen; Entpacken und Ergebnis-ZIP benötigen freien Platz im Datenordner.</p>
         </div>
         <div class="fields">
-          <div><label for="run-format">2. Evidence-Format</label>
+          <div><label for="run-format" data-i18n="web.s035">2. Evidence-Format</label>
             <select id="run-format">
-              <option value="ZIP">ZIP (KAPE-Target)</option>
-              <option value="E01" disabled>E01 — in Planung</option>
-              <option value="VMDK" disabled>VMDK — in Planung</option>
+              <option value="ZIP" data-i18n="web.s036">ZIP (KAPE-Target)</option>
+              <option value="E01" disabled data-i18n="web.s037">E01 — in Planung</option>
+              <option value="VMDK" disabled data-i18n="web.s038">VMDK — in Planung</option>
             </select>
           </div>
-          <div><label for="run-effort">3. Aufwand</label>
-            <select id="run-effort" disabled><option value="">Modi werden geladen…</option></select>
+          <div><label for="run-effort" data-i18n="web.s039">3. Aufwand</label>
+            <select id="run-effort" disabled><option value="" data-i18n="web.s040">Modi werden geladen…</option></select>
           </div>
         </div>
         <p id="run-mode-message" class="help" role="status"></p>
         <div class="actions">
-          <button id="run-start" disabled aria-describedby="run-start-note">Run</button>
-          <button id="preview-run" class="secondary" disabled>Ablauf ansehen</button>
-          <button id="cancel-run" class="danger" hidden>Abbrechen</button>
+          <button id="run-start" disabled aria-describedby="run-start-note" data-i18n="web.s041">Run</button>
+          <button id="preview-run" class="secondary" disabled data-i18n="web.s042">Ablauf ansehen</button>
+          <button id="cancel-run" class="danger" hidden data-i18n="web.s043">Abbrechen</button>
         </div>
-        <p id="run-start-note" class="help">Limits werden geladen…</p>
+        <p id="run-start-note" class="help" data-i18n="web.s044">Limits werden geladen…</p>
         <details class="run-placeholder">
-          <summary>Archivoptionen</summary>
+          <summary data-i18n="web.s045">Archivoptionen</summary>
           <label><input id="allow-high-compression" type="checkbox" checked style="display:inline;width:auto">
-            Hohe Kompression zulassen</label>
-          <p class="help">Für bekannte eigene Sicherungen mit stark komprimierten Dateien (über 1000:1).
+            <span data-i18n="web.s046">Hohe Kompression zulassen</span></label>
+          <p class="help" data-i18n="web.s047">Für bekannte eigene Sicherungen mit stark komprimierten Dateien (über 1000:1).
             Das eingestellte Entpacklimit sowie alle Pfad-/Speicherplatzprüfungen bleiben aktiv.</p>
         </details>
-        <label class="checkbox-inline"><input type="checkbox" id="create-result-zip" checked> Ergebnis-ZIP direkt erstellen</label>
-        <p class="help">Ohne ZIP steht der Ergebnisordner lokal bereit. Ein Archiv kannst du später ausdrücklich erstellen lassen, ohne erneute Analyse.</p>
-        <label id="upload-label" for="upload-progress" hidden>ZIP hochladen</label>
+        <label class="checkbox-inline"><input type="checkbox" id="create-result-zip" checked> <span data-i18n="web.s048">Ergebnis-ZIP direkt erstellen</span></label>
+        <p class="help" data-i18n="web.s049">Ohne ZIP steht der Ergebnisordner lokal bereit. Ein Archiv kannst du später ausdrücklich erstellen lassen, ohne erneute Analyse.</p>
+        <label id="upload-label" for="upload-progress" hidden data-i18n="web.s050">ZIP hochladen</label>
         <progress id="upload-progress" value="0" max="100" hidden></progress>
         <details class="run-placeholder" style="margin-top:16px">
-          <summary>Modusauswahl prüfen</summary>
+          <summary data-i18n="web.s051">Modusauswahl prüfen</summary>
           <ul id="run-availability"></ul>
           <div class="actions">
-            <button id="reload-run" class="secondary">Modi aktualisieren</button>
-            <button id="open-settings" class="secondary">Modi einrichten</button>
+            <button id="reload-run" class="secondary" data-i18n="web.s052">Modi aktualisieren</button>
+            <button id="open-settings" class="secondary" data-i18n="web.s053">Modi einrichten</button>
           </div>
         </details>
         <section id="run-plan" class="mode-category" hidden>
-          <h3>Geplanter Ablauf</h3>
+          <h3 data-i18n="web.s054">Geplanter Ablauf</h3>
           <p id="run-plan-summary"></p>
           <p id="run-plan-folders" class="help"></p>
-          <details><summary>Geplante Kommandozeilen anzeigen</summary><div id="run-plan-commands"></div></details>
-          <p class="help">Dies ist eine Vorschau deiner Konfiguration. Es wurde kein Arbeitsordner
+          <details><summary data-i18n="web.s055">Geplante Kommandozeilen anzeigen</summary><div id="run-plan-commands"></div></details>
+          <p class="help" data-i18n="web.s056">Dies ist eine Vorschau deiner Konfiguration. Es wurde kein Arbeitsordner
             angelegt und kein Befehl ausgeführt.</p>
         </section>
       </section>
       <section class="panel">
-        <div class="heading"><h2>Fortschritt</h2><span id="run-status" class="badge">Nicht gestartet</span></div>
-        <label for="run-total-progress" id="run-total-label">Gesamt: 0 Befehle ausgeführt</label>
+        <div class="heading"><h2 data-i18n="web.s057">Fortschritt</h2><span id="run-status" class="badge" data-i18n="web.s058">Nicht gestartet</span></div>
+        <label for="run-total-progress" id="run-total-label" data-i18n="web.s059">Gesamt: 0 Befehle ausgeführt</label>
         <progress id="run-total-progress" value="0" max="1" aria-describedby="run-progress-note"></progress>
-        <label id="run-command-label" for="run-command-progress">Aktueller Befehl: noch keiner gestartet</label>
+        <label id="run-command-label" for="run-command-progress" data-i18n="web.s060">Aktueller Befehl: noch keiner gestartet</label>
         <progress id="run-command-progress" value="0" max="100"></progress>
-        <p id="run-progress-note" class="run-status" role="status">Noch keine Aufbereitung gestartet.</p><div id="run-inventory"></div>
+        <p id="run-progress-note" class="run-status" role="status" data-i18n="web.s061">Noch keine Aufbereitung gestartet.</p><div id="run-inventory"></div>
         <details id="run-error-panel" hidden>
-          <summary>Fehlerdetails</summary>
+          <summary data-i18n="web.s062">Fehlerdetails</summary>
           <pre id="run-error-detail"></pre>
-          <button id="open-job-logs" class="secondary">Diesen Lauf in Logs öffnen</button>
+          <button id="open-job-logs" class="secondary" data-i18n="web.s063">Diesen Lauf in Logs öffnen</button>
         </details>
-        <details id="run-terminal" class="run-placeholder"><summary>Kommandozeile anzeigen</summary>
-          <pre id="run-live-command" class="terminal-command">Kein Befehl gestartet.</pre>
-          <div class="terminal-bar"><span>Terminal · Live-Ausgabe</span><button id="follow-output" class="secondary">Live folgen: an</button></div>
-          <pre id="run-live-output" class="terminal-output" aria-label="Live-Ausgabe" tabindex="0">Noch keine Ausgabe.</pre>
-          <p class="help">Nach oben scrollen pausiert das Mitscrollen. „Live folgen“ springt zur neuesten Ausgabe.
+        <details id="run-terminal" class="run-placeholder"><summary data-i18n="web.s064">Kommandozeile anzeigen</summary>
+          <pre id="run-live-command" class="terminal-command" data-i18n="web.s065">Kein Befehl gestartet.</pre>
+          <div class="terminal-bar"><span data-i18n="web.s066">Terminal · Live-Ausgabe</span><button id="follow-output" class="secondary" data-i18n="web.s067">Live folgen: an</button></div>
+          <pre id="run-live-output" class="terminal-output" aria-label="Live-Ausgabe" tabindex="0" data-i18n-aria-label="label.x003" data-i18n="web.s068">Noch keine Ausgabe.</pre>
+          <p class="help" data-i18n="web.s069">Nach oben scrollen pausiert das Mitscrollen. „Live folgen“ springt zur neuesten Ausgabe.
             Der vollständige gespeicherte Log ist im Tab Logs abrufbar.</p>
         </details>
-        <div class="actions"><button id="download-evidences" disabled>Download Evidences</button>
-          <button id="run-archive" class="secondary" disabled>Ergebnis-ZIP erstellen</button>
-          <button id="run-report" class="secondary" disabled>Abschlussbericht herunterladen</button>
-          <button id="run-explorer" class="secondary" hidden disabled>Show in Explorer</button></div>
+        <div class="actions"><button id="download-evidences" disabled data-i18n="web.s070">Download Evidences</button>
+          <button id="run-archive" class="secondary" disabled data-i18n="web.s071">Ergebnis-ZIP erstellen</button>
+          <button id="run-report" class="secondary" disabled data-i18n="web.s072">Abschlussbericht herunterladen</button>
+          <button id="run-explorer" class="secondary" hidden disabled data-i18n="web.s073">Show in Explorer</button></div>
         <p id="run-explorer-note" class="help" role="status"></p>
-        <div class="actions"><button id="new-run" class="secondary" hidden>Neuen Lauf vorbereiten</button></div>
-        <p id="run-download-note" class="help">Der Download wird nach erfolgreicher Verarbeitung verfügbar.</p>
+        <div class="actions"><button id="new-run" class="secondary" hidden data-i18n="web.s074">Neuen Lauf vorbereiten</button></div>
+        <p id="run-download-note" class="help" data-i18n="web.s075">Der Download wird nach erfolgreicher Verarbeitung verfügbar.</p>
       </section>
     </div>
     <div id="malware-overview" hidden>
       <section class="panel">
-        <div class="heading"><div><div class="eyebrow">STATIC ANALYSIS · OFFLINE</div><h2>Verdächtige Datei untersuchen</h2></div><span class="badge">☠ Keine Sample-Ausführung</span></div>
-        <p class="note">Eine einzelne PDF-, Office- oder Windows-PE-Datei als Daten untersuchen. Interne Prüfungen lesen Rohdaten; sie starten keine Samples, Makros oder eingebetteten Inhalte. Kein Cloud-Upload.</p>
-        <p class="help">0.25 ist eine erste statische Triage, keine Sandbox und keine Malware-Erkennung. Befunde und Grenzen stehen im Bericht. Maximal 256 MiB pro Datei.</p>
-        <label for="static-source">1. Quelle</label><select id="static-source"><option value="upload">Upload</option><option value="local">Lokale Datei auf dem Server</option></select>
-        <div class="grid"><div><label for="static-case">Fallnummer (optional)</label><input id="static-case" maxlength="120" type="text"></div><div><label for="static-device">Gerätename (optional)</label><input id="static-device" maxlength="120" type="text"></div></div>
-        <div id="static-upload"><label for="static-file">Einzeldatei auswählen</label><input id="static-file" type="file" accept=".pdf,.exe,.dll,.sys,.scr,.doc,.docx,.docm,.xls,.xlsx,.xlsm,.ppt,.pptx,.pptm"></div>
-        <div id="static-local" hidden><label for="static-path">Absoluter Dateipfad auf dem Server</label><div class="path-input"><input id="static-path" maxlength="4096" spellcheck="false"><button id="static-browse" class="secondary">Durchsuchen…</button></div><p class="help">Das Original bleibt erhalten. Eine lesend geprüfte Arbeitskopie wird unter neutralem Dateinamen erstellt.</p></div>
-        <div class="fields"><div><label for="static-format">2. Dateiformat</label><select id="static-format"><option value="PDF">PDF</option><option value="OFFICE">Office-Dokument</option><option value="EXE">Windows Executable / PE</option></select></div>
-        <div><label for="static-mode">3. Aufwand / Modul</label><select id="static-mode"></select></div></div>
+        <div class="heading"><div><div class="eyebrow" data-i18n="web.s076">STATIC ANALYSIS · OFFLINE</div><h2 data-i18n="web.s077">Verdächtige Datei untersuchen</h2></div><span class="badge" data-i18n="web.s078">☠ Keine Sample-Ausführung</span></div>
+        <p class="note" data-i18n="web.s079">Eine einzelne PDF-, Office- oder Windows-PE-Datei als Daten untersuchen. Interne Prüfungen lesen Rohdaten; sie starten keine Samples, Makros oder eingebetteten Inhalte. Kein Cloud-Upload.</p>
+        <p class="help" data-i18n="web.s080">0.25 ist eine erste statische Triage, keine Sandbox und keine Malware-Erkennung. Befunde und Grenzen stehen im Bericht. Maximal 256 MiB pro Datei.</p>
+        <label for="static-source" data-i18n="web.s081">1. Quelle</label><select id="static-source"><option value="upload" data-i18n="web.s026">Upload</option><option value="local" data-i18n="web.s027">Lokale Datei auf dem Server</option></select>
+        <div class="grid"><div><label for="static-case" data-i18n="web.s028">Fallnummer (optional)</label><input id="static-case" maxlength="120" type="text"></div><div><label for="static-device" data-i18n="web.s029">Gerätename (optional)</label><input id="static-device" maxlength="120" type="text"></div></div>
+        <div id="static-upload"><label for="static-file" data-i18n="web.s082">Einzeldatei auswählen</label><input id="static-file" type="file" accept=".pdf,.exe,.dll,.sys,.scr,.doc,.docx,.docm,.xls,.xlsx,.xlsm,.ppt,.pptx,.pptm"></div>
+        <div id="static-local" hidden><label for="static-path" data-i18n="web.s083">Absoluter Dateipfad auf dem Server</label><div class="path-input"><input id="static-path" maxlength="4096" spellcheck="false"><button id="static-browse" class="secondary" data-i18n="web.s033">Durchsuchen…</button></div><p class="help" data-i18n="web.s084">Das Original bleibt erhalten. Eine lesend geprüfte Arbeitskopie wird unter neutralem Dateinamen erstellt.</p></div>
+        <div class="fields"><div><label for="static-format" data-i18n="web.s085">2. Dateiformat</label><select id="static-format"><option value="PDF" data-i18n="web.s086">PDF</option><option value="OFFICE" data-i18n="web.s087">Office-Dokument</option><option value="EXE" data-i18n="web.s088">Windows Executable / PE</option></select></div>
+        <div><label for="static-mode" data-i18n="web.s089">3. Aufwand / Modul</label><select id="static-mode"></select></div></div>
         <p id="static-ready" class="help" role="status"></p>
-        <label class="checkbox-inline"><input id="static-zip" type="checkbox" checked> Ergebnis-ZIP direkt erstellen</label>
-        <div class="actions"><button id="static-run" disabled>Statische Analyse starten</button><button id="static-reload" class="secondary">Module aktualisieren</button><button id="static-configure" class="secondary">Module einrichten</button></div>
-        <details><summary>Geplanter Ablauf</summary><pre id="static-plan">Noch kein Modul gewählt.</pre></details>
+        <label class="checkbox-inline"><input id="static-zip" type="checkbox" checked> <span data-i18n="web.s048">Ergebnis-ZIP direkt erstellen</span></label>
+        <div class="actions"><button id="static-run" disabled data-i18n="web.s090">Statische Analyse starten</button><button id="static-reload" class="secondary" data-i18n="web.s091">Module aktualisieren</button><button id="static-configure" class="secondary" data-i18n="web.s092">Module einrichten</button></div>
+        <details><summary data-i18n="web.s054">Geplanter Ablauf</summary><pre id="static-plan" data-i18n="web.s093">Noch kein Modul gewählt.</pre></details>
       </section>
-      <section class="panel"><h2 id="static-status">Noch keine Analyse gestartet</h2><p id="static-detail" role="status"></p><div id="static-findings"></div>
-        <label id="static-progress-label" for="static-progress">0 Schritte abgeschlossen</label><progress id="static-progress" max="1" value="0"></progress>
-        <details><summary>Aktuelle Prüfung und Terminal anzeigen</summary><pre id="static-command" class="terminal-command">Kein Schritt gestartet.</pre>
-        <div class="terminal-bar"><span>Statische Prüfungen · Live-Ausgabe</span><button id="static-follow" class="secondary">Live folgen: an</button></div><pre id="static-terminal" class="terminal-output" tabindex="0" aria-label="Ausgabe der statischen Analyse">Noch keine Ausgabe.</pre></details>
-        <div class="actions"><button id="static-cancel" class="danger" disabled>Abbrechen</button><button id="static-download" disabled>Ergebnisse herunterladen</button><button id="static-report" class="secondary" disabled>HTML-Abschlussbericht</button><button id="static-archive" class="secondary" disabled>Ergebnis-ZIP erstellen</button><button id="static-explorer" class="secondary" hidden>Show in Explorer</button></div>
-        <p class="help">Das Ergebnisarchiv enthält Prüfberichte, keine Kopie der verdächtigen Eingangsdatei. Frühere Analysen stehen im Logs-Tab dieses Bereichs.</p>
+      <section class="panel"><h2 id="static-status" data-i18n="web.s094">Noch keine Analyse gestartet</h2><p id="static-detail" role="status"></p><div id="static-findings"></div>
+        <label id="static-progress-label" for="static-progress" data-i18n="web.s095">0 Schritte abgeschlossen</label><progress id="static-progress" max="1" value="0"></progress>
+        <details><summary data-i18n="web.s096">Aktuelle Prüfung und Terminal anzeigen</summary><pre id="static-command" class="terminal-command" data-i18n="web.s097">Kein Schritt gestartet.</pre>
+        <div class="terminal-bar"><span data-i18n="web.s098">Statische Prüfungen · Live-Ausgabe</span><button id="static-follow" class="secondary" data-i18n="web.s067">Live folgen: an</button></div><pre id="static-terminal" class="terminal-output" tabindex="0" aria-label="Ausgabe der statischen Analyse" data-i18n-aria-label="label.x005" data-i18n="web.s068">Noch keine Ausgabe.</pre></details>
+        <div class="actions"><button id="static-cancel" class="danger" disabled data-i18n="web.s043">Abbrechen</button><button id="static-download" disabled data-i18n="web.s099">Ergebnisse herunterladen</button><button id="static-report" class="secondary" disabled data-i18n="web.s100">HTML-Abschlussbericht</button><button id="static-archive" class="secondary" disabled data-i18n="web.s071">Ergebnis-ZIP erstellen</button><button id="static-explorer" class="secondary" hidden data-i18n="web.s073">Show in Explorer</button></div>
+        <p class="help" data-i18n="web.s101">Das Ergebnisarchiv enthält Prüfberichte, keine Kopie der verdächtigen Eingangsdatei. Frühere Analysen stehen im Logs-Tab dieses Bereichs.</p>
       </section>
     </div>
     <div id="settings" hidden>
-      <section class="panel settings-intro"><h2>Zentrale Einstellungen</h2>
-        <p>Eine gemeinsame Konfiguration für Forensik und Malware-Analyse. Beide Modulbereiche sind hier jederzeit erreichbar, unabhängig von der Auswahl auf der Hauptseite.</p>
+      <section class="panel settings-intro"><h2 data-i18n="web.s102">Zentrale Einstellungen</h2>
+        <p data-i18n="web.s103">Eine gemeinsame Konfiguration für Forensik und Malware-Analyse. Beide Modulbereiche sind hier jederzeit erreichbar, unabhängig von der Auswahl auf der Hauptseite.</p>
       </section>
-      <nav class="settings-tabs" aria-label="Zentrale Einstellungskategorien">
-        <span class="settings-category-label">Gemeinsam</span>
-        <button id="settings-tools" aria-current="page">Tools</button>
-        <button id="settings-processing">Allgemein</button>
-        <button id="settings-transfer">Konfiguration</button>
-        <span class="settings-category-label">Bereichsspezifisch</span>
-        <button id="settings-modes">Forensik-Modi</button>
-        <button id="settings-malware">Malware-Module</button>
+      <nav class="settings-tabs" aria-label="Zentrale Einstellungskategorien" data-i18n-aria-label="label.x002">
+        <span class="settings-category-label" data-i18n="web.s104">Gemeinsam</span>
+        <button id="settings-tools" aria-current="page" data-i18n="web.s105">Tools</button>
+        <button id="settings-processing" data-i18n="web.s106">Allgemein</button>
+        <button id="settings-transfer" data-i18n="web.s107">Konfiguration</button>
+        <span class="settings-category-label" data-i18n="web.s108">Bereichsspezifisch</span>
+        <button id="settings-modes" data-i18n="web.s109">Forensik-Modi</button>
+        <button id="settings-malware" data-i18n="web.s110">Malware-Module</button>
       </nav>
       <div id="malware-settings" hidden>
-      <section class="panel"><div class="heading"><div><div class="eyebrow">MALWARE-MODULE</div><h2>Statische Abläufe</h2></div><button id="static-new-module">Modul hinzufügen</button></div>
-      <p>Eigene Reihenfolge aus internen statischen Prüfungen zusammenstellen. Tools sind mit Forensik gemeinsam; Module und Aufträge sind getrennt.</p><p class="help">Externe Toolblöcke mit Parametern können als Entwurf gespeichert werden. Ihre Ausführung folgt nach gemeinsamer Adapter-Abstimmung. Keine freien PowerShell-Blöcke in diesem Bereich.</p>
+      <section class="panel"><div class="heading"><div><div class="eyebrow" data-i18n="web.s111">MALWARE-MODULE</div><h2 data-i18n="web.s112">Statische Abläufe</h2></div><button id="static-new-module" data-i18n="web.s113">Modul hinzufügen</button></div>
+      <p data-i18n="web.s114">Eigene Reihenfolge aus internen statischen Prüfungen zusammenstellen. Tools sind mit Forensik gemeinsam; Module und Aufträge sind getrennt.</p><p class="help" data-i18n="web.s115">Externe Toolblöcke mit Parametern können als Entwurf gespeichert werden. Ihre Ausführung folgt nach gemeinsamer Adapter-Abstimmung. Keine freien PowerShell-Blöcke in diesem Bereich.</p>
       <p id="static-module-message" role="status"></p><div id="static-modules"></div></section>
-      <section id="static-editor" class="panel" hidden><h2 id="static-editor-title">Malware-Modul hinzufügen</h2><form id="static-module-form">
-        <label for="static-module-name">Modulname</label><input id="static-module-name" maxlength="120" required>
-        <label for="static-module-description">Beschreibung</label><textarea id="static-module-description" maxlength="4000" rows="2"></textarea>
-        <div class="fields"><div><label for="static-module-format">Import · einzelne Datei</label><select id="static-module-format"><option value="PDF">PDF</option><option value="OFFICE">Office</option><option value="EXE">Windows PE</option></select></div><div><label for="static-module-effort">Aufwand</label><select id="static-module-effort"><option>schnell</option><option selected>Medium</option><option>langsam</option></select></div></div>
-        <div class="mode-category"><div class="heading"><h3>Verarbeitung</h3><button type="button" id="static-add-step" class="secondary">Prüfung hinzufügen</button></div><div id="static-steps"></div></div>
-        <div class="mode-category"><h3>Export</h3><label for="static-module-output">Diesen Ergebnisordner am Ende zippen</label><input id="static-module-output" value="Analysis" maxlength="240" required><p class="help">Relativer Unterordner des eigenen Auftrags. Der reservierte Sample-Ordner ist ausgeschlossen.</p></div>
-        <p id="static-editor-error" class="help" role="alert"></p><div class="actions"><button id="static-save-module" type="submit">Modul speichern</button><button id="static-cancel-module" type="button" class="secondary">Abbrechen</button></div>
+      <section id="static-editor" class="panel" hidden><h2 id="static-editor-title" data-i18n="web.s116">Malware-Modul hinzufügen</h2><form id="static-module-form">
+        <label for="static-module-name" data-i18n="web.s117">Modulname</label><input id="static-module-name" maxlength="120" required>
+        <label for="static-module-description" data-i18n="web.s118">Beschreibung</label><textarea id="static-module-description" maxlength="4000" rows="2"></textarea>
+        <div class="fields"><div><label for="static-module-format" data-i18n="web.s119">Import · einzelne Datei</label><select id="static-module-format"><option value="PDF" data-i18n="web.s086">PDF</option><option value="OFFICE" data-i18n="web.s120">Office</option><option value="EXE" data-i18n="web.s121">Windows PE</option></select></div><div><label for="static-module-effort" data-i18n="web.s122">Aufwand</label><select id="static-module-effort"><option data-i18n="web.s123" value="schnell">schnell</option><option selected data-i18n="web.s124" value="Medium">Medium</option><option data-i18n="web.s125" value="langsam">langsam</option></select></div></div>
+        <div class="mode-category"><div class="heading"><h3 data-i18n="web.s126">Verarbeitung</h3><button type="button" id="static-add-step" class="secondary" data-i18n="web.s127">Prüfung hinzufügen</button></div><div id="static-steps"></div></div>
+        <div class="mode-category"><h3 data-i18n="web.s128">Export</h3><label for="static-module-output" data-i18n="web.s129">Diesen Ergebnisordner am Ende zippen</label><input id="static-module-output" value="Analysis" maxlength="240" required><p class="help" data-i18n="web.s130">Relativer Unterordner des eigenen Auftrags. Der reservierte Sample-Ordner ist ausgeschlossen.</p></div>
+        <p id="static-editor-error" class="help" role="alert"></p><div class="actions"><button id="static-save-module" type="submit" data-i18n="web.s131">Modul speichern</button><button id="static-cancel-module" type="button" class="secondary" data-i18n="web.s043">Abbrechen</button></div>
       </form></section>
     </div>
     <div id="tool-settings">
       <section class="panel">
-        <h2>Gemeinsame Toolverwaltung</h2>
-        <p>Hinterlege pro Tool die Programmdatei oder das Installationsverzeichnis.</p>
-        <p class="help">Die Pfade gelten auf dem Rechner, auf dem die EXE läuft.
+        <h2 data-i18n="web.s132">Gemeinsame Toolverwaltung</h2>
+        <p data-i18n="web.s133">Hinterlege pro Tool die Programmdatei oder das Installationsverzeichnis.</p>
+        <p class="help" data-i18n="web.s134">Die Pfade gelten auf dem Rechner, auf dem die EXE läuft.
           „Pfad prüfen“ kontrolliert die Erreichbarkeit. Es wird dabei kein Programm gestartet.
           Die Zuordnung zu einer Aufbereitungsart folgt später.</p>
       </section>
       <div class="columns">
         <section class="panel">
-          <h2 id="editor-title">Tool hinzufügen</h2>
+          <h2 id="editor-title" data-i18n="web.s135">Tool hinzufügen</h2>
           <form id="tool-form">
-            <label for="tool-name">Toolname</label>
-            <input id="tool-name" maxlength="100" placeholder="Name des Forensiktools" required>
-            <label for="tool-path">Absoluter Pfad auf dem Server</label>
+            <label for="tool-name" data-i18n="web.s136">Toolname</label>
+            <input id="tool-name" maxlength="100" placeholder="Name des Forensiktools" required data-i18n-placeholder="label.x010">
+            <label for="tool-path" data-i18n="web.s137">Absoluter Pfad auf dem Server</label>
             <div class="path-input">
               <input id="tool-path" maxlength="4096" placeholder="C:\Forensiktools\MeinTool\tool.exe" required spellcheck="false">
-              <button type="button" id="browse-tool" class="secondary">Durchsuchen…</button>
+              <button type="button" id="browse-tool" class="secondary" data-i18n="web.s033">Durchsuchen…</button>
             </div>
-            <p class="help">Ohne Anführungszeichen oder Startparameter. Ein noch nicht vorhandener
+            <p class="help" data-i18n="web.s138">Ohne Anführungszeichen oder Startparameter. Ein noch nicht vorhandener
               lokaler Pfad kann bereits gespeichert werden.</p>
             <div class="actions">
-              <button type="button" id="check-path" class="secondary">Pfad prüfen</button>
-              <button type="submit" id="save-tool">Speichern</button>
-              <button type="button" id="cancel-edit" class="secondary" hidden>Abbrechen</button>
+              <button type="button" id="check-path" class="secondary" data-i18n="web.s139">Pfad prüfen</button>
+              <button type="submit" id="save-tool" data-i18n="web.s140">Speichern</button>
+              <button type="button" id="cancel-edit" class="secondary" hidden data-i18n="web.s043">Abbrechen</button>
             </div>
             <p id="path-result" role="status" class="help"></p>
           </form>
         </section>
         <section class="panel">
-          <div class="heading"><h2>Gespeicherte Tools</h2><button id="reload-tools" class="secondary">Aktualisieren</button></div>
+          <div class="heading"><h2 data-i18n="web.s141">Gespeicherte Tools</h2><button id="reload-tools" class="secondary" data-i18n="web.s142">Aktualisieren</button></div>
           <div id="tools-list"></div>
         </section>
       </div>
       <section class="panel">
-        <h2>Zugang zum Dienst</h2>
-        <p>Token-Datei auf dem Server:</p><p><code id="token-file"></code></p>
-        <div class="actions"><button id="show-token" class="secondary">Aktuellen Token anzeigen</button></div>
+        <h2 data-i18n="web.s143">Zugang zum Dienst</h2>
+        <p data-i18n="web.s144">Token-Datei auf dem Server:</p><p><code id="token-file"></code></p>
+        <div class="actions"><button id="show-token" class="secondary" data-i18n="web.s145">Aktuellen Token anzeigen</button></div>
         <p><code id="current-token" hidden></code></p>
-        <p class="help">Der angezeigte Token gehört zu dieser Serversitzung und gewährt Zugriff
+        <p class="help" data-i18n="web.s146">Der angezeigte Token gehört zu dieser Serversitzung und gewährt Zugriff
           auf die App. Nach einem Serverneustart erneut anmelden.</p>
       </section>
       <details class="panel">
-        <summary>Technischer Dienststatus (Startgerüst)</summary>
+        <summary data-i18n="web.s147">Technischer Dienststatus (Startgerüst)</summary>
         <dl id="details" style="margin-top:20px"></dl>
-        <div class="actions"><button id="refresh" class="secondary">Status aktualisieren</button></div>
-        <p class="help">Dienst beenden unterbricht laufende Aufbereitungen. Sie werden beim Neustart nicht automatisch wiederholt.</p>
-        <button id="stop-server" class="danger">Dienst beenden</button>
+        <div class="actions"><button id="refresh" class="secondary" data-i18n="web.s148">Status aktualisieren</button></div>
+        <p class="help" data-i18n="web.s149">Dienst beenden unterbricht laufende Aufbereitungen. Sie werden beim Neustart nicht automatisch wiederholt.</p>
+        <button id="stop-server" class="danger" data-i18n="web.s150">Dienst beenden</button>
       </details>
       </div>
       <div id="mode-settings" hidden>
         <section class="panel">
-          <h2>Aufbereitungsmodi</h2>
-          <p>Lege fest, wie eine Evidence aufbereitet werden soll. Deine KAPE-Vorlage
+          <h2 data-i18n="web.s151">Aufbereitungsmodi</h2>
+          <p data-i18n="web.s152">Lege fest, wie eine Evidence aufbereitet werden soll. Deine KAPE-Vorlage
             ist als bearbeitbarer Entwurf vorhanden.</p>
-          <p class="note">Nur Konfiguration: Es wird nichts entpackt, ausgeführt oder gezippt.
+          <p class="note" data-i18n="web.s153">Nur Konfiguration: Es wird nichts entpackt, ausgeführt oder gezippt.
             Jeder spätere Lauf arbeitet in einem eigenen lokalen Ordner.</p>
         </section>
         <section class="panel">
-          <div class="heading"><h2 id="mode-list-title" tabindex="-1">Gespeicherte Modi</h2><div class="actions" style="margin:0">
-            <button id="new-mode">Neuer Modus</button>
-            <button id="reload-modes" class="secondary">Modi aktualisieren</button>
+          <div class="heading"><h2 id="mode-list-title" tabindex="-1" data-i18n="web.s154">Gespeicherte Modi</h2><div class="actions" style="margin:0">
+            <button id="new-mode" data-i18n="web.s155">Neuer Modus</button>
+            <button id="reload-modes" class="secondary" data-i18n="web.s052">Modi aktualisieren</button>
           </div></div>
           <p id="modes-message" role="status" aria-live="polite"></p>
           <p id="mode-availability" class="help"></p>
           <div id="modes-list"></div>
         </section>
         <section id="mode-editor" class="panel" hidden>
-          <h2 id="mode-editor-title">Modus hinzufügen</h2>
+          <h2 id="mode-editor-title" data-i18n="web.s156">Modus hinzufügen</h2>
           <form id="mode-form">
-            <label for="mode-name">Modusname</label>
+            <label for="mode-name" data-i18n="web.s157">Modusname</label>
             <input id="mode-name" maxlength="120" required>
-            <label for="mode-description">Beschreibung</label>
+            <label for="mode-description" data-i18n="web.s118">Beschreibung</label>
             <textarea id="mode-description" maxlength="4000" rows="3"></textarea>
-            <label for="mode-effort">Aufwand</label>
+            <label for="mode-effort" data-i18n="web.s122">Aufwand</label>
             <select id="mode-effort" required>
-              <option value="schnell">schnell</option>
-              <option value="Medium" selected>Medium</option>
-              <option value="langsam">langsam</option>
+              <option value="schnell" data-i18n="web.s123">schnell</option>
+              <option value="Medium" selected data-i18n="web.s124">Medium</option>
+              <option value="langsam" data-i18n="web.s125">langsam</option>
             </select>
             <p id="mode-effort-note" class="help"></p>
             <section class="mode-category" aria-labelledby="mode-import-title">
-              <h3 id="mode-import-title">Import</h3>
-              <label for="mode-format">Evidence-Format</label>
-                <select id="mode-format"><option value="ZIP">ZIP (KAPE-Target)</option>
-                  <option value="E01" disabled>E01 — in Planung</option>
-                  <option value="VMDK" disabled>VMDK — in Planung</option></select>
-              <label for="mode-source">ZIP entpacken in</label><input id="mode-source" maxlength="240" required>
-              <p class="help">Relativ zum eigenen Arbeitsordner dieser Evidence.
+              <h3 id="mode-import-title" data-i18n="web.s158">Import</h3>
+              <label for="mode-format" data-i18n="web.s159">Evidence-Format</label>
+                <select id="mode-format"><option value="ZIP" data-i18n="web.s036">ZIP (KAPE-Target)</option>
+                  <option value="E01" disabled data-i18n="web.s037">E01 — in Planung</option>
+                  <option value="VMDK" disabled data-i18n="web.s038">VMDK — in Planung</option></select>
+              <label for="mode-source" data-i18n="web.s160">ZIP entpacken in</label><input id="mode-source" maxlength="240" required>
+              <p class="help" data-i18n="web.s161">Relativ zum eigenen Arbeitsordner dieser Evidence.
                 Beispiel: Entpacken in Targets; ein im ZIP enthaltener Ordner C liegt danach unter Targets\C.
                 Dateien und Ordner im ZIP behalten ihre Namen.</p>
             </section>
             <section class="mode-category" aria-labelledby="mode-processing-title">
-            <h3 id="mode-processing-title">Verarbeitung</h3>
-            <p>Befehle in dieser Reihenfolge</p>
-            <p class="help">Tool aus den Einstellungen auswählen und nur die Parameter eintragen.
+            <h3 id="mode-processing-title" data-i18n="web.s126">Verarbeitung</h3>
+            <p data-i18n="web.s162">Befehle in dieser Reihenfolge</p>
+            <p class="help" data-i18n="web.s163">Tool aus den Einstellungen auswählen und nur die Parameter eintragen.
               Der Programmpfad wird automatisch ergänzt. Ausgabeziele stehen in deinen Parametern.</p>
             <div id="mode-steps"></div>
-            <button type="button" id="add-mode-step" class="secondary">+ Befehl hinzufügen</button>
+            <button type="button" id="add-mode-step" class="secondary" data-i18n="web.s164">+ Befehl hinzufügen</button>
             <details id="mode-original-reference" style="margin-top:20px" hidden>
-              <summary>Ursprünglichen Beispielbefehl anzeigen</summary>
-              <textarea id="mode-command" rows="5" readonly aria-label="Ursprünglicher Beispielbefehl"></textarea>
+              <summary data-i18n="web.s165">Ursprünglichen Beispielbefehl anzeigen</summary>
+              <textarea id="mode-command" rows="5" readonly aria-label="Ursprünglicher Beispielbefehl" data-i18n-aria-label="label.x004"></textarea>
             </details>
             </section>
             <section class="mode-category" aria-labelledby="mode-export-title">
-              <h3 id="mode-export-title">Export</h3>
-              <label for="mode-output">Diesen Ergebnisordner am Ende zippen</label>
+              <h3 id="mode-export-title" data-i18n="web.s128">Export</h3>
+              <label for="mode-output" data-i18n="web.s129">Diesen Ergebnisordner am Ende zippen</label>
               <input id="mode-output" maxlength="240" required>
-              <p class="help">Relativ zum Arbeitsordner dieser Evidence. Dieser Ordner wird nach
+              <p class="help" data-i18n="web.s166">Relativ zum Arbeitsordner dieser Evidence. Dieser Ordner wird nach
                 Abschluss aller Befehle als Ergebnis-ZIP zum Download bereitgestellt.</p>
             </section>
             <section class="mode-category" aria-labelledby="mode-preview-title">
-            <h3 id="mode-preview-title">Vorgesehener lokaler Ablauf</h3>
+            <h3 id="mode-preview-title" data-i18n="web.s167">Vorgesehener lokaler Ablauf</h3>
             <pre id="mode-workspace-preview"></pre>
-            <p class="help">Vorschau: Diese Ordner werden jetzt noch nicht angelegt. Das Original
+            <p class="help" data-i18n="web.s168">Vorschau: Diese Ordner werden jetzt noch nicht angelegt. Das Original
               bleibt separat erhalten. Der spätere Runner verwendet je Lauf eine eindeutige ID.</p>
             </section>
-            <div class="actions"><button type="submit" id="save-mode">Modus speichern</button>
-              <button type="button" id="cancel-mode" class="secondary">Bearbeitung abbrechen</button></div>
+            <div class="actions"><button type="submit" id="save-mode" data-i18n="web.s169">Modus speichern</button>
+              <button type="button" id="cancel-mode" class="secondary" data-i18n="web.s170">Bearbeitung abbrechen</button></div>
             <p id="mode-message" role="status" aria-live="polite"></p>
           </form>
         </section>
       </div>
       <div id="processing-settings" hidden>
-        <section class="panel"><h2>Lokale Ergebnis-Viewer</h2><p>Gemeinsame Toolpfade für beide Bereiche; im Konfigurationsexport enthalten. Speichern startet kein Programm. Getestet: 2026.5.0; andere Builds bleiben als ungeprüft gesperrt. Fremdviewer verarbeiten Ergebnisse außerhalb der internen Vorschau und erben die Serverrechte; keine Sandbox.</p><div id="viewer-settings"></div></section>
+        <section class="panel"><h2 data-i18n="web.s171">Lokale Ergebnis-Viewer</h2><p data-i18n="web.s172">Gemeinsame Toolpfade für beide Bereiche; im Konfigurationsexport enthalten. Speichern startet kein Programm. Getestet: 2026.5.0; andere Builds bleiben als ungeprüft gesperrt. Fremdviewer verarbeiten Ergebnisse außerhalb der internen Vorschau und erben die Serverrechte; keine Sandbox.</p><div id="viewer-settings"></div></section>
         <section class="panel">
-          <h2>Warteschlange</h2>
+          <h2 data-i18n="web.s173">Warteschlange</h2>
           <p id="queue-status" role="status"></p>
-          <div class="actions"><button id="pause-queue">Warteschlange pausieren</button>
-            <button id="refresh-queue" class="secondary">Status aktualisieren</button></div>
-          <p class="help">Die Pause verhindert die Übernahme des nächsten Auftrags. Ein bereits übernommener
+          <div class="actions"><button id="pause-queue" data-i18n="web.s174">Warteschlange pausieren</button>
+            <button id="refresh-queue" class="secondary" data-i18n="web.s148">Status aktualisieren</button></div>
+          <p class="help" data-i18n="web.s175">Die Pause verhindert die Übernahme des nächsten Auftrags. Ein bereits übernommener
             Auftrag läuft vollständig weiter. Neue Läufe können währenddessen in die Warteschlange gestellt werden.
             Die Pause bleibt nach einem Neustart erhalten; unterbrochene Aufträge werden weiterhin nicht automatisch wiederholt.</p>
         </section>
         <section class="panel">
-          <h2>Technisches Diagnosepaket</h2>
-          <p>Version, Server-/Workerstatus und bereinigte technische Ereignisse als ZIP exportieren.
+          <h2 data-i18n="web.s176">Technisches Diagnosepaket</h2>
+          <p data-i18n="web.s177">Version, Server-/Workerstatus und bereinigte technische Ereignisse als ZIP exportieren.
             Die Vorschau zeigt alle enthaltenen Dateien und Inhalte. Kein automatischer Versand.</p>
-          <p class="help">Keine Tokens, Evidenzen, Ergebnisse, Befehlsausgaben oder Feedbacktexte.
+          <p class="help" data-i18n="web.s178">Keine Tokens, Evidenzen, Ergebnisse, Befehlsausgaben oder Feedbacktexte.
             Unbekannte Logmeldungen und freie Fehlerdetails werden ausgelassen. Auch im Serverfenster verfügbar.</p>
-          <button id="preview-diagnostics">Diagnosepaket vorbereiten</button>
+          <button id="preview-diagnostics" data-i18n="web.s179">Diagnosepaket vorbereiten</button>
         </section>
         <section class="panel">
-          <div class="heading"><h2>Speicherübersicht</h2><button id="measure-storage" class="secondary">Speicher messen</button></div>
-          <p id="storage-volume" role="status">Speicherplatz wird geladen…</p>
+          <div class="heading"><h2 data-i18n="web.s180">Speicherübersicht</h2><button id="measure-storage" class="secondary" data-i18n="web.s181">Speicher messen</button></div>
+          <p id="storage-volume" role="status" data-i18n="web.s182">Speicherplatz wird geladen…</p>
           <p id="storage-path" class="help"></p>
           <div id="storage-areas"></div>
           <p id="storage-measurement" class="help" role="status"></p>
-          <p class="help">Gemessen werden Dateigrößen in den App-Ordnern; Dateiinhalte werden nicht gelesen.
+          <p class="help" data-i18n="web.s183">Gemessen werden Dateigrößen in den App-Ordnern; Dateiinhalte werden nicht gelesen.
             Lokal referenzierte Originaldateien außerhalb dieser Ordner sind nicht enthalten.
             Logische Dateigrößen können vom belegten Platz auf dem Datenträger abweichen.
             Während laufender Aufbereitungen ändern sich die Werte. Eine Messung ist auf 10 Sekunden
             und 500.000 Einträge begrenzt; Teilmessungen werden ausdrücklich gekennzeichnet.</p>
         </section>
         <section class="panel">
-          <h2>Daten bereinigen</h2>
-          <p>Nur Daten bekannter, abgeschlossener Aufträge im App-Datenordner entfernen.
+          <h2 data-i18n="web.s184">Daten bereinigen</h2>
+          <p data-i18n="web.s185">Nur Daten bekannter, abgeschlossener Aufträge im App-Datenordner entfernen.
             Historie und Einstellungen bleiben erhalten. Offene Aufträge sperren die Bereinigung.</p>
-          <label for="cleanup-scope">Umfang der Bereinigung</label>
-          <select id="cleanup-scope"><option value="">Alle abgeschlossenen Aufträge</option></select>
+          <label for="cleanup-scope" data-i18n="web.s186">Umfang der Bereinigung</label>
+          <select id="cleanup-scope"><option value="" data-i18n="web.s187">Alle abgeschlossenen Aufträge</option></select>
           <div class="actions">
-            <button data-cleanup="cache" class="secondary">Cache leeren</button>
-            <button data-cleanup="evidence" class="secondary">Evidences leeren</button>
-            <button data-cleanup="results" class="secondary">Results leeren</button>
+            <button data-cleanup="cache" class="secondary" data-i18n="web.s188">Cache leeren</button>
+            <button data-cleanup="evidence" class="secondary" data-i18n="web.s189">Evidences leeren</button>
+            <button data-cleanup="results" class="secondary" data-i18n="web.s190">Results leeren</button>
           </div>
-          <p class="help">Cache: entpackte Eingänge, Arbeitsreste und vollständige Command-Logs.
+          <p class="help" data-i18n="web.s191">Cache: entpackte Eingänge, Arbeitsreste und vollständige Command-Logs.
             Evidences: hochgeladene Eingangskopien. Results: Ergebnisordner, Ergebnis-ZIPs und Abschlussberichte.
             Lokal referenzierte Originaldateien werden in allen Kategorien geschützt.</p>
           <p id="cleanup-message" role="status"></p>
         </section>
         <section class="panel">
-          <h2>Arbeitslaufwerk / Zielordner</h2>
-          <p>Für neue Aufträge einen vorhandenen Ordner auf einer lokalen SSD/Festplatte wählen.
+          <h2 data-i18n="web.s192">Arbeitslaufwerk / Zielordner</h2>
+          <p data-i18n="web.s193">Für neue Aufträge einen vorhandenen Ordner auf einer lokalen SSD/Festplatte wählen.
             Die App erstellt darunter einen eigenen gekennzeichneten Datenordner. Bestehende Aufträge bleiben an ihrem bisherigen Ort.</p>
-          <label for="workspace-folder">Übergeordneter Ordner auf dem Server</label>
-          <div class="path-input"><input id="workspace-folder" placeholder="D:\Aufbereitungen"><button id="browse-workspace" class="secondary">Ordner auswählen…</button></div>
-          <div class="actions"><button id="save-workspace">Arbeitsziel speichern</button><button id="reset-workspace" class="secondary">Standard verwenden</button></div>
+          <label for="workspace-folder" data-i18n="web.s194">Übergeordneter Ordner auf dem Server</label>
+          <div class="path-input"><input id="workspace-folder" placeholder="D:\Aufbereitungen"><button id="browse-workspace" class="secondary" data-i18n="web.s195">Ordner auswählen…</button></div>
+          <div class="actions"><button id="save-workspace" data-i18n="web.s196">Arbeitsziel speichern</button><button id="reset-workspace" class="secondary" data-i18n="web.s197">Standard verwenden</button></div>
           <p id="workspace-message" role="status"></p>
-          <p class="help">Diese Server-Einstellung wird nicht exportiert und verschiebt keine Daten. Frühere registrierte Ziele bleiben für Downloads, Berichte und Bereinigung bekannt.</p>
+          <p class="help" data-i18n="web.s198">Diese Server-Einstellung wird nicht exportiert und verschiebt keine Daten. Frühere registrierte Ziele bleiben für Downloads, Berichte und Bereinigung bekannt.</p>
         </section>
         <section class="panel">
-          <h2>Verarbeitungslimits</h2>
+          <h2 data-i18n="web.s199">Verarbeitungslimits</h2>
           <form id="limits-form">
-            <label for="upload-limit-gib">Uploadlimit (GiB)</label>
+            <label for="upload-limit-gib" data-i18n="web.s200">Uploadlimit (GiB)</label>
             <input id="upload-limit-gib" type="number" min="0.000000001" step="any" required>
-            <label for="extract-limit-tb">Entpacklimit (TB, dezimal)</label>
+            <label for="extract-limit-tb" data-i18n="web.s201">Entpacklimit (TB, dezimal)</label>
             <input id="extract-limit-tb" type="number" min="0.000000000001" step="any" required>
-            <p class="help">Standard: 50 GiB Upload und 2 TB entpackte Daten (2.000 GB).
+            <p class="help" data-i18n="web.s202">Standard: 50 GiB Upload und 2 TB entpackte Daten (2.000 GB).
               Lokale ZIPs benötigen keinen Upload. Der Ergebnisordner verwendet dasselbe Größenlimit wie die entpackten Daten.
               Neue Werte gelten nur für neu gestartete Läufe; freier Speicherplatz wird zusätzlich geprüft.</p>
-            <button id="save-limits" type="submit">Limits speichern</button>
+            <button id="save-limits" type="submit" data-i18n="web.s203">Limits speichern</button>
             <p id="limits-message" role="status"></p>
           </form>
         </section>
       </div>
       <div id="transfer-settings" hidden>
         <section class="panel">
-          <h2>Konfiguration exportieren</h2>
-          <p>Gemeinsame Tools und Limits sowie Forensik-Modi und Malware-Module einschließlich aller Befehle, Parameter und Reihenfolgen in einer einzigen JSON-Datei sichern oder übertragen. Beide Bereiche sind immer enthalten, auch wenn einer leer ist.</p>
-          <p class="help">Enthalten sind Tool-Pfade und Konfigurationen. Zugangstokens,
+          <h2 data-i18n="web.s204">Konfiguration exportieren</h2>
+          <p data-i18n="web.s205">Gemeinsame Tools und Limits sowie Forensik-Modi und Malware-Module einschließlich aller Befehle, Parameter und Reihenfolgen in einer einzigen JSON-Datei sichern oder übertragen. Beide Bereiche sind immer enthalten, auch wenn einer leer ist.</p>
+          <p class="help" data-i18n="web.s206">Enthalten sind Tool-Pfade und Konfigurationen. Zugangstokens,
             Zertifikate, Evidence-Dateien und die Programme selbst sind nicht enthalten.</p>
-          <button id="export-config">Konfiguration exportieren</button>
+          <button id="export-config" data-i18n="web.s204">Konfiguration exportieren</button>
         </section>
         <section class="panel">
-          <h2>Konfiguration importieren</h2>
-          <p>Wähle eine exportierte JSON-Datei und prüfe zuerst die Vorschau.
+          <h2 data-i18n="web.s207">Konfiguration importieren</h2>
+          <p data-i18n="web.s208">Wähle eine exportierte JSON-Datei und prüfe zuerst die Vorschau.
             Es werden keine Tools ausgeführt. Vor dem Anwenden wird die bisherige Konfiguration gesichert.</p>
-          <label for="config-file">JSON-Konfigurationsdatei</label>
+          <label for="config-file" data-i18n="web.s209">JSON-Konfigurationsdatei</label>
           <input id="config-file" type="file" accept=".json,application/json" aria-describedby="config-file-help">
-          <p id="config-file-help" class="help">Maximal 4 MiB. Tool-Pfade beziehen sich auf den Server;
+          <p id="config-file-help" class="help" data-i18n="web.s210">Maximal 4 MiB. Tool-Pfade beziehen sich auf den Server;
             auf einem anderen Rechner müssen sie gegebenenfalls angepasst werden.</p>
-          <label for="import-strategy">Importart</label>
+          <label for="import-strategy" data-i18n="web.s211">Importart</label>
           <select id="import-strategy">
-            <option value="merge">Zusammenführen — vorhandene Einträge behalten, gleiche IDs aktualisieren</option>
-            <option value="replace">Ersetzen — gesamte Tool- und Moduskonfiguration aus der Datei übernehmen</option>
+            <option value="merge" data-i18n="web.s212">Zusammenführen — vorhandene Einträge behalten, gleiche IDs aktualisieren</option>
+            <option value="replace" data-i18n="web.s213">Ersetzen — gesamte Tool- und Moduskonfiguration aus der Datei übernehmen</option>
           </select>
-          <div class="actions"><button id="preview-config" class="secondary">Import prüfen</button></div>
+          <div class="actions"><button id="preview-config" class="secondary" data-i18n="web.s214">Import prüfen</button></div>
           <div id="config-preview" hidden>
-            <h3 style="margin-top:24px">Importvorschau</h3>
+            <h3 style="margin-top:24px" data-i18n="web.s215">Importvorschau</h3>
             <p id="config-preview-summary"></p>
             <div id="config-preview-changes"></div>
             <ul id="config-preview-errors"></ul>
             <ul id="config-preview-warnings" class="help"></ul>
             <label id="replace-confirm-label" hidden>
               <input id="replace-confirm" type="checkbox" style="width:auto;display:inline;margin-right:8px">
-              Ich möchte die bisherige Tool- und Moduskonfiguration vollständig ersetzen.
+              <span data-i18n="web.s216">Ich möchte die bisherige Tool- und Moduskonfiguration vollständig ersetzen.</span>
             </label>
-            <div class="actions"><button id="apply-config" disabled>Import anwenden</button></div>
+            <div class="actions"><button id="apply-config" disabled data-i18n="web.s217">Import anwenden</button></div>
           </div>
           <p id="config-message" role="status" aria-live="polite"></p>
         </section>
@@ -572,118 +580,138 @@
     </div>
     <div id="logs" hidden>
       <section class="panel">
-        <div class="heading"><h2>Logs und Fehlerdiagnose</h2><button id="reload-job-logs" class="secondary">Aktualisieren</button></div>
+        <div class="heading"><h2 data-i18n="web.s218">Logs und Fehlerdiagnose</h2><button id="reload-job-logs" class="secondary" data-i18n="web.s142">Aktualisieren</button></div>
         <form id="job-search">
-          <label for="job-query">Dateiname, Modus, Fallnummer oder Gerätename suchen</label>
-          <input id="job-query" type="search" maxlength="200" placeholder="Zum Beispiel C-low.zip">
+          <label for="job-query" data-i18n="web.s219">Dateiname, Modus, Fallnummer oder Gerätename suchen</label>
+          <input id="job-query" type="search" maxlength="200" placeholder="Zum Beispiel C-low.zip" data-i18n-placeholder="label.x011">
           <div class="fields">
-            <div><label for="job-status-filter">Status</label><select id="job-status-filter">
-              <option value="">Alle Status</option><option value="succeeded">Abgeschlossen</option>
-              <option value="failed">Fehlgeschlagen</option><option value="cancelled">Abgebrochen</option>
-              <option value="interrupted">Unterbrochen</option><option value="queued">Warteschlange</option>
-              <option value="running">Läuft</option><option value="uploading">Upload</option>
-              <option value="validating">Validierung</option></select></div>
-            <div><label for="job-mode-filter">Modus</label><select id="job-mode-filter"><option value="">Alle Modi</option></select></div>
-            <div><label for="job-date-from">Von (UTC-Datum)</label><input id="job-date-from" type="date"></div>
-            <div><label for="job-date-to">Bis (UTC-Datum, einschließlich)</label><input id="job-date-to" type="date"></div>
+            <div><label for="job-status-filter" data-i18n="web.s220">Status</label><select id="job-status-filter">
+              <option value="" data-i18n="web.s221">Alle Status</option><option value="succeeded" data-i18n="web.s222">Abgeschlossen</option>
+              <option value="failed" data-i18n="web.s223">Fehlgeschlagen</option><option value="cancelled" data-i18n="web.s224">Abgebrochen</option>
+              <option value="interrupted" data-i18n="web.s225">Unterbrochen</option><option value="queued" data-i18n="web.s173">Warteschlange</option>
+              <option value="running" data-i18n="web.s226">Läuft</option><option value="uploading" data-i18n="web.s026">Upload</option>
+              <option value="validating" data-i18n="web.s227">Validierung</option></select></div>
+            <div><label for="job-mode-filter" data-i18n="web.s228">Modus</label><select id="job-mode-filter"><option value="" data-i18n="web.s229">Alle Modi</option></select></div>
+            <div><label for="job-date-from" data-i18n="web.s230">Von (UTC-Datum)</label><input id="job-date-from" type="date"></div>
+            <div><label for="job-date-to" data-i18n="web.s231">Bis (UTC-Datum, einschließlich)</label><input id="job-date-to" type="date"></div>
           </div>
-          <div class="actions"><button type="submit">Suchen</button><button id="clear-job-search" type="button" class="secondary">Filter zurücksetzen</button></div>
+          <div class="actions"><button type="submit" data-i18n="web.s232">Suchen</button><button id="clear-job-search" type="button" class="secondary" data-i18n="web.s233">Filter zurücksetzen</button></div>
         </form>
         <p id="job-search-count" role="status"></p>
-        <div id="job-results" class="search-results" aria-label="Suchtreffer"></div>
-        <div class="actions"><button id="jobs-prev" class="secondary" disabled>Vorherige Seite</button><button id="jobs-next" class="secondary" disabled>Nächste Seite</button></div>
-        <label for="log-job">Aufbereitung auswählen (50 je Seite)</label>
+        <div id="job-results" class="search-results" aria-label="Suchtreffer" data-i18n-aria-label="label.x006"></div>
+        <div class="actions"><button id="jobs-prev" class="secondary" disabled data-i18n="web.s234">Vorherige Seite</button><button id="jobs-next" class="secondary" disabled data-i18n="web.s235">Nächste Seite</button></div>
+        <label for="log-job" data-i18n="web.s236">Aufbereitung auswählen (50 je Seite)</label>
         <select id="log-job"></select>
         <p id="log-job-status" role="status"></p><div id="log-inventory"></div>
         <pre id="log-job-error" hidden></pre>
-        <h3>Kommandozeile</h3><pre id="log-job-command" class="terminal-command"></pre>
-        <div class="terminal-bar"><span>Terminal · gespeicherte Ausgabe</span></div>
+        <h3 data-i18n="web.s237">Kommandozeile</h3><pre id="log-job-command" class="terminal-command"></pre>
+        <div class="terminal-bar"><span data-i18n="web.s238">Terminal · gespeicherte Ausgabe</span></div>
         <pre id="log-job-output" class="terminal-output" tabindex="0"></pre>
-        <div class="actions"><button id="download-diagnostics" class="secondary" disabled>Diagnose als TXT herunterladen</button>
-          <button id="download-job-log" class="secondary" disabled>KAPE-Log herunterladen</button>
-          <button id="log-download" class="secondary" disabled>Download Evidences</button>
-          <button id="log-archive" class="secondary" disabled>Ergebnis-ZIP erstellen</button>
-          <button id="log-report" class="secondary" disabled>Abschlussbericht herunterladen</button>
-          <button id="log-cleanup" class="secondary" disabled>Diesen Auftrag bereinigen</button>
-          <button id="log-cancel-archive" class="secondary" hidden>Archivierung abbrechen</button>
-          <button id="log-report-json" class="secondary" disabled>Bericht als JSON</button>
-          <button id="log-explorer" class="secondary" hidden disabled>Show in Explorer</button></div>
+        <div class="actions"><button id="download-diagnostics" class="secondary" disabled data-i18n="web.s239">Diagnose als TXT herunterladen</button>
+          <button id="download-job-log" class="secondary" disabled data-i18n="web.s240">KAPE-Log herunterladen</button>
+          <button id="log-download" class="secondary" disabled data-i18n="web.s070">Download Evidences</button>
+          <button id="log-archive" class="secondary" disabled data-i18n="web.s071">Ergebnis-ZIP erstellen</button>
+          <button id="log-report" class="secondary" disabled data-i18n="web.s072">Abschlussbericht herunterladen</button>
+          <button id="log-cleanup" class="secondary" disabled data-i18n="web.s241">Diesen Auftrag bereinigen</button>
+          <button id="log-cancel-archive" class="secondary" hidden data-i18n="web.s242">Archivierung abbrechen</button>
+          <button id="log-report-json" class="secondary" disabled data-i18n="web.s243">Bericht als JSON</button>
+          <button id="log-explorer" class="secondary" hidden disabled data-i18n="web.s073">Show in Explorer</button></div>
         <p id="log-artifacts-note" class="help" role="status"></p>
         <p id="log-explorer-note" class="help" role="status"></p>
       </section>
     </div>
     <div id="results" hidden>
       <section id="result-workplace" class="panel">
-        <div class="heading"><h2>Ergebnis-Arbeitsplatz</h2><button id="results-maximize" type="button">Ansicht vergrößern</button></div>
-        <label for="result-job">Erfolgreicher Auftrag · letzte 50 im gewählten Bereich</label><select id="result-job"></select>
+        <div class="heading"><h2 data-i18n="web.s244">Ergebnis-Arbeitsplatz</h2><button id="results-maximize" type="button" data-i18n="web.s245">Ansicht vergrößern</button></div>
+        <label for="result-job" data-i18n="web.s246">Erfolgreicher Auftrag · letzte 50 im gewählten Bereich</label><select id="result-job"></select>
         <p id="result-job-note" role="status"></p>
-        <p>Vorschau, keine Gesamtdateisuche: CSV maximal 1 MiB / 2.000 Zeilen; XLSX maximal 64 MiB Paket / 2.000 Datenzeilen, 64 Spalten. Originalwerte bleiben erhalten. Keine Formelauswertung oder externen Verbindungen. XLSX zeigt gespeicherte Formelwerte und rohe Excel-Datumsserien, ohne Neuberechnung oder Datumsumwandlung.</p>
-        <button id="csv-load" type="button" disabled>Dateiliste aktualisieren</button>
-        <div role="tablist" aria-label="Ergebnisformat"><button id="results-csv" role="tab" aria-selected="true" aria-controls="result-format-panel">CSV</button><button id="results-xlsx" role="tab" aria-selected="false" aria-controls="result-format-panel" tabindex="-1">XLSX</button></div>
+        <p data-i18n="web.s247">Vorschau, keine Gesamtdateisuche: CSV maximal 1 MiB / 2.000 Zeilen; XLSX maximal 64 MiB Paket / 2.000 Datenzeilen, 64 Spalten. Originalwerte bleiben erhalten. Keine Formelauswertung oder externen Verbindungen. XLSX zeigt gespeicherte Formelwerte und rohe Excel-Datumsserien, ohne Neuberechnung oder Datumsumwandlung.</p>
+        <button id="csv-load" type="button" disabled data-i18n="web.s248">Dateiliste aktualisieren</button>
+        <div role="tablist" aria-label="Ergebnisformat" data-i18n-aria-label="label.x007"><button id="results-csv" role="tab" aria-selected="true" aria-controls="result-format-panel" data-i18n="web.s249">CSV</button><button id="results-xlsx" role="tab" aria-selected="false" aria-controls="result-format-panel" tabindex="-1" data-i18n="web.s250">XLSX</button></div>
         <div id="result-format-panel" role="tabpanel" aria-labelledby="results-csv">
-        <label for="csv-file" id="result-file-label">CSV-Ergebnisdatei</label><select id="csv-file"></select>
-        <div id="result-sheet-fields" hidden><label for="result-sheet">XLSX-Blatt</label><select id="result-sheet" disabled></select></div>
-        <label for="csv-search">Im eingelesenen Ausschnitt filtern</label><input id="csv-search" maxlength="128" type="search">
-        <p class="help">Spaltenüberschrift anklicken: aufsteigend, erneut: absteigend. Der Sortiertyp wird aus dem gesamten eingelesenen Ausschnitt abgeleitet und im Header angezeigt. Bei Mehrdeutigkeit gilt Text. Mit dem Typ-Button lässt er sich ausdrücklich wechseln. Filter und Sortierung gelten vor der Seitenteilung für den begrenzten Ausschnitt.</p>
-        <button id="csv-search-button" type="button" disabled>Filter anwenden</button><button id="result-source-order" type="button">Quellreihenfolge</button><button id="result-first" type="button">Erste Seite</button><button id="csv-next" type="button" disabled>Weitere Treffer im Ausschnitt</button>
+        <label for="csv-file" id="result-file-label" data-i18n="web.s251">CSV-Ergebnisdatei</label><select id="csv-file"></select>
+        <div id="result-sheet-fields" hidden><label for="result-sheet" data-i18n="web.s252">XLSX-Blatt</label><select id="result-sheet" disabled></select></div>
+        <label for="csv-search" data-i18n="web.s253">Im eingelesenen Ausschnitt filtern</label><input id="csv-search" maxlength="128" type="search">
+        <p class="help" data-i18n="web.s254">Spaltenüberschrift anklicken: aufsteigend, erneut: absteigend. Der Sortiertyp wird aus dem gesamten eingelesenen Ausschnitt abgeleitet und im Header angezeigt. Bei Mehrdeutigkeit gilt Text. Mit dem Typ-Button lässt er sich ausdrücklich wechseln. Filter und Sortierung gelten vor der Seitenteilung für den begrenzten Ausschnitt.</p>
+        <button id="csv-search-button" type="button" disabled data-i18n="web.s255">Filter anwenden</button><button id="result-source-order" type="button" data-i18n="web.s256">Quellreihenfolge</button><button id="result-first" type="button" data-i18n="web.s257">Erste Seite</button><button id="csv-next" type="button" disabled data-i18n="web.s258">Weitere Treffer im Ausschnitt</button>
         <p id="csv-note" role="status"></p><div id="csv-table" tabindex="0" style="overflow:auto;height:55vh"></div>
-        <button id="result-viewer" type="button" disabled>Im lokalen Viewer öffnen</button><p id="result-viewer-note">Viewer wird ausschließlich nach eigenem Klick auf dem Server gestartet; keine Sandbox. Aufrufvertrag wird vor Freigabe geprüft.</p>
+        <button id="result-viewer" type="button" disabled data-i18n="web.s259">Im lokalen Viewer öffnen</button><p id="result-viewer-note" data-i18n="web.s260">Viewer wird ausschließlich nach eigenem Klick auf dem Server gestartet; keine Sandbox. Aufrufvertrag wird vor Freigabe geprüft.</p>
         </div>
       </section>
     </div>
   </main>
   <dialog id="feedback-dialog" aria-labelledby="feedback-title">
-    <div class="heading"><h2 id="feedback-title">Feedback, Bugs und Wünsche</h2><button id="close-feedback" class="secondary">Schließen</button></div>
-    <p class="help">Wird lokal auf dem Server gespeichert. Kein Versand und keine automatischen Loganhänge.
+    <div class="heading"><h2 id="feedback-title" data-i18n="web.s261">Feedback, Bugs und Wünsche</h2><button id="close-feedback" class="secondary" data-i18n="web.s262">Schließen</button></div>
+    <p class="help" data-i18n="web.s263">Wird lokal auf dem Server gespeichert. Kein Versand und keine automatischen Loganhänge.
       Beim Export werden deine eingegebenen Texte unverändert übernommen.</p>
     <form id="feedback-form">
-      <label for="feedback-category">Kategorie</label><select id="feedback-category"><option value="bug">Bug / Fehler</option><option value="wish">Wunsch</option><option value="feedback">Allgemeines Feedback</option></select>
-      <label for="feedback-subject">Titel</label><input id="feedback-subject" maxlength="160" required>
-      <label for="feedback-text">Beschreibung</label><textarea id="feedback-text" rows="5" maxlength="8000" required></textarea>
-      <button id="save-feedback" type="submit">Lokal speichern</button>
+      <label for="feedback-category" data-i18n="web.s264">Kategorie</label><select id="feedback-category"><option value="bug" data-i18n="web.s265">Bug / Fehler</option><option value="wish" data-i18n="web.s266">Wunsch</option><option value="feedback" data-i18n="web.s267">Allgemeines Feedback</option></select>
+      <label for="feedback-subject" data-i18n="web.s268">Titel</label><input id="feedback-subject" maxlength="160" required>
+      <label for="feedback-text" data-i18n="web.s118">Beschreibung</label><textarea id="feedback-text" rows="5" maxlength="8000" required></textarea>
+      <button id="save-feedback" type="submit" data-i18n="web.s269">Lokal speichern</button>
       <p id="feedback-message" role="status"></p>
     </form>
-    <div class="heading" style="margin-top:24px"><h3>Letzte 100 lokale Einträge</h3><button id="export-feedback" class="secondary">Feedback exportieren</button></div>
+    <div class="heading" style="margin-top:24px"><h3 data-i18n="web.s270">Letzte 100 lokale Einträge</h3><button id="export-feedback" class="secondary" data-i18n="web.s271">Feedback exportieren</button></div>
     <div id="feedback-list" style="max-height:260px;overflow:auto"></div>
   </dialog>
   <dialog id="diagnostics-dialog" aria-labelledby="diagnostics-title">
-    <div class="heading"><h2 id="diagnostics-title">Diagnosepaket – Vorschau</h2><button id="close-diagnostics" class="secondary">Schließen</button></div>
+    <div class="heading"><h2 id="diagnostics-title" data-i18n="web.s272">Diagnosepaket – Vorschau</h2><button id="close-diagnostics" class="secondary" data-i18n="web.s262">Schließen</button></div>
     <p id="diagnostics-message"></p><div id="diagnostics-files"></div>
-    <div class="actions"><button id="export-diagnostics">ZIP herunterladen</button></div>
+    <div class="actions"><button id="export-diagnostics" data-i18n="web.s273">ZIP herunterladen</button></div>
   </dialog>
   <dialog id="cleanup-dialog" aria-labelledby="cleanup-title">
-    <h2 id="cleanup-title">Löschvorschau</h2>
+    <h2 id="cleanup-title" data-i18n="web.s274">Löschvorschau</h2>
     <p id="cleanup-summary"></p><p id="cleanup-warning"></p>
     <p id="cleanup-root" class="help"></p>
-    <label><input type="checkbox" id="cleanup-confirm"> Ich möchte diese Daten dauerhaft löschen.</label>
-    <div class="actions"><button id="cleanup-cancel" class="secondary">Abbrechen</button>
-      <button id="cleanup-apply" disabled>Endgültig löschen</button></div>
+    <label><input type="checkbox" id="cleanup-confirm"> <span data-i18n="web.s275">Ich möchte diese Daten dauerhaft löschen.</span></label>
+    <div class="actions"><button id="cleanup-cancel" class="secondary" data-i18n="web.s043">Abbrechen</button>
+      <button id="cleanup-apply" disabled data-i18n="web.s276">Endgültig löschen</button></div>
     <p id="cleanup-progress" role="status"></p>
   </dialog>
   <dialog id="path-picker" aria-labelledby="picker-title">
-    <div class="heading"><h2 id="picker-title">Tool oder Ordner auswählen</h2><button id="picker-close" class="secondary" autofocus>Schließen</button></div>
-    <p class="help">Du wählst auf dem Serverrechner aus. Dateien werden nicht hochgeladen oder gestartet.</p>
+    <div class="heading"><h2 id="picker-title" data-i18n="web.s277">Tool oder Ordner auswählen</h2><button id="picker-close" class="secondary" autofocus data-i18n="web.s262">Schließen</button></div>
+    <p class="help" data-i18n="web.s278">Du wählst auf dem Serverrechner aus. Dateien werden nicht hochgeladen oder gestartet.</p>
     <div class="actions picker-roots" id="picker-roots"></div>
     <form id="picker-address-form">
-      <label for="picker-address">Ordner oder vollständiger Dateipfad</label>
-      <div class="path-input"><input id="picker-address" spellcheck="false" maxlength="4096"><button type="submit" class="secondary">Öffnen</button></div>
+      <label for="picker-address" data-i18n="web.s279">Ordner oder vollständiger Dateipfad</label>
+      <div class="path-input"><input id="picker-address" spellcheck="false" maxlength="4096"><button type="submit" class="secondary" data-i18n="web.s280">Öffnen</button></div>
     </form>
-    <div class="actions"><button id="picker-up" class="secondary">Eine Ebene höher</button><button id="picker-home" class="secondary">Startordner</button></div>
-    <label for="picker-search">In diesem Ordner suchen</label>
-    <input id="picker-search" type="search" maxlength="100" placeholder="Datei- oder Ordnername">
+    <div class="actions"><button id="picker-up" class="secondary" data-i18n="web.s281">Eine Ebene höher</button><button id="picker-home" class="secondary" data-i18n="web.s282">Startordner</button></div>
+    <label for="picker-search" data-i18n="web.s283">In diesem Ordner suchen</label>
+    <input id="picker-search" type="search" maxlength="100" placeholder="Datei- oder Ordnername" data-i18n-placeholder="label.x009">
     <p id="picker-error" role="alert"></p>
     <p id="picker-notice" class="help" role="status"></p>
-    <div id="picker-list" class="picker-list" aria-label="Ordnerinhalt"></div>
+    <div id="picker-list" class="picker-list" aria-label="Ordnerinhalt" data-i18n-aria-label="label.x008"></div>
     <div class="actions">
-      <button id="picker-select-file" hidden>Datei übernehmen</button>
-      <button id="picker-select-folder" disabled>Diesen Ordner verwenden</button>
-      <button id="picker-cancel" class="secondary">Abbrechen</button>
+      <button id="picker-select-file" hidden data-i18n="web.s284">Datei übernehmen</button>
+      <button id="picker-select-folder" disabled data-i18n="web.s285">Diesen Ordner verwenden</button>
+      <button id="picker-cancel" class="secondary" data-i18n="web.s043">Abbrechen</button>
     </div>
   </dialog>
   <p id="message" role="status" aria-live="polite"></p>
-  <footer>Das Schließen dieses Tabs beendet den Server nicht. Beenden unter Einstellungen → Tools → Technischer Dienststatus.</footer>
+  <footer data-i18n="web.s286">Das Schließen dieses Tabs beendet den Server nicht. Beenden unter Einstellungen → Tools → Technischer Dienststatus.</footer>
+  <script src="/i18n.js"></script>
   <script>
     const byId = id => document.getElementById(id);
+    function effortLabel(value) {return value === 'schnell' ? t('effort.fast') : value === 'langsam' ? t('effort.slow') : value;}
+    async function loadOnboarding() {
+      const requestToken = token, data = await api('/api/settings/onboarding');
+      if (requestToken !== token || byId('workspace').hidden) return;
+      byId('onboarding').hidden = data.dismissed;
+      byId('onboarding-required').replaceChildren(); byId('onboarding-optional').replaceChildren();
+      for (const item of data.required) {
+        const row = document.createElement('li');
+        setUiText(row, () => t('onboarding.'+item.status,{mode:item.mode_name,step:item.step_name,tool:item.tool_name}),true);
+        byId('onboarding-required').append(row);
+      }
+      setUiText(byId('onboarding-empty'), () => data.required.length ? '' : t('onboarding.empty'),true);
+      for (const item of data.optional) {
+        const row = document.createElement('li');
+        setUiText(row, () => t('onboarding.viewer',{name:item.name,status:t(item.configured ? 'onboarding.configured' : 'onboarding.not_configured')}),true);
+        byId('onboarding-optional').append(row);
+      }
+      setUiText(byId('onboarding-scope'), () => [t('onboarding.scope'),data.partial ? t('onboarding.partial') : '',data.skipped_unsupported ? t('onboarding.skipped',{count:data.skipped_unsupported}) : ''].filter(Boolean).join(' '),true);
+    }
     const fragment = new URLSearchParams(location.hash.slice(1));
     let token = fragment.get('token') || sessionStorage.getItem('ppm-token') || '';
     let editingId = null;
@@ -702,7 +730,7 @@
     let uploadRequest = null, eventController = null, eventRefreshTimer = null, eventGeneration = 0;
     if (location.hash) history.replaceState(null, '', location.pathname);
     function message(text, error=false) {
-      byId('message').textContent = text;
+      setUiText(byId('message'), () => text);
       byId('message').classList.toggle('error', error);
     }
     function hideWorkspace() {
@@ -714,56 +742,60 @@
       closePicker();
       byId('workspace').hidden = true; byId('login').hidden = false;
       byId('details').replaceChildren(); byId('tools-list').replaceChildren();
-      byId('token-file').textContent = ''; byId('current-token').textContent = '';
+      setUiText(byId('token-file'), () => ''); setUiText(byId('current-token'), () => '');
       byId('current-token').hidden = true;
-      byId('show-token').textContent = 'Aktuellen Token anzeigen';
+      setUiText(byId('show-token'), () => t("web.s145"), true);
       resetEditor();
       modesRequest++; resetModeEditor(); byId('modes-list').replaceChildren();
-      savedModes = []; byId('modes-message').textContent = ''; byId('mode-availability').textContent = '';
-      invalidateImport(); byId('config-file').value = ''; byId('config-message').textContent = '';
+      savedModes = []; setUiText(byId('modes-message'), () => ''); setUiText(byId('mode-availability'), () => '');
+      invalidateImport(); byId('config-file').value = ''; setUiText(byId('config-message'), () => '');
       preparationRequest++; preparationModes = []; preparationTools = [];
       eventGeneration++; eventController?.abort(); uploadRequest?.abort(); clearTimeout(eventRefreshTimer);
       processingAvailable = false; activeJobId = null; runBusy = false;
-      byId('run-live-command').textContent = 'Kein Befehl gestartet.'; byId('run-live-output').textContent = 'Noch keine Ausgabe.';
+      setUiText(byId('run-live-command'), () => t("web.s065"), true); setUiText(byId('run-live-output'), () => t("web.s068"), true);
       byId('run-inventory').replaceChildren(); byId('log-inventory').replaceChildren(); resetCSV(null);
-      byId('run-status').textContent = 'Nicht gestartet'; byId('run-progress-note').textContent = 'Noch keine Aufbereitung gestartet.';
+      setUiText(byId('run-status'), () => t("web.s058"), true); setUiText(byId('run-progress-note'), () => t("web.s061"), true);
       byId('run-total-progress').value = 0; byId('run-command-progress').value = 0;
       byId('cancel-run').hidden = true; byId('download-evidences').disabled = true;
       byId('upload-label').hidden = true; byId('upload-progress').hidden = true;
       byId('run-file').value = ''; byId('run-effort').replaceChildren();
       byId('local-zip-path').value = ''; byId('run-error-panel').hidden = true;
       logsRequest++; byId('log-job').replaceChildren();
-      for (const id of ['log-job-error','log-job-output','log-job-command','log-job-status']) byId(id).textContent = '';
+      for (const id of ['log-job-error','log-job-output','log-job-command','log-job-status']) setUiText(byId(id), () => '');
       byId('run-effort').disabled = true; byId('run-availability').replaceChildren();
-      byId('run-mode-message').textContent = ''; updatePreparation();
+      setUiText(byId('run-mode-message'), () => ''); updatePreparation();
     }
     async function api(path, method='GET', payload) {
-      const response = await fetch(path, {method, headers:{Authorization:'Bearer '+token,
+      const response = await fetch(path, {method, headers:{Authorization:'Bearer '+token,'Accept-Language':I18n.locale,
         ...(payload ? {'Content-Type':'application/json'} : {})},
         ...(payload ? {body:JSON.stringify(payload)} : {})});
       if (!response.ok) {
         if (response.status === 401) {
           token = ''; sessionStorage.removeItem('ppm-token'); hideWorkspace();
-          throw new Error('Token fehlt oder ist abgelaufen. Bitte neu anmelden.');
+          throw new Error(t("web.s287"));
         }
         const data = await response.json().catch(() => ({}));
         const detail = typeof data.detail === 'string' ? data.detail : data.detail?.message ||
-          (Array.isArray(data.detail) ? data.detail.map(item => item.msg).join(' ') : 'Anfrage fehlgeschlagen.');
+          (Array.isArray(data.detail) ? data.detail.map(item => item.msg).join(' ') : t("web.s288"));
         throw new Error(detail);
       }
       return response.status === 204 ? null : response.json();
     }
     async function connect() {
+      await I18n.ready;
+      const preferences = await api('/api/settings/interface');
+      await I18n.setLocale(preferences.locale);
       const data = await api('/api/system');
       sessionStorage.setItem('ppm-token', token); byId('token').value = '';
       byId('login').hidden = true; byId('workspace').hidden = false;
-      byId('details').replaceChildren(); byId('token-file').textContent = data.token_file;
-      for (const [label,value] of [['Version',data.version],['Betrieb',data.mode],
-        ['Rechte',data.administrator ? 'Administrator' : 'Nicht erhöht'],
-        ['Datenordner',data.storage],['Datenbank',data.database],['Analyseprofile','Noch keine freigegeben']]) {
+      byId('details').replaceChildren(); setUiText(byId('token-file'), () => data.token_file);
+      for (const [label,value] of [[t("label.x012"),data.version],[t("label.x013"),data.mode],
+        [t("label.x014"),data.administrator ? t("label.x015") : t("web.s289")],
+        [t("label.x016"),data.storage],[t("label.x017"),data.database],[t("label.x018"),t("web.s290")]]) {
         const dt = document.createElement('dt'), dd = document.createElement('dd');
-        dt.textContent = label; dd.textContent = value; byId('details').append(dt,dd);
+        setUiText(dt, () => label); setUiText(dd, () => value); byId('details').append(dt,dd);
       }
+      await loadOnboarding();
     }
     async function navigate(page) {
       currentPage=page;
@@ -783,10 +815,10 @@
     }
     function clearPreparationPlan() {
       byId('run-plan').hidden = true;
-      byId('run-plan-summary').textContent = ''; byId('run-plan-folders').textContent = '';
+      setUiText(byId('run-plan-summary'), () => ''); setUiText(byId('run-plan-folders'), () => '');
       byId('run-plan-commands').replaceChildren();
       if (!activeJobId && !runBusy) {
-        byId('run-total-label').textContent = 'Gesamt: 0 Befehle ausgeführt';
+        setUiText(byId('run-total-label'), () => t("web.s059"), true);
         byId('run-total-progress').max = 1;
       }
     }
@@ -797,14 +829,14 @@
       clearPreparationPlan();
       const file = byId('run-file').files[0];
       const local = byId('run-source-kind').value === 'local';
-      byId('run-intro').textContent = local ? 'Run referenziert deine lokale ZIP direkt und führt den ausgewählten KAPE-Befehl aus. Das Original bleibt unverändert.' :
-        'Run lädt deine ZIP hoch und führt den ausgewählten KAPE-Befehl aus. Das Original-ZIP bleibt erhalten.';
+      setUiText(byId('run-intro'), () => local ? t("web.s291") :
+        t("web.s292"), true);
       byId('upload-source').hidden = local; byId('local-source').hidden = !local;
       const validFile = local ? /\.zip$/i.test(byId('local-zip-path').value.trim()) : Boolean(file && /\.zip$/i.test(file.name) && file.size > 0);
-      byId('run-file-message').textContent = !file ? 'Noch keine Datei ausgewählt.' :
-        !/\.zip$/i.test(file.name) ? 'Bitte eine ZIP-Datei auswählen. Andere Evidence-Formate folgen später.' :
-        !file.size ? 'Die gewählte Datei ist leer. Bitte eine ZIP-Datei mit Inhalt auswählen.' :
-        file.name+' · '+new Intl.NumberFormat('de-DE').format(file.size)+' Bytes · bereit für Upload mit Run.';
+      setUiText(byId('run-file-message'), () => !file ? t("web.s031") :
+        !/\.zip$/i.test(file.name) ? t("web.s293") :
+        !file.size ? t("web.s294") :
+        t('run.file',{filename:file.name,bytes:new Intl.NumberFormat(I18n.numberLocale).format(file.size)}), true);
       byId('run-file-message').classList.toggle('error', Boolean(file && !validFile));
       const mode = selectedPreparationMode();
       byId('preview-run').disabled = runBusy || !validFile || !mode || byId('run-format').value !== 'ZIP';
@@ -814,41 +846,39 @@
     async function loadPreparation() {
       const previous = byId('run-effort').value, request = ++preparationRequest;
       preparationModes = []; preparationTools = [];
-      byId('run-effort').replaceChildren(new Option('Modi werden geladen…',''));
-      byId('run-effort').disabled = true; byId('run-mode-message').textContent = 'Konfiguration wird geprüft…';
+      byId('run-effort').replaceChildren(new Option(t("web.s040"),''));
+      byId('run-effort').disabled = true; setUiText(byId('run-mode-message'), () => t("web.s296"), true);
       byId('run-availability').replaceChildren(); updatePreparation();
       try {
         const [data,tools,catalog] = await Promise.all([api('/api/settings/modes'),api('/api/settings/tools'),api('/api/jobs/catalog')]);
         if (request !== preparationRequest || byId('workspace').hidden) return;
         preparationTools = tools.tools;
         processingAvailable = catalog.worker;
-        byId('run-start-note').textContent = 'Limits für neue Läufe: '+
-          new Intl.NumberFormat('de-DE',{maximumFractionDigits:3}).format(catalog.limits.max_upload_bytes/1024**3)+' GiB Upload · '+
-          new Intl.NumberFormat('de-DE',{maximumFractionDigits:3}).format(catalog.limits.max_extract_bytes/1e12)+' TB entpackt. PowerShell-Blöcke laufen mit Administratorrechten.';
-        byId('admin-status').textContent = catalog.administrator ? 'Administratorrechte aktiv — KAPE erbt diese Rechte.' :
-          catalog.test_no_admin ? 'Synthetischer Entwicklertest ohne Administratorrechte.' : 'Administratorrechte fehlen. App neu starten und Windows-UAC bestätigen.';
+        setUiText(byId('run-start-note'), () => t('limits.run',{upload:new Intl.NumberFormat(I18n.numberLocale,{maximumFractionDigits:3}).format(catalog.limits.max_upload_bytes/1024**3),extract:new Intl.NumberFormat(I18n.numberLocale,{maximumFractionDigits:3}).format(catalog.limits.max_extract_bytes/1e12)}), true);
+        setUiText(byId('admin-status'), () => catalog.administrator ? t("web.s299") :
+          catalog.test_no_admin ? t("web.s300") : t("web.s301"), true);
         byId('admin-status').classList.toggle('unavailable', !catalog.administrator);
-        byId('run-effort').replaceChildren(new Option('Aufwand auswählen…',''));
-        const labels = {missing:'kein Modus hinterlegt',conflict:'mehrfach belegt',
-          incomplete:'Befehle, Toolzuordnung oder Programmdatei fehlen',configured:'Konfiguration hinterlegt'};
+        byId('run-effort').replaceChildren(new Option(t("web.s302"),''));
+        const labels = {missing:t("web.s303"),conflict:t("web.s304"),
+          incomplete:t("web.s305"),configured:t("web.s306")};
         for (const slot of data.availability) {
           const mode = data.modes.find(mode => mode.id === slot.mode_ids[0]);
           const profile = catalog.modes.find(item => item.id === mode?.id);
           const complete = profile?.ready && slot.state === 'configured' && mode && mode.evidence_format === 'ZIP' && mode.steps.length;
           const reason = profile?.reason || labels[slot.state];
-          const option = new Option(slot.effort+(complete ? '' : ' — '+reason),complete ? mode.id : 'unavailable-'+slot.effort);
+          const option = new Option(effortLabel(slot.effort)+(complete ? '' : ' — '+reason),complete ? mode.id : 'unavailable-'+slot.effort);
           option.disabled = !complete;
           byId('run-effort').append(option);
           if (complete) preparationModes.push(mode);
           const item = document.createElement('li');
-          item.textContent = slot.effort+': '+(complete ? mode.name+' ('+mode.steps.length+' Befehle)' : reason);
+          setUiText(item, () => effortLabel(slot.effort)+': '+(complete ? mode.name+' ('+mode.steps.length+t("label.x034") : reason), true);
           byId('run-availability').append(item);
         }
         byId('run-effort').disabled = false;
         if (preparationModes.some(mode => mode.id === previous)) byId('run-effort').value = previous;
-        byId('run-mode-message').textContent = !processingAvailable ? 'Ausführungsprozess nicht verfügbar. Server neu starten.' : preparationModes.length ?
-          'Wähle den Aufwand. Mit Run gibst du den hinterlegten KAPE-Befehl für diesen Lauf frei.' :
-          'Noch kein vollständiger Modus verfügbar. Unter Einstellungen → Modi die Befehle und Tools zuordnen.';
+        setUiText(byId('run-mode-message'), () => !processingAvailable ? t("web.s307") : preparationModes.length ?
+          t("web.s308") :
+          t("web.s309"), true);
         updatePreparation();
         if (!activeJobId && !runBusy) {
           const previousJob = sessionStorage.getItem('ppm-job-id');
@@ -856,26 +886,25 @@
         }
       } catch (error) {
         if (request !== preparationRequest || byId('workspace').hidden) return;
-        byId('run-effort').replaceChildren(new Option('Konfiguration nicht verfügbar',''));
-        byId('run-mode-message').textContent = error.message; throw error;
+        byId('run-effort').replaceChildren(new Option(t("web.s310"),''));
+        setUiText(byId('run-mode-message'), () => error.message); throw error;
       }
     }
     function previewPreparation() {
       updatePreparation(); if (byId('preview-run').disabled) return;
       const mode = selectedPreparationMode(), file = byId('run-file').files[0];
       const inputName = byId('run-source-kind').value === 'local' ? byId('local-zip-path').value.trim() : file.name;
-      byId('run-plan-summary').textContent = inputName+' · '+mode.effort+' · '+mode.name+' · '+mode.steps.length+' Befehle';
-      byId('run-plan-folders').textContent = 'Je Evidence eigener Arbeitsordner. Entpacken nach '+mode.extract_folder+
-        '; ein einzelner abweichender Laufwerksordner (z. B. G statt C) wird erkannt. Nach Abschluss aller Befehle '+mode.output_folder+' als Ergebnis-ZIP bereitstellen.';
+      setUiText(byId('run-plan-summary'), () => t('run.selected',{filename:inputName,effort:effortLabel(mode.effort),mode:mode.name,count:mode.steps.length}), true);
+      setUiText(byId('run-plan-folders'), () => t('run.folders',{source:mode.extract_folder,output:mode.output_folder}), true);
       mode.steps.forEach((step,index) => {
-        const title = document.createElement('p'); title.textContent = (index+1)+'. '+step.name;
+        const title = document.createElement('p'); setUiText(title, () => (index+1)+'. '+step.name);
         const command = document.createElement('pre'), tool = preparationTools.find(tool => tool.id === step.tool_id);
-        command.textContent = (step.type === 'powershell' ? 'PowerShell\n'+step.script : '"'+tool.path+'"'+(step.parameters ? ' '+step.parameters : ''))+
-          '\nArbeitsordner: '+(step.working_directory || '.');
+        setUiText(command, () => (step.type === 'powershell' ? 'PowerShell\n'+step.script : '"'+tool.path+'"'+(step.parameters ? ' '+step.parameters : ''))+
+          t("label.x032")+(step.working_directory || '.'), true);
         byId('run-plan-commands').append(title,command);
       });
       if (!activeJobId) {
-        byId('run-total-label').textContent = 'Gesamt: 0 von '+mode.steps.length+' Befehlen ausgeführt';
+        setUiText(byId('run-total-label'), () => t('run.total',{completed:0,total:mode.steps.length}), true);
         byId('run-total-progress').max = mode.steps.length;
       }
       byId('run-plan').hidden = false;
@@ -908,14 +937,14 @@
     function storageSize(value) {
       const units = ['Bytes','KiB','MiB','GiB','TiB'];
       const index = value > 0 ? Math.min(Math.floor(Math.log(value)/Math.log(1024)),units.length-1) : 0;
-      return new Intl.NumberFormat('de-DE',{maximumFractionDigits:2}).format(value/1024**index)+' '+units[index];
+      return new Intl.NumberFormat(I18n.numberLocale,{maximumFractionDigits:2}).format(value/1024**index)+' '+units[index];
     }
-    async function loadWorkspaces() {
+    async function loadWorkspaces(preserveInput=false) {
       try {const data = await api('/api/settings/workspace');
-        byId('workspace-folder').value = data.folder;
-        byId('workspace-folder').placeholder = 'Standard: '+data.default_path;
-        byId('workspace-message').textContent = (data.custom ? 'Eigenes Arbeitsziel: ' : 'Standard aktiv: ')+data.path+' · '+storageSize(data.free_bytes)+' frei. '+data.note;
-      } catch (error) {byId('workspace-message').textContent = error.message+' Mit „Standard verwenden“ zurücksetzen.';}
+        if (!preserveInput) byId('workspace-folder').value = data.folder;
+        byId('workspace-folder').placeholder = t("label.x030")+data.default_path;
+        setUiText(byId('workspace-message'), () => (data.custom ? t("web.s314") : t("web.s315"))+data.path+' · '+storageSize(data.free_bytes)+t("storage.free")+data.note, true);
+      } catch (error) {setUiText(byId('workspace-message'), () => error.message+t("web.s316"), true);}
     }
     byId('save-workspace').addEventListener('click',() => run(async () => {
       await api('/api/settings/workspace','PUT',{folder:byId('workspace-folder').value.trim()}); await loadWorkspaces(); await loadStorage();
@@ -926,7 +955,7 @@
     async function loadCleanupScope() {
       const previous = byId('cleanup-scope').value;
       const jobs = await api('/api/jobs?limit=100');
-      byId('cleanup-scope').replaceChildren(new Option('Alle abgeschlossenen Aufträge',''));
+      byId('cleanup-scope').replaceChildren(new Option(t("web.s187"),''));
       for (const job of jobs.jobs) if (['succeeded','failed','cancelled','interrupted'].includes(job.status)) {
         byId('cleanup-scope').append(new Option(job.filename+' · '+job.created_at+' · '+job.id.slice(0,8),job.id));
       }
@@ -934,18 +963,18 @@
     }
     let cleanupTicket = null, cleanupBusy = false;
     for (const button of document.querySelectorAll('[data-cleanup]')) button.addEventListener('click',() => run(async () => {
-      byId('cleanup-message').textContent = 'Löschvorschau wird ermittelt…';
+      setUiText(byId('cleanup-message'), () => t("web.s317"), true);
       try {
         const preview = await api('/api/settings/cleanup/preview','POST',{category:button.dataset.cleanup,job_id:byId('cleanup-scope').value || null});
         cleanupTicket = preview.ticket;
-        byId('cleanup-title').textContent = preview.label+' – Vorschau ('+(byId('cleanup-scope').value ? byId('cleanup-scope').selectedOptions[0].textContent : 'alle abgeschlossenen Aufträge')+')';
-        byId('cleanup-summary').textContent = preview.files+' Dateien · '+storageSize(preview.bytes)+' · '+preview.skipped_links+' Verknüpfungen übersprungen';
-        byId('cleanup-warning').textContent = preview.note;
-        byId('cleanup-root').textContent = 'Datenordner: '+preview.root;
+        setUiText(byId('cleanup-title'), () => t('cleanup.title',{label:preview.label,scope:byId('cleanup-scope').value ? byId('cleanup-scope').selectedOptions[0].textContent : t('web.s318')}), true);
+        setUiText(byId('cleanup-summary'), () => t('cleanup.files',{files:preview.files,size:storageSize(preview.bytes),links:preview.skipped_links}), true);
+        setUiText(byId('cleanup-warning'), () => preview.note);
+        setUiText(byId('cleanup-root'), () => t("label.data_folder")+preview.root, true);
         byId('cleanup-confirm').checked = false; byId('cleanup-apply').disabled = true;
-        byId('cleanup-progress').textContent = ''; byId('cleanup-message').textContent = '';
+        setUiText(byId('cleanup-progress'), () => ''); setUiText(byId('cleanup-message'), () => '');
         byId('cleanup-dialog').showModal();
-      } catch (error) {byId('cleanup-message').textContent = error.message;}
+      } catch (error) {setUiText(byId('cleanup-message'), () => error.message);}
     },button));
     byId('cleanup-confirm').addEventListener('change',() => {byId('cleanup-apply').disabled = !byId('cleanup-confirm').checked;});
     byId('cleanup-cancel').addEventListener('click',() => {cleanupTicket = null; byId('cleanup-dialog').close();});
@@ -953,94 +982,93 @@
     byId('cleanup-apply').addEventListener('click',() => run(async () => {
       if (!cleanupTicket || !byId('cleanup-confirm').checked) return;
       cleanupBusy = true; byId('cleanup-cancel').disabled = true; byId('cleanup-confirm').disabled = true;
-      byId('cleanup-progress').textContent = 'Bereinigung läuft…';
+      setUiText(byId('cleanup-progress'), () => t("web.s320"), true);
       try {
         const result = await api('/api/settings/cleanup/apply','POST',{ticket:cleanupTicket,confirmed:true});
-        byId('cleanup-message').textContent = result.deleted_files+' Dateien gelöscht · '+storageSize(result.bytes)+
-          (result.errors.length ? ' · Nicht vollständig entfernt: '+result.errors.join(' | ') : ' · Bereinigung abgeschlossen.');
+        setUiText(byId('cleanup-message'), () => result.deleted_files+t("web.s321")+storageSize(result.bytes)+
+          (result.errors.length ? t("web.s322")+result.errors.join(' | ') : t("web.s323")), true);
         byId('cleanup-dialog').close(); await loadStorage(); await refreshJob();
-      } catch (error) {byId('cleanup-progress').textContent = error.message+' Bitte schließen und neue Vorschau anfordern.';}
+      } catch (error) {setUiText(byId('cleanup-progress'), () => error.message+t("web.s324"), true);}
       finally {cleanupBusy = false; cleanupTicket = null; byId('cleanup-cancel').disabled = false; byId('cleanup-confirm').disabled = false;}
     },byId('cleanup-apply')));
     let queuePaused = false;
     async function loadQueue() {
       const state = await api('/api/queue');
       queuePaused = state.paused;
-      byId('queue-status').textContent = (state.paused ? 'Pausiert – keine neuen Aufträge werden übernommen.' : 'Aktiv – wartende Aufträge werden nacheinander gestartet.')+
-        ' Wartend: '+state.waiting+' · In Bearbeitung: '+state.running.length+' · ZIPs wartend: '+state.archive_waiting+' · ZIPs in Bearbeitung: '+state.archiving.length;
-      byId('pause-queue').textContent = state.paused ? 'Warteschlange fortsetzen' : 'Warteschlange pausieren';
+      setUiText(byId('queue-status'), () => (state.paused ? t("web.s325") : t("web.s326"))+
+        t('queue.counts',{waiting:state.waiting,running:state.running.length,archives:state.archive_waiting,archiving:state.archiving.length}), true);
+      setUiText(byId('pause-queue'), () => state.paused ? t("web.s330") : t("web.s174"), true);
     }
     byId('refresh-queue').addEventListener('click',() => run(loadQueue));
     byId('pause-queue').addEventListener('click',() => run(async () => {
       await api('/api/queue','PUT',{paused:!queuePaused}); await loadQueue();
     },byId('pause-queue')));
     function renderStorage(data) {
-      byId('storage-volume').textContent = storageSize(data.volume.free_bytes)+' frei von '+storageSize(data.volume.total_bytes)+
-        ' · '+storageSize(data.volume.used_bytes)+' auf dem Datenträger belegt';
-      byId('storage-path').textContent = 'Datenordner auf dem Server: '+data.path+' · Bekannte Arbeitsziele: '+(data.locations || []).map(item => item.path+(item.error ? ' (nicht erreichbar: '+item.error+')' : ' · '+storageSize(item.free_bytes)+' frei')).join(' | ');
+      setUiText(byId('storage-volume'), () => storageSize(data.volume.free_bytes)+t("web.s331")+storageSize(data.volume.total_bytes)+
+        ' · '+storageSize(data.volume.used_bytes)+t("web.s332"), true);
+      setUiText(byId('storage-path'), () => t("web.s333")+data.path+t("web.s334")+(data.locations || []).map(item => item.path+(item.error ? t("web.s335")+item.error+')' : ' · '+storageSize(item.free_bytes)+t("label.x026"))).join(' | '), true);
       const target = byId('storage-areas'); target.replaceChildren();
       if (!data.scan) {
-        byId('storage-measurement').textContent = 'App-Ordner noch nicht gemessen. „Speicher messen“ liest ausschließlich Dateimetadaten.';
+        setUiText(byId('storage-measurement'), () => t("web.s336"), true);
         return;
       }
       const list = document.createElement('dl');
       for (const area of data.scan.areas) {
         const label = document.createElement('dt'), value = document.createElement('dd');
-        label.textContent = area.label;
-        value.textContent = storageSize(area.bytes)+' · '+area.files+' Dateien · '+area.directories+' Unterordner'+
-          (area.complete ? '' : ' · Teilmessung');
+        setUiText(label, () => area.label);
+        setUiText(value, () => storageSize(area.bytes)+' · '+area.files+' Dateien · '+area.directories+t("label.x028")+
+          (area.complete ? '' : t("label.x029")), true);
         list.append(label,value);
       }
       target.append(list);
-      byId('storage-measurement').textContent = (data.scan.complete ? 'Messung abgeschlossen' : 'Teilmessung – Werte sind Untergrenzen')+
-        ' · '+new Date(data.scan.measured_at).toLocaleString('de-DE')+' · Summe der gemessenen Dateigrößen: '+storageSize(data.scan.bytes)+
-        ' · '+data.scan.skipped_links+' Verknüpfungen übersprungen · '+data.scan.errors+' nicht lesbare Einträge/Ordner';
+      setUiText(byId('storage-measurement'), () => (data.scan.complete ? t("web.s337") : t("web.s338"))+
+        ' · '+new Date(data.scan.measured_at).toLocaleString(I18n.numberLocale)+t("web.s339")+storageSize(data.scan.bytes)+
+        ' · '+data.scan.skipped_links+t("web.s340")+data.scan.errors+t("web.s341"), true);
     }
     async function loadStorage() {
       try { renderStorage(await api('/api/settings/storage')); }
-      catch (error) { byId('storage-volume').textContent = error.message; }
+      catch (error) { setUiText(byId('storage-volume'), () => error.message); }
     }
     byId('measure-storage').addEventListener('click', () => run(async () => {
-      byId('storage-measurement').textContent = 'Dateimetadaten werden gemessen…';
+      setUiText(byId('storage-measurement'), () => t("web.s342"), true);
       try { renderStorage(await api('/api/settings/storage/scan','POST')); }
-      catch (error) { byId('storage-measurement').textContent = error.message; }
+      catch (error) { setUiText(byId('storage-measurement'), () => error.message); }
     },byId('measure-storage')));
     function resetModeEditor() {
       editingModeId = null; byId('mode-form').reset(); byId('mode-editor').hidden = true;
-      byId('mode-message').textContent = ''; byId('mode-workspace-preview').textContent = '';
+      setUiText(byId('mode-message'), () => ''); setUiText(byId('mode-workspace-preview'), () => '');
       modeSteps = []; byId('mode-steps').replaceChildren();
     }
     function modePreview() {
       const root = modeWorkspacePattern || 'work\\{Aufbereitungs-ID}';
       const source = byId('mode-source').value, output = byId('mode-output').value;
-      byId('mode-workspace-preview').textContent =
-        'Eigener Arbeitsordner je Evidence-Aufbereitung:\n'+root+'\n\n'+
-        '1. '+(byId('mode-format').value === 'ZIP' ? 'ZIP entpacken' : 'Evidence bereitstellen')+'\n   Ziel: '+root+'\\'+source+'\n'+
-        '2. '+modeSteps.length+' konfigurierte Befehle nacheinander\n   Standardarbeitsordner: '+root+'\n   Abweichende Arbeitsordner stehen im jeweiligen Block.\n'+
-        '3. Nach Abschluss aller Befehle und Prüfung:\n   '+root+'\\'+output+'\n   als Ergebnis-ZIP zum Download bereitstellen';
+      setUiText(byId('mode-workspace-preview'), () => t("web.s343")+root+'\n\n'+
+        '1. '+(byId('mode-format').value === 'ZIP' ? t("label.x084") : t("web.s344"))+t("label.x083")+root+'\\'+source+'\n'+
+        '2. '+modeSteps.length+t("web.s345")+root+t("web.s346")+
+        t("web.s347")+root+'\\'+output+t("web.s348"), true);
     }
     function stepCommand(step) {
       if (step.type === 'powershell') return 'PowerShell\n'+(step.script || '');
       const tool = modeTools.find(tool => tool.id === step.tool_id);
-      return (tool ? '"'+tool.path+'"' : '['+(step.tool_hint || 'Tool auswählen')+']')+
+      return (tool ? '"'+tool.path+'"' : '['+(step.tool_hint || t("web.s349"))+']')+
         (step.parameters ? ' '+step.parameters : '');
     }
     function newModeStep(index=modeSteps.length) {
-      if (modeSteps.length >= 50) {message('Maximal 50 Befehle pro Modus.',true); return;}
-      modeSteps.splice(index,0,{id:crypto.randomUUID(),name:'Tool-Aufruf',type:'tool',script:'',working_directory:'.',timeout_seconds:86400,tool_id:null,tool_hint:'',parameters:''});
+      if (modeSteps.length >= 50) {message(t("web.s350"),true); return;}
+      modeSteps.splice(index,0,{id:crypto.randomUUID(),name:t("label.x021"),type:'tool',script:'',working_directory:'.',timeout_seconds:86400,tool_id:null,tool_hint:'',parameters:''});
       renderModeSteps(); modePreview();
     }
     function renderModeSteps() {
       const list = byId('mode-steps'); list.replaceChildren();
       if (!modeSteps.length) {
-        const note = document.createElement('p'); note.className = 'muted'; note.textContent = 'Noch keine Befehle. Über den Button unten hinzufügen.'; list.append(note);
+        const note = document.createElement('p'); note.className = 'muted'; setUiText(note, () => t("web.s351"), true); list.append(note);
       }
       modeSteps.forEach((step,index) => {
         const card = document.createElement('article'); card.className = 'command-step';
-        const heading = document.createElement('h3'); heading.textContent = 'Befehl '+(index+1);
+        const heading = document.createElement('h3'); setUiText(heading, () => t('step.command',{index:index+1}), true);
         const typeLabel = document.createElement('label'), typeSelect = document.createElement('select');
-        typeSelect.id = 'step-type-'+step.id; typeLabel.htmlFor = typeSelect.id; typeLabel.textContent = 'Blocktyp für Befehl '+(index+1);
-        typeSelect.append(new Option('Tool-Aufruf','tool'),new Option('Freier PowerShell-Befehl','powershell'));
+        typeSelect.id = 'step-type-'+step.id; typeLabel.htmlFor = typeSelect.id; setUiText(typeLabel, () => t('step.type',{index:index+1}), true);
+        typeSelect.append(new Option(t("label.x021"),'tool'),new Option(t("web.s353"),'powershell'));
         typeSelect.value = step.type || 'tool';
         typeSelect.addEventListener('change', () => {
           step.type = typeSelect.value;
@@ -1048,54 +1076,54 @@
           renderModeSteps(); modePreview();
         });
         const nameLabel = document.createElement('label'), name = document.createElement('input');
-        name.id = 'step-name-'+step.id; nameLabel.htmlFor = name.id; nameLabel.textContent = 'Bezeichnung';
+        name.id = 'step-name-'+step.id; nameLabel.htmlFor = name.id; setUiText(nameLabel, () => t("label.x022"), true);
         name.value = step.name; name.maxLength = 120; name.required = true;
         name.addEventListener('input', () => {step.name = name.value;});
         const toolLabel = document.createElement('label'), select = document.createElement('select');
-        select.id = 'step-tool-'+step.id; toolLabel.htmlFor = select.id; toolLabel.textContent = 'Tool für Befehl '+(index+1);
-        const empty = document.createElement('option'); empty.value = ''; empty.textContent = step.tool_hint ? step.tool_hint+' — bitte Tool zuordnen' : 'Tool auswählen (Entwurf darf offen bleiben)'; select.append(empty);
+        select.id = 'step-tool-'+step.id; toolLabel.htmlFor = select.id; setUiText(toolLabel, () => t('step.tool',{index:index+1}), true);
+        const empty = document.createElement('option'); empty.value = ''; setUiText(empty, () => step.tool_hint ? step.tool_hint+t("web.s355") : t("web.s356"), true); select.append(empty);
         for (const tool of modeTools) {
-          const option = document.createElement('option'); option.value = tool.id; option.textContent = tool.name; select.append(option);
+          const option = document.createElement('option'); option.value = tool.id; setUiText(option, () => tool.name); select.append(option);
         }
         if (step.tool_id && !modeTools.some(tool => tool.id === step.tool_id)) {
-          const missing = document.createElement('option'); missing.value = step.tool_id; missing.textContent = 'Tool nicht mehr vorhanden'; select.append(missing);
+          const missing = document.createElement('option'); missing.value = step.tool_id; setUiText(missing, () => t("web.s357"), true); select.append(missing);
         }
         select.value = step.tool_id || '';
         const parametersLabel = document.createElement('label'), parameters = document.createElement('textarea');
         parameters.id = 'step-parameters-'+step.id; parametersLabel.htmlFor = parameters.id;
-        parametersLabel.textContent = 'Parameter für Befehl '+(index+1)+' (ohne Programmname)';
+        setUiText(parametersLabel, () => t('step.parameters',{index:index+1}), true);
         parameters.value = step.parameters; parameters.rows = 4; parameters.maxLength = 16000; parameters.spellcheck = false;
         const scriptLabel = document.createElement('label'), script = document.createElement('textarea');
-        script.id = 'step-script-'+step.id; scriptLabel.htmlFor = script.id; scriptLabel.textContent = 'PowerShell-Code für Befehl '+(index+1);
+        script.id = 'step-script-'+step.id; scriptLabel.htmlFor = script.id; setUiText(scriptLabel, () => t('step.script',{index:index+1}), true);
         script.value = step.script || ''; script.rows = 7; script.maxLength = 8000; script.spellcheck = false;
         script.addEventListener('input', () => {step.script = script.value; updateCommand();});
         const cwdLabel = document.createElement('label'), cwd = document.createElement('input');
-        cwd.id = 'step-cwd-'+step.id; cwdLabel.htmlFor = cwd.id; cwdLabel.textContent = 'Arbeitsordner für Befehl '+(index+1)+' (relativ zur Aufbereitung)';
+        cwd.id = 'step-cwd-'+step.id; cwdLabel.htmlFor = cwd.id; setUiText(cwdLabel, () => t('step.cwd',{index:index+1}), true);
         cwd.value = step.working_directory || '.'; cwd.maxLength = 240;
         cwd.addEventListener('input', () => {step.working_directory = cwd.value;});
         const timeoutLabel = document.createElement('label'), timeout = document.createElement('input'), timeoutHint = document.createElement('p');
         timeout.id = 'step-timeout-'+step.id; timeoutLabel.htmlFor = timeout.id;
-        timeoutLabel.textContent = 'Zeitlimit in Sekunden'; timeout.type = 'number'; timeout.min = '1'; timeout.max = '604800'; timeout.step = '1'; timeout.required = true;
+        setUiText(timeoutLabel, () => t("web.s362"), true); timeout.type = 'number'; timeout.min = '1'; timeout.max = '604800'; timeout.step = '1'; timeout.required = true;
         timeout.value = step.timeout_seconds ?? 86400; step.timeout_seconds = Number(timeout.value);
         timeoutHint.className = 'help';
         function updateTimeout() {
           const seconds = Number(timeout.value); step.timeout_seconds = seconds;
-          timeoutHint.textContent = '1 bis 604800 Sekunden (7 Tage). Standard: 86400 Sekunden (24 Stunden). Aktuell: '+(Number.isInteger(seconds) && seconds > 0 ? (seconds/3600).toLocaleString('de-DE',{maximumFractionDigits:4})+' Stunden' : 'bitte ganze Sekunden eingeben')+'.';
+          setUiText(timeoutHint, () => t("label.x081")+(Number.isInteger(seconds) && seconds > 0 ? (seconds/3600).toLocaleString(I18n.numberLocale,{maximumFractionDigits:4})+t("label.x082") : t("web.s363"))+'.', true);
         }
         timeout.addEventListener('input',updateTimeout); updateTimeout();
         const powershell = step.type === 'powershell';
         for (const node of [toolLabel,select,parametersLabel,parameters]) node.hidden = powershell;
         for (const node of [scriptLabel,script]) node.hidden = !powershell;
-        const preview = document.createElement('pre'); preview.className = 'command-preview'; preview.textContent = stepCommand(step);
+        const preview = document.createElement('pre'); preview.className = 'command-preview'; setUiText(preview, () => stepCommand(step));
         const warning = document.createElement('p'); warning.className = 'help';
         function updateCommand() {
-          preview.textContent = stepCommand(step);
+          setUiText(preview, () => stepCommand(step));
           const tool = modeTools.find(tool => tool.id === step.tool_id);
-          warning.textContent = step.type === 'powershell' ?
-            'Freier Code mit Administratorrechten. Keine Toolzuordnung erforderlich. cd gilt nur in diesem Block; für nachfolgende Blöcke deren Arbeitsordner setzen. Der Ordner muss bei Ausführung existieren. KAPE verwendet Arbeitsordner „.“.' :
-            !tool ? 'Noch kein Tool zugeordnet. Entwurf kann gespeichert werden.' :
-            tool.kind === 'directory' ? 'Tool verweist auf einen Ordner. Vor der späteren Ausführung muss die Programmdatei festgelegt werden.' :
-            'Vorschau mit aktuellem Toolpfad — keine Ausführung.';
+          setUiText(warning, () => step.type === 'powershell' ?
+            t("web.s364") :
+            !tool ? t("web.s365") :
+            tool.kind === 'directory' ? t("web.s366") :
+            t("web.s367"), true);
         }
         select.addEventListener('change', () => {
           step.tool_id = select.value || null;
@@ -1106,30 +1134,30 @@
         parameters.addEventListener('input', () => {step.parameters = parameters.value; updateCommand();});
         updateCommand();
         const actions = document.createElement('div'); actions.className = 'actions';
-        const up = action('Nach oben', async () => {
+        const up = action(t("web.s368"), async () => {
           [modeSteps[index-1],modeSteps[index]] = [modeSteps[index],modeSteps[index-1]]; renderModeSteps(); modePreview();
         }); up.disabled = index === 0;
-        const down = action('Nach unten', async () => {
+        const down = action(t("web.s369"), async () => {
           [modeSteps[index+1],modeSteps[index]] = [modeSteps[index],modeSteps[index+1]]; renderModeSteps(); modePreview();
         }); down.disabled = index === modeSteps.length-1;
-        actions.append(up,down,action('Davor einfügen',async () => newModeStep(index)),
-          action('Danach einfügen',async () => newModeStep(index+1)),
-          action('Befehl entfernen',async () => {modeSteps.splice(index,1); renderModeSteps(); modePreview();},'danger'));
+        actions.append(up,down,action(t("web.s370"),async () => newModeStep(index)),
+          action(t("web.s371"),async () => newModeStep(index+1)),
+          action(t("web.s372"),async () => {modeSteps.splice(index,1); renderModeSteps(); modePreview();},'danger'));
         card.append(heading,typeLabel,typeSelect,nameLabel,name,toolLabel,select,parametersLabel,parameters,scriptLabel,script,cwdLabel,cwd,timeoutLabel,timeout,timeoutHint,warning,preview,actions); list.append(card);
       });
     }
     function editMode(mode, copy=false) {
       resetModeEditor(); editingModeId = mode && !copy ? mode.id : null;
-      byId('modes-message').textContent = '';
-      byId('mode-editor-title').textContent = editingModeId ? 'Modus bearbeiten' : 'Modus hinzufügen';
-      byId('mode-name').value = mode ? (copy ? mode.name.slice(0,112)+' (Kopie)' : mode.name) : '';
+      setUiText(byId('modes-message'), () => '');
+      setUiText(byId('mode-editor-title'), () => editingModeId ? t("web.s373") : t("web.s156"), true);
+      byId('mode-name').value = mode ? (copy ? mode.name.slice(0,112)+t("label.x024") : mode.name) : '';
       byId('mode-description').value = mode?.description || '';
       byId('mode-format').value = mode?.evidence_format || 'ZIP';
       byId('mode-effort').querySelectorAll('option[data-legacy]').forEach(option => option.remove());
       byId('mode-effort').value = mode?.effort || 'Medium';
       if (!byId('mode-effort').value && mode?.effort) {
         const legacy = document.createElement('option'); legacy.value = mode.effort;
-        legacy.textContent = mode.effort+' (bisheriger Wert)'; legacy.dataset.legacy = 'true';
+        setUiText(legacy, () => mode.effort+t("label.x025"), true); legacy.dataset.legacy = 'true';
         legacy.disabled = true; legacy.selected = true; byId('mode-effort').append(legacy);
       }
       updateEffortOptions();
@@ -1148,27 +1176,27 @@
       modeWorkspacePattern = data.workspace_pattern;
       modeTools = tools.tools;
       savedModes = data.modes;
-      byId('mode-availability').textContent = data.availability.map(slot =>
-        slot.effort+': '+({missing:'noch kein Modus',conflict:'mehrfach belegt — bitte auflösen',
-          incomplete:'Befehle oder Toolzuordnung unvollständig',configured:'Befehlssammlung hinterlegt'})[slot.state]
-      ).join(' · ');
+      setUiText(byId('mode-availability'), () => data.availability.map(slot =>
+        effortLabel(slot.effort)+': '+({missing:t("web.s374"),conflict:t("web.s375"),
+          incomplete:t("web.s376"),configured:t("web.s377")})[slot.state]
+      ).join(' · '), true);
       const list = byId('modes-list'); list.replaceChildren();
       if (!data.modes.length) {
-        const empty = document.createElement('p'); empty.textContent = 'Noch keine Modi angelegt.'; list.append(empty);
+        const empty = document.createElement('p'); setUiText(empty, () => t("web.s378"), true); list.append(empty);
       }
       for (const mode of data.modes) {
         const row = document.createElement('article'); row.className = 'tool';
-        const name = document.createElement('h3'); name.textContent = mode.name;
-        const info = document.createElement('p'); info.textContent = mode.evidence_format+' · '+mode.effort+' · '+mode.steps.length+' Befehle · Entwurf — keine Ausführung';
-        if (mode.slot_conflict) info.textContent += ' · Konflikt: Aufwandsstufe mehrfach belegt';
-        const description = document.createElement('p'); description.className = 'muted'; description.textContent = mode.description;
+        const name = document.createElement('h3'); setUiText(name, () => mode.name);
+        const info = document.createElement('p'); setUiText(info, () => mode.evidence_format+' · '+effortLabel(mode.effort)+' · '+mode.steps.length+t("web.s379"), true);
+        if (mode.slot_conflict) info.textContent += t("web.s380");
+        const description = document.createElement('p'); description.className = 'muted'; setUiText(description, () => mode.description);
         const actions = document.createElement('div'); actions.className = 'actions';
-        actions.append(action('Modus bearbeiten', async () => editMode(mode)),
-          action('Modus kopieren', async () => editMode(mode,true)),
-          action('Modus entfernen', async () => {
+        actions.append(action(t("web.s373"), async () => editMode(mode)),
+          action(t("web.s381"), async () => editMode(mode,true)),
+          action(t("web.s382"), async () => {
             await api('/api/settings/modes/'+mode.id,'DELETE');
             if (editingModeId === mode.id) resetModeEditor();
-            await loadModes(); message('Modus entfernt. Es wurden keine Evidence-Dateien verändert.');
+            await loadModes(); message(t("web.s383"));
           },'danger'));
         row.append(name,info,description,actions); list.append(row);
       }
@@ -1183,7 +1211,7 @@
           mode.evidence_format === format && mode.effort === option.value);
         const keepOwn = own && own.evidence_format === format && own.effort === option.value;
         option.disabled = taken && !keepOwn;
-        option.textContent = option.value+(taken && !keepOwn ? ' — bereits belegt' : '');
+        setUiText(option, () => effortLabel(option.value)+(taken && !keepOwn ? t("web.s384") : ''), true);
       }
       const selected = [...select.options].find(option => option.value === current);
       if (!selected || selected.disabled && !selected.dataset.legacy) {
@@ -1191,24 +1219,24 @@
       }
       const free = [...select.options].some(option => !option.disabled);
       byId('save-mode').disabled = !free && !own;
-      byId('mode-effort-note').textContent = !free && !own
-        ? 'Alle Aufwandsstufen sind bereits belegt. Bitte einen bestehenden Modus bearbeiten.'
-        : own?.slot_conflict ? 'Bestehender Konflikt: Diese Stufe ist mehrfach belegt. Wähle für einen der Modi eine freie Stufe oder entferne eine nicht benötigte Testkopie.'
-        : 'Jede Aufwandsstufe kann pro Format genau einmal angelegt werden.';
+      setUiText(byId('mode-effort-note'), () => !free && !own
+        ? t("web.s385")
+        : own?.slot_conflict ? t("web.s386")
+        : t("web.s387"), true);
     }
     function resetEditor() {
-      editingId = null; byId('tool-form').reset(); byId('path-result').textContent = '';
-      byId('editor-title').textContent = 'Tool hinzufügen'; byId('cancel-edit').hidden = true;
+      editingId = null; byId('tool-form').reset(); setUiText(byId('path-result'), () => '');
+      setUiText(byId('editor-title'), () => t("web.s135"), true); byId('cancel-edit').hidden = true;
     }
     function closePicker() {
       clearTimeout(searchTimer); pickerRequest++;
       byId('path-picker').close();
     }
     function selectPath(path, name) {
-      if (pickerPurpose === 'static') {if (!staticExtensions[byId('static-format').value].test(path)) {byId('picker-error').textContent='Datei passt nicht zum gewählten Format.';return;}sessionStorage.setItem('ppm-static-folder',pickerFolder || '');byId('static-path').value=path;closePicker();updateStaticForm();return;}
+      if (pickerPurpose === 'static') {if (!staticExtensions[byId('static-format').value].test(path)) {setUiText(byId('picker-error'), () => t("web.s388"), true);return;}sessionStorage.setItem('ppm-static-folder',pickerFolder || '');byId('static-path').value=path;closePicker();updateStaticForm();return;}
       if (pickerPurpose === 'workspace') {byId('workspace-folder').value = path; closePicker(); return;}
       if (pickerPurpose === 'local') {
-        if (!/\.zip$/i.test(path)) {byId('picker-error').textContent = 'Bitte eine ZIP-Datei auswählen.'; return;}
+        if (!/\.zip$/i.test(path)) {setUiText(byId('picker-error'), () => t("web.s389"), true); return;}
         lastEvidenceFolder = pickerFolder;
         if (lastEvidenceFolder) sessionStorage.setItem('ppm-last-evidence-folder',lastEvidenceFolder);
         byId('local-zip-path').value = path; closePicker(); updatePreparation(); return;
@@ -1217,12 +1245,12 @@
       if (lastToolFolder) sessionStorage.setItem('ppm-last-tool-folder',lastToolFolder);
       byId('tool-path').value = path;
       if (!byId('tool-name').value.trim()) byId('tool-name').value = name.replace(/\.(exe|com|cmd|bat|py|ps1)$/i, '').slice(0,100);
-      byId('path-result').textContent = 'Pfad übernommen. Zum Hinterlegen auf Speichern klicken.';
+      setUiText(byId('path-result'), () => t("web.s390"), true);
       closePicker(); byId('tool-path').focus();
     }
     async function browsePath(path, query='') {
       const request = ++pickerRequest;
-      byId('picker-error').textContent = ''; byId('picker-notice').textContent = 'Ordner wird geladen…';
+      setUiText(byId('picker-error'), () => ''); setUiText(byId('picker-notice'), () => t("web.s391"), true);
       byId('picker-list').replaceChildren();
       byId('picker-select-folder').disabled = true; byId('picker-select-file').hidden = true;
       byId('picker-up').disabled = true; pickerFile = null;
@@ -1239,20 +1267,20 @@
         for (const entry of data.entries) {
           if (pickerPurpose === 'workspace' && entry.kind !== 'directory') continue;
           const row = document.createElement('div'); row.className = 'picker-entry';
-          const label = document.createElement('span'); label.textContent = entry.name;
-          const button = action(entry.kind === 'directory' ? 'Ordner öffnen' : 'Datei auswählen', async () => {
+          const label = document.createElement('span'); setUiText(label, () => entry.name);
+          const button = action(entry.kind === 'directory' ? t("web.s392") : t("web.s393"), async () => {
             if (entry.kind === 'directory') await navigatePicker(entry.path);
             else selectPath(entry.path,entry.name);
           });
-          button.setAttribute('aria-label', (entry.kind === 'directory' ? 'Ordner öffnen: ' : 'Datei auswählen: ') + entry.name);
+          button.setAttribute('aria-label', (entry.kind === 'directory' ? t("web.s394") : t("web.s395")) + entry.name);
           row.append(label,button); list.append(row);
         }
-        byId('picker-notice').textContent = data.limited
-          ? 'Großer Ordner: Anzeige begrenzt. Suche eingrenzen oder vollständigen Pfad oben eingeben.'
-          : data.entries.length ? data.entries.length+' Einträge' : 'Keine passenden Dateien oder Ordner gefunden.';
+        setUiText(byId('picker-notice'), () => data.limited
+          ? t("web.s396")
+          : data.entries.length ? t('picker.count',{count:data.entries.length}) : t("web.s398"), true);
       } catch (error) {
         if (request !== pickerRequest || !byId('path-picker').open) return;
-        byId('picker-error').textContent = error.message; byId('picker-notice').textContent = '';
+        setUiText(byId('picker-error'), () => error.message); setUiText(byId('picker-notice'), () => '');
       }
     }
     function navigatePicker(path) {
@@ -1263,7 +1291,7 @@
       return {name:byId('tool-name').value.trim(),path:byId('tool-path').value.trim()};
     }
     function action(label, callback, className='secondary') {
-      const button = document.createElement('button'); button.textContent = label;
+      const button = document.createElement('button'); setUiText(button, () => label);
       button.type = 'button';
       button.className = className; button.addEventListener('click', () => run(callback, button));
       return button;
@@ -1272,32 +1300,31 @@
       const data = await api('/api/settings/tools'); const list = byId('tools-list'); list.replaceChildren();
       if (!data.tools.length) {
         const empty = document.createElement('p'); empty.className = 'muted';
-        empty.textContent = 'Noch keine Tools hinterlegt. Füge links dein erstes Tool hinzu.';
+        setUiText(empty, () => t("web.s399"), true);
         list.append(empty);
       }
       for (const tool of data.tools) {
         const row = document.createElement('article'); row.className = 'tool';
-        const name = document.createElement('h3'); name.textContent = tool.name;
-        const path = document.createElement('p'); path.className = 'path'; path.textContent = tool.path;
-        const badge = document.createElement('span'); badge.className = 'badge '+tool.kind; badge.textContent = tool.message;
+        const name = document.createElement('h3'); setUiText(name, () => tool.name);
+        const path = document.createElement('p'); path.className = 'path'; setUiText(path, () => tool.path);
+        const badge = document.createElement('span'); badge.className = 'badge '+tool.kind; setUiText(badge, () => tool.message);
         const usage = document.createElement('p'); usage.className = 'help';
-        usage.textContent = tool.used_by?.length ? 'Eingebunden in: '+tool.used_by.map(mode => mode.name).join(', ') : 'In keinem Modus eingebunden.';
+        setUiText(usage, () => tool.used_by?.length ? t("web.s400")+tool.used_by.map(mode => mode.name).join(', ') : t("web.s401"), true);
         const warning = document.createElement('p'); warning.setAttribute('role','alert'); warning.hidden = true; warning.style.color = '#ffb5a9';
         const actions = document.createElement('div'); actions.className = 'actions';
         actions.append(action('Bearbeiten', async () => {
           editingId = tool.id; byId('tool-name').value = tool.name; byId('tool-path').value = tool.path;
-          byId('editor-title').textContent = 'Tool bearbeiten'; byId('cancel-edit').hidden = false;
-          byId('path-result').textContent = ''; byId('tool-name').focus();
+          setUiText(byId('editor-title'), () => t("web.s402"), true); byId('cancel-edit').hidden = false;
+          setUiText(byId('path-result'), () => ''); byId('tool-name').focus();
         }), action('Entfernen', async () => {
           if (tool.used_by?.length) {
-            warning.textContent = 'Dieses Tool ist bereits eingebunden: '+tool.used_by.map(mode => mode.name).join(', ')+
-              '. Es wurde nichts gelöscht. Alle Verknüpfungen bleiben erhalten.';
+            setUiText(warning, () => t('tool.used',{modes:tool.used_by.map(mode => mode.name).join(', ')}), true);
             warning.hidden = false; warning.scrollIntoView({block:'nearest'}); return;
           }
           try {await api('/api/settings/tools/'+tool.id,'DELETE');}
-          catch (error) {warning.textContent = error.message; warning.hidden = false; throw error;}
+          catch (error) {setUiText(warning, () => error.message); warning.hidden = false; throw error;}
           if (editingId === tool.id) resetEditor();
-          await loadTools(); message('Tool-Eintrag entfernt. Die Programmdatei bleibt erhalten.');
+          await loadTools(); message(t("web.s405"));
         }, 'danger'));
         row.append(name,path,badge,usage,actions,warning); list.append(row);
       }
@@ -1332,37 +1359,37 @@
       const archiving = ['queued','running'].includes(state.archive_status);
       byId('new-run').disabled = archiving;
       setRunBusy(!terminal || archiving);
-      byId('run-status').textContent = archiving ? 'Ergebnis-ZIP '+(state.archive_status === 'queued' ? 'wartet' : 'wird erstellt') : state.phase;
-      byId('run-total-label').textContent = 'Gesamt: '+state.completed+' von '+state.total+' Befehlen ausgeführt';
+      setUiText(byId('run-status'), () => archiving ? t("label.x039")+(state.archive_status === 'queued' ? t("label.x040") : t("web.s406")) : state.phase, true);
+      setUiText(byId('run-total-label'), () => t('run.total',{completed:state.completed,total:state.total}), true);
       byId('run-total-progress').max = state.total; byId('run-total-progress').value = state.completed;
-      byId('run-command-label').textContent = state.completed === state.total ? 'Alle Befehle beendet (letzter Exitcode '+state.exit_code+')' :
-        state.phase.endsWith('läuft') ? 'Befehl '+(state.current_step+1)+'/'+state.total+': '+state.current_name+' — Fortschritt unbekannt' : 'Aktueller Befehl: noch nicht abgeschlossen';
-      if (state.phase.endsWith('läuft') && !terminal) byId('run-command-progress').removeAttribute('value');
+      setUiText(byId('run-command-label'), () => state.completed === state.total ? t('run.finished',{code:state.exit_code}) :
+        state.command_running === true ? t('run.current',{index:state.current_step+1,total:state.total,name:state.current_name}) : t("web.s410"), true);
+      if (state.command_running === true && !terminal) byId('run-command-progress').removeAttribute('value');
       else byId('run-command-progress').value = state.completed === state.total ? 100 : 0;
       renderInputInventory(state,'run-inventory');
-      byId('run-progress-note').textContent = state.error_detail?.message || state.error || (state.phase+' · '+state.filename+' · '+state.mode_name+' · '+[state.case_number,state.device_name].filter(Boolean).join(' · '));
+      setUiText(byId('run-progress-note'), () => state.error_detail?.message || state.error || (state.phase+' · '+state.filename+' · '+state.mode_name+' · '+[state.case_number,state.device_name].filter(Boolean).join(' · ')));
       if (state.status === 'queued') {
         const queue = await api('/api/queue');
         if (ident !== activeJobId) return;
-        if (queue.paused) byId('run-progress-note').textContent = 'Warteschlange pausiert. Unter Einstellungen → Verarbeitung fortsetzen. Dieser Auftrag wurde noch nicht gestartet.';
+        if (queue.paused) setUiText(byId('run-progress-note'), () => t("web.s411"), true);
       }
       byId('run-error-panel').hidden = !state.error_detail;
       if (state.error_detail) {
         byId('run-error-panel').open = true;
-        byId('run-error-detail').textContent = 'Phase: '+state.error_detail.phase+'\nGrund: '+state.error_detail.message+
-          '\nHinweis: '+state.error_detail.recommendation+(state.exit_code !== null ? '\nExitcode: '+state.exit_code : '')+'\nAufbereitung: '+state.id;
+        setUiText(byId('run-error-detail'), () => t("label.phase")+state.error_detail.phase+t("label.x085")+state.error_detail.message+
+          t("label.x086")+state.error_detail.recommendation+(state.exit_code !== null ? t("label.exitcode")+state.exit_code : '')+t("label.x087")+state.id, true);
       }
-      byId('run-live-command').textContent = state.command;
+      setUiText(byId('run-live-command'), () => state.command);
       const terminalOutput = byId('run-live-output'), oldPosition = terminalOutput.scrollTop;
-      if (terminalOutput.textContent !== (state.log_tail || 'Noch keine Ausgabe.')) {
-        terminalOutput.textContent = state.log_tail || 'Noch keine Ausgabe.';
+      if (terminalOutput.textContent !== (state.log_tail || t("web.s068"))) {
+        setUiText(terminalOutput, () => state.log_tail || t("web.s068"), true);
         terminalOutput.scrollTop = followOutput ? terminalOutput.scrollHeight : oldPosition;
       }
       byId('download-evidences').disabled = !state.result_available;
       renderArtifacts(state,'run');
-      byId('run-download-note').textContent = state.status === 'succeeded' && !state.result_available ? (state.create_zip ? 'Ergebnisarchiv nicht vorhanden oder bereinigt.' : 'Ohne Ergebnis-ZIP abgeschlossen. Ordner verwenden oder ZIP ausdrücklich erstellen.') : state.status === 'succeeded' ?
-        'Ergebnis-ZIP bereit. KAPE-Ausgaben und Aufbereitungsprotokoll enthalten. Fachliche Ergebnisse bitte prüfen.' :
-        'Ergebnisdownload nach erfolgreichem KAPE-Ende und Prüfung des Ergebnisordners.';
+      setUiText(byId('run-download-note'), () => state.status === 'succeeded' && !state.result_available ? (state.create_zip ? t("web.s412") : t("web.s413")) : state.status === 'succeeded' ?
+        t("web.s414") :
+        t("web.s415"), true);
       if (state.status === 'succeeded') await refreshExplorer(ident,'run', () => activeJobId === ident && !byId('workspace').hidden);
       else resetExplorer('run');
     }
@@ -1374,7 +1401,7 @@
         try {
           const response = await fetch('/api/jobs/'+ident+'/events?after='+cursor,{
             headers:{Authorization:'Bearer '+token},signal:eventController.signal});
-          if (!response.ok) throw new Error('Live-Verbindung unterbrochen.');
+          if (!response.ok) throw new Error(t("web.s416"));
           const reader = response.body.getReader(), decoder = new TextDecoder(); let pending = '';
           while (true) {
             const {value,done} = await reader.read(); if (done) break;
@@ -1394,7 +1421,7 @@
           await refreshJob(); if (!runBusy) return;
         } catch (error) {
           if (generation !== eventGeneration || error.name === 'AbortError') return;
-          byId('run-progress-note').textContent = 'Live-Verbindung unterbrochen. Verbindung wird wiederhergestellt…';
+          setUiText(byId('run-progress-note'), () => t("web.s417"), true);
         }
         await new Promise(resolve => setTimeout(resolve,1000));
       }
@@ -1408,8 +1435,8 @@
       sessionStorage.removeItem('ppm-job-id'); setRunBusy(true);
       followOutput = true; updateFollowButton();
       byId('run-error-panel').hidden = true;
-      byId('download-evidences').disabled = true; byId('run-status').textContent = local ? 'Lokale ZIP' : 'Upload';
-      byId('run-progress-note').textContent = local ? 'Lokale ZIP wird referenziert…' : 'ZIP wird hochgeladen…';
+      byId('download-evidences').disabled = true; setUiText(byId('run-status'), () => local ? t("web.s418") : t("web.s026"), true);
+      setUiText(byId('run-progress-note'), () => local ? t("web.s419") : t("web.s420"), true);
       byId('upload-label').hidden = local; byId('upload-progress').hidden = local; byId('upload-progress').value = 0;
       try {
         const result = local ? await api('/api/jobs/local','POST',{case_number:byId('run-case').value,device_name:byId('run-device').value,mode_id:mode.id,path:byId('local-zip-path').value.trim(),allow_high_compression:allowCompression,create_zip:byId('create-result-zip').checked}) : await new Promise((resolve,reject) => {
@@ -1417,13 +1444,13 @@
           xhr.open('POST','/api/jobs?case_number='+encodeURIComponent(byId('run-case').value)+'&device_name='+encodeURIComponent(byId('run-device').value)+'&mode_id='+encodeURIComponent(mode.id)+'&filename='+encodeURIComponent(file.name)+'&allow_high_compression='+allowCompression+'&create_zip='+byId('create-result-zip').checked);
           xhr.setRequestHeader('Authorization','Bearer '+token); xhr.setRequestHeader('Content-Type','application/zip');
           xhr.upload.onprogress = event => {if (event.lengthComputable) byId('upload-progress').value = 100*event.loaded/event.total;};
-          xhr.onerror = () => reject(new Error('Upload-Verbindung fehlgeschlagen.'));
-          xhr.onabort = () => reject(new Error('Upload abgebrochen.'));
+          xhr.onerror = () => reject(new Error(t("web.s421")));
+          xhr.onabort = () => reject(new Error(t("web.s422")));
           xhr.onload = () => {
-            let data; try {data = JSON.parse(xhr.responseText);} catch {reject(new Error('Ungültige Serverantwort.')); return;}
+            let data; try {data = JSON.parse(xhr.responseText);} catch {reject(new Error(t("web.s423"))); return;}
             if (xhr.status >= 200 && xhr.status < 300) resolve(data);
             else {
-              const error = new Error(typeof data.detail === 'string' ? data.detail : data.detail?.message || 'Upload fehlgeschlagen.');
+              const error = new Error(typeof data.detail === 'string' ? data.detail : data.detail?.message || t("web.s424"));
               error.jobId = data.detail?.job_id; reject(error);
             }
           };
@@ -1432,14 +1459,14 @@
         activeJobId = result.id; sessionStorage.setItem('ppm-job-id',activeJobId);
         await refreshJob(); watchJob();
       } catch (error) {
-        setRunBusy(false); byId('run-status').textContent = local ? 'Lokale Datei fehlgeschlagen' : 'Upload fehlgeschlagen';
+        setRunBusy(false); setUiText(byId('run-status'), () => local ? t("web.s425") : t("web.s426"), true);
         if (error.jobId) {activeJobId = error.jobId; sessionStorage.setItem('ppm-job-id',activeJobId); await refreshJob();}
-        byId('run-progress-note').textContent = error.message; throw error;
+        setUiText(byId('run-progress-note'), () => error.message); throw error;
       } finally {uploadRequest = null; byId('upload-label').hidden = true; byId('upload-progress').hidden = true;}
     }));
     byId('cancel-run').addEventListener('click', () => run(async () => {
       if (uploadRequest) uploadRequest.abort();
-      else if (activeJobId) {await api('/api/jobs/'+activeJobId+'/cancel','POST'); byId('run-progress-note').textContent = 'Abbruch angefordert…';}
+      else if (activeJobId) {await api('/api/jobs/'+activeJobId+'/cancel','POST'); setUiText(byId('run-progress-note'), () => t("web.s427"), true);}
     }));
     byId('new-run').addEventListener('click', () => {
       resetExplorer('run');
@@ -1447,10 +1474,10 @@
       activeJobId = null; sessionStorage.removeItem('ppm-job-id'); setRunBusy(false);
       byId('run-error-panel').hidden = true; byId('new-run').hidden = true;
       byId('run-inventory').replaceChildren(); byId('log-inventory').replaceChildren(); resetCSV(null);
-      byId('run-status').textContent = 'Nicht gestartet'; byId('run-progress-note').textContent = 'Bereit für einen neuen Lauf. Frühere Läufe bleiben im Tab Logs erhalten.';
+      setUiText(byId('run-status'), () => t("web.s058"), true); setUiText(byId('run-progress-note'), () => t("web.s428"), true);
       byId('run-total-progress').value = 0; byId('run-command-progress').value = 0;
-      byId('run-command-label').textContent = 'Aktueller Befehl: noch keiner gestartet';
-      byId('run-live-command').textContent = 'Kein Befehl gestartet.'; byId('run-live-output').textContent = 'Noch keine Ausgabe.';
+      setUiText(byId('run-command-label'), () => t("web.s060"), true);
+      setUiText(byId('run-live-command'), () => t("web.s065"), true); setUiText(byId('run-live-output'), () => t("web.s068"), true);
       byId('download-evidences').disabled = true; byId('run-archive').disabled = true; byId('run-report').disabled = true;
     });
     byId('download-evidences').addEventListener('click', () => run(async () => {
@@ -1459,43 +1486,43 @@
       const link = document.createElement('a');
       link.href = ticket.url; link.download = 'PostMortem-'+activeJobId+'.zip'; document.body.append(link); link.click(); link.remove();
     },byId('download-evidences')));
-    byId('refresh').addEventListener('click', () => run(async () => {await connect(); message('Status aktualisiert.');}));
+    byId('refresh').addEventListener('click', () => run(async () => {await connect(); message(t("web.s429"));}));
     byId('stop-server').addEventListener('click', () => run(async () => {
       await api('/api/system/stop','POST'); token = ''; sessionStorage.removeItem('ppm-token'); hideWorkspace();
-      message('Dienst wird beendet. Für einen neuen Start die EXE öffnen und Windows-UAC bestätigen.');
+      message(t("web.s430"));
     }));
     function resetExplorer(prefix) {
       byId(prefix+'-explorer').hidden = true;
       byId(prefix+'-explorer').disabled = true;
-      byId(prefix+'-explorer-note').textContent = '';
+      setUiText(byId(prefix+'-explorer-note'), () => '');
     }
     async function refreshExplorer(ident, prefix, isCurrent) {
       const info = await api('/api/jobs/'+ident+'/explorer');
       if (!isCurrent()) return;
       byId(prefix+'-explorer').hidden = !info.local;
       byId(prefix+'-explorer').disabled = !info.available;
-      byId(prefix+'-explorer-note').textContent = info.local ? info.reason : '';
+      setUiText(byId(prefix+'-explorer-note'), () => info.local ? info.reason : '');
     }
     for (const prefix of ['run','log']) byId(prefix+'-explorer').addEventListener('click', () => run(async () => {
       const ident = prefix === 'run' ? activeJobId : byId('log-job').value;
       if (!ident) return;
       const result = await api('/api/jobs/'+ident+'/explorer','POST');
       const current = prefix === 'run' ? activeJobId : byId('log-job').value;
-      if (current === ident) byId(prefix+'-explorer-note').textContent = result.message+' '+result.path;
+      if (current === ident) setUiText(byId(prefix+'-explorer-note'), () => result.message+' '+result.path);
     },byId(prefix+'-explorer')));
     function renderArtifacts(state,prefix) {
       const busy = ['queued','running'].includes(state.archive_status);
       byId(prefix+'-archive').disabled = !state.output_available || state.result_available || busy || !!state.storage_error;
-      byId(prefix+'-archive').textContent = busy ? 'Archivierung '+(state.archive_status === 'queued' ? 'wartet' : 'läuft…') : 'Ergebnis-ZIP erstellen';
+      setUiText(byId(prefix+'-archive'), () => busy ? t("label.x041")+(state.archive_status === 'queued' ? t("label.x040") : t("web.s431")) : t("web.s071"), true);
       byId(prefix+'-report').disabled = !state.report_available;
       if (prefix === 'log') {
         byId('log-download').disabled = !state.result_available;
         byId('log-report-json').disabled = !state.report_available;
         byId('log-cancel-archive').hidden = !busy;
         byId('log-cleanup').disabled = !['succeeded','failed','cancelled','interrupted'].includes(state.status) || busy;
-        byId('log-artifacts-note').textContent = 'Arbeitsziel: '+state.data_root+(state.result_available ? ' · ZIP vorhanden' : ' · Kein ZIP vorhanden')+
-          (state.archive_error ? ' · Archivierung: '+state.archive_error : '')+(state.storage_error ? ' · '+state.storage_error : '');
-      } else if (state.archive_error) byId('run-progress-note').textContent = state.archive_error;
+        setUiText(byId('log-artifacts-note'), () => t("label.x042")+state.data_root+(state.result_available ? t("label.x043") : t("web.s432"))+
+          (state.archive_error ? t("label.x044")+state.archive_error : '')+(state.storage_error ? ' · '+state.storage_error : ''), true);
+      } else if (state.archive_error) setUiText(byId('run-progress-note'), () => state.archive_error);
     }
     for (const prefix of ['run','log']) {
       const selectedJob = () => prefix === 'run' ? activeJobId : byId('log-job').value;
@@ -1533,42 +1560,42 @@
       const box=byId(target); box.replaceChildren();
       if (state.workspace==='malware') return;
       const inventory=state.input_inventory, heading=document.createElement('h3'), note=document.createElement('p');
-      heading.textContent='Eingangsarchiv: Artefaktgruppen'; box.append(heading,note);
-      if (!inventory) { note.textContent='Nicht erfasst. Die Ansicht liest keine Original-Evidence erneut.'; return; }
-      note.textContent=inventory.scope_note+' '+(inventory.complete?'Erfassungsumfang abgeschlossen.':'Teilerfassung: '+inventory.partial_reasons.join(', '));
+      setUiText(heading, () => t("label.x045"), true); box.append(heading,note);
+      if (!inventory) { setUiText(note, () => t("web.s433"), true); return; }
+      setUiText(note, () => inventory.scope_note+' '+(inventory.complete?t("web.s434"):t("label.x046")+inventory.partial_reasons.join(', ')), true);
       const table=document.createElement('table');table.className='result-preview-table';const header=document.createElement('tr');
-      for (const value of ['Gruppe','Dateien','Logische Bytes','Relative Beispiele']) {const cell=document.createElement('th');cell.textContent=value;header.append(cell);} table.append(header);
-      for (const group of Object.values(inventory.groups)) {const row=document.createElement('tr');for (const value of [group.label,group.files,group.bytes,group.samples.join('; ')]) {const cell=document.createElement('td');cell.textContent=String(value);row.append(cell);}table.append(row);}
+      for (const value of [t("label.x047"),t("label.x048"),t("web.s435"),t("web.s436")]) {const cell=document.createElement('th');setUiText(cell, () => value);header.append(cell);} table.append(header);
+      for (const group of Object.values(inventory.groups)) {const row=document.createElement('tr');for (const value of [group.label,group.files,group.bytes,group.samples.join('; ')]) {const cell=document.createElement('td');setUiText(cell, () => String(value));row.append(cell);}table.append(row);}
       const scroll=document.createElement('div');scroll.style.overflowX='auto';scroll.append(table);box.append(scroll);
     }
     let csvJob=null, csvGeneration=0, csvNext=null, resultJobsGeneration=0, viewerGeneration=0;
     let resultFormat='csv', resultSortColumn=null, resultDescending=false, resultColumnKinds={}, resultInferredKinds=[];
     function resetResultSort(){resultSortColumn=null;resultDescending=false;resultColumnKinds={};resultInferredKinds=[];}
     const viewerKind=()=>byId('csv-file').value.toLowerCase().endsWith('.xlsx')?'ezviewer':'timeline';
-    async function loadViewerSettings(){const data=await api('/api/settings/viewers');byId('viewer-settings').replaceChildren();for(const viewer of data.viewers){const label=document.createElement('label');label.textContent=viewer.name;const input=document.createElement('input');input.id='viewer-path-'+viewer.kind;label.htmlFor=input.id;input.value=viewer.tool?.path || viewer.proposal;input.maxLength=4096;input.spellcheck=false;const button=document.createElement('button');button.textContent='Pfad speichern';button.type='button';const note=document.createElement('p');note.textContent=viewer.tool?'Als gemeinsames Tool gespeichert; Verfügbarkeit wird im Ergebnisbereich geprüft.':'Pfadvorschlag; noch nicht gespeichert.';button.addEventListener('click',()=>run(async()=>{const payload={name:viewer.name,path:input.value};const saved=await api('/api/settings/tools'+(viewer.tool?'/'+viewer.tool.id:''),viewer.tool?'PUT':'POST',payload);viewer.tool=saved;note.textContent='Pfad gespeichert. Kein Programm gestartet.';},button));byId('viewer-settings').append(label,input,button,note);}}
-    async function refreshResultViewer(){const ident=csvJob,path=byId('csv-file').value,generation=++viewerGeneration;byId('result-viewer').disabled=true;if(!ident||!path)return;const kind=viewerKind();byId('result-viewer').textContent=kind==='ezviewer'?'In EZViewer öffnen':'In Timeline Explorer öffnen';const state=await api('/api/jobs/'+ident+'/viewer?'+new URLSearchParams({path,kind}));if(generation!==viewerGeneration||ident!==csvJob||path!==byId('csv-file').value)return;byId('result-viewer').disabled=!state.available;byId('result-viewer-note').textContent=state.reason;}
+    async function loadViewerSettings(){const data=await api('/api/settings/viewers');byId('viewer-settings').replaceChildren();for(const viewer of data.viewers){const label=document.createElement('label');setUiText(label, () => viewer.name);const input=document.createElement('input');input.id='viewer-path-'+viewer.kind;label.htmlFor=input.id;input.value=viewer.tool?.path || viewer.proposal;input.maxLength=4096;input.spellcheck=false;const button=document.createElement('button');setUiText(button, () => t("web.s437"), true);button.type='button';const note=document.createElement('p');setUiText(note, () => viewer.tool?t("web.s438"):t("web.s439"), true);button.addEventListener('click',()=>run(async()=>{const payload={name:viewer.name,path:input.value};const saved=await api('/api/settings/tools'+(viewer.tool?'/'+viewer.tool.id:''),viewer.tool?'PUT':'POST',payload);viewer.tool=saved;setUiText(note, () => t("web.s440"), true);},button));byId('viewer-settings').append(label,input,button,note);}}
+    async function refreshResultViewer(){const ident=csvJob,path=byId('csv-file').value,generation=++viewerGeneration;byId('result-viewer').disabled=true;if(!ident||!path)return;const kind=viewerKind();setUiText(byId('result-viewer'), () => kind==='ezviewer'?t("web.s441"):t("web.s442"), true);const state=await api('/api/jobs/'+ident+'/viewer?'+new URLSearchParams({path,kind}));if(generation!==viewerGeneration||ident!==csvJob||path!==byId('csv-file').value)return;byId('result-viewer').disabled=!state.available;setUiText(byId('result-viewer-note'), () => state.reason);}
     function resetCSV(state) {
-      viewerGeneration++;byId('result-viewer').disabled=true;byId('result-viewer-note').textContent='Datei auswählen; lokale Verfügbarkeit wird geprüft.';
+      viewerGeneration++;byId('result-viewer').disabled=true;setUiText(byId('result-viewer-note'), () => t("web.s443"), true);
       csvGeneration++; csvJob=state?.id || null; csvNext=null;
       for(const id of ['csv-file','csv-table','result-sheet']) byId(id).replaceChildren();
       resetResultSort();
-      byId('csv-search').value='';byId('csv-note').textContent='';byId('result-sheet').disabled=true;
+      byId('csv-search').value='';setUiText(byId('csv-note'), () => '');byId('result-sheet').disabled=true;
       byId('csv-load').disabled=state?.status!=='succeeded';byId('csv-search-button').disabled=true;byId('csv-next').disabled=true;
     }
     async function loadResultJobs() {
       const generation=++resultJobsGeneration, area=workspaceArea;
-      resetCSV(null);byId('result-job').replaceChildren();byId('result-job-note').textContent='Aufträge werden geladen…';
+      resetCSV(null);byId('result-job').replaceChildren();setUiText(byId('result-job-note'), () => t("web.s444"), true);
       const data=await api('/api/jobs?status=succeeded&limit=50&workspace='+area);
       if(generation!==resultJobsGeneration || area!==workspaceArea)return;
       byId('result-job').replaceChildren(...data.jobs.map(item=>new Option(item.created_at+' · '+item.filename+' · '+item.id,item.id)));
-      byId('result-job-note').textContent=data.jobs.length?'Dateien stammen aus der gespeicherten Ergebnisliste dieses Auftrags.':'Keine erfolgreichen Aufträge in diesem Bereich.';
+      setUiText(byId('result-job-note'), () => data.jobs.length?t("web.s445"):t("web.s446"), true);
       if(data.jobs.length) {resetCSV(data.jobs[0]);await loadResultFiles();}
     }
     async function showCSV(offset=0, focusColumn=null) {
       const ident=csvJob, path=byId('csv-file').value;
       if (!ident || !path) return;
       const generation=++csvGeneration;
-      byId('csv-next').disabled=true;byId('csv-table').replaceChildren();byId('csv-note').textContent='Vorschauausschnitt wird geladen…';
+      byId('csv-next').disabled=true;byId('csv-table').replaceChildren();setUiText(byId('csv-note'), () => t("web.s447"), true);
       const params=new URLSearchParams({path,format:resultFormat,search:byId('csv-search').value,offset:String(offset),sort_kind:resultColumnKinds[resultSortColumn] || resultInferredKinds[resultSortColumn] || 'text',descending:String(resultDescending)});
       if(resultSortColumn!==null)params.set('sort_column',String(resultSortColumn));
       if(byId('result-sheet').value)params.set('sheet_id',byId('result-sheet').value);
@@ -1578,30 +1605,30 @@
       byId('result-sheet').replaceChildren(...(result.sheets || []).map(item=>new Option(item.name+' · '+item.state,item.id)));
       byId('result-sheet').disabled=!result.sheets;if(result.sheet_id)byId('result-sheet').value=result.sheet_id;
       const table=document.createElement('table');table.className='result-preview-table';const head=document.createElement('tr');
-      const sourceHeader=document.createElement('th');sourceHeader.scope='col';sourceHeader.textContent='Quellzeile';head.append(sourceHeader);
+      const sourceHeader=document.createElement('th');sourceHeader.scope='col';setUiText(sourceHeader, () => t("label.x049"), true);head.append(sourceHeader);
       result.columns.forEach((title,index)=>{
         const cell=document.createElement('th');cell.scope='col';cell.setAttribute('aria-sort',resultSortColumn===index?(resultDescending?'descending':'ascending'):'none');
-        const button=document.createElement('button');button.type='button';button.className='result-header-sort';button.dataset.column=String(index);button.textContent=(title || 'Spalte '+(index+1))+(resultSortColumn===index?(resultDescending?' ▼':' ▲'):' ↕');
-        button.setAttribute('aria-label',(title || 'Spalte '+(index+1))+': '+(resultSortColumn===index&&!resultDescending?'absteigend':'aufsteigend')+' sortieren');
+        const button=document.createElement('button');button.type='button';button.className='result-header-sort';button.dataset.column=String(index);setUiText(button, () => (title || t("label.x050")+(index+1))+(resultSortColumn===index?(resultDescending?' ▼':' ▲'):' ↕'), true);
+        button.setAttribute('aria-label',(title || t("label.x050")+(index+1))+': '+(resultSortColumn===index&&!resultDescending?t("label.x051"):t("label.x052"))+t("label.x053"));
         button.addEventListener('click',()=>run(async()=>{resultDescending=resultSortColumn===index?!resultDescending:false;resultSortColumn=index;await showCSV(0,index);}));
-        const kinds=['text','number','time'], labels={text:'Text',number:'Zahl',time:'ISO-Zeit'};
+        const kinds=['text','number','time'], labels={text:'Text',number:t("label.x054"),time:t("label.x055")};
         const currentKind=resultColumnKinds[index] || resultInferredKinds[index] || 'text';
-        const kind=document.createElement('button');kind.type='button';kind.className='result-header-kind';kind.textContent='Typ: '+labels[currentKind]+(resultColumnKinds[index]?' (manuell)':'');
-        kind.setAttribute('aria-label','Sortiertyp für Spalte '+(index+1)+' '+title+': '+labels[currentKind]+'. Wechseln zu '+labels[kinds[(kinds.indexOf(currentKind)+1)%3]]);kind.title='Typ wechseln: Text → Zahl → ISO-Zeit. Originalwerte bleiben erhalten.';
+        const kind=document.createElement('button');kind.type='button';kind.className='result-header-kind';setUiText(kind, () => t("label.x056")+labels[currentKind]+(resultColumnKinds[index]?t("label.x057"):''), true);
+        kind.setAttribute('aria-label',t("web.s448")+(index+1)+' '+title+': '+labels[currentKind]+t("web.s449")+labels[kinds[(kinds.indexOf(currentKind)+1)%3]]);kind.title=t("web.s450");
         kind.addEventListener('click',()=>run(async()=>{resultColumnKinds[index]=kinds[(kinds.indexOf(currentKind)+1)%3];await showCSV(0,index);}));
         cell.append(button,kind);head.append(cell);
       });
       const thead=document.createElement('thead');thead.append(head);table.append(thead);
-      for (const item of result.rows) {const row=document.createElement('tr');for(const [i,value] of [item.line,...item.values].entries()) {const cell=document.createElement('td');cell.textContent=String(value);if(i>0 && item.formula_cells?.includes(i-1)){cell.title='Gespeicherter Formelwert; nicht berechnet';cell.append(document.createTextNode(' [Formelwert]'));}row.append(cell);}table.append(row);}
+      for (const item of result.rows) {const row=document.createElement('tr');for(const [i,value] of [item.line,...item.values].entries()) {const cell=document.createElement('td');setUiText(cell, () => String(value));if(i>0 && item.formula_cells?.includes(i-1)){cell.title=t("web.s451");cell.append(document.createTextNode(t("label.x058")));}row.append(cell);}table.append(row);}
       byId('csv-table').replaceChildren(table);if(focusColumn!==null)table.querySelector('[data-column="'+focusColumn+'"]')?.focus({preventScroll:true});csvNext=result.next_offset;byId('csv-next').disabled=!result.has_more;
-      byId('csv-note').textContent=result.note+' Eingelesene Datenzeilen: '+result.scanned_rows+'. '+(result.partial?'Begrenzte Vorschau: '+result.partial_reason:'Dateiende innerhalb der Vorschau erreicht.');
+      setUiText(byId('csv-note'), () => result.note+t("web.s452")+result.scanned_rows+'. '+(result.partial?t("web.s453")+result.partial_reason:t("web.s454")), true);
     }
     async function loadResultFiles() {
       const ident=csvJob,generation=++csvGeneration;if(!ident)return;
       const result=await api('/api/jobs/'+ident+'/preview?format='+resultFormat);if(generation!==csvGeneration || ident!==csvJob)return;
       byId('csv-file').replaceChildren(...result.files.map(path=>new Option(path,path)));
       byId('csv-search-button').disabled=!result.files.length;
-      byId('csv-note').textContent=result.files.length?result.note:'Keine '+resultFormat.toUpperCase()+'-Ergebnisdatei für diesen Auftrag erfasst.';
+      setUiText(byId('csv-note'), () => result.files.length?result.note:t("label.x059")+resultFormat.toUpperCase()+t("web.s455"), true);
       if(result.files.length){await refreshResultViewer();if(generation===csvGeneration && ident===csvJob)await showCSV();}
     }
     async function switchResultFormat(format){
@@ -1609,7 +1636,7 @@
       resultFormat=format;
       for(const item of ['csv','xlsx']){const active=item===format;byId('results-'+item).setAttribute('aria-selected',String(active));byId('results-'+item).tabIndex=active?0:-1;}
       byId('result-format-panel').setAttribute('aria-labelledby','results-'+format);
-      byId('result-file-label').textContent=format.toUpperCase()+'-Ergebnisdatei';byId('result-sheet-fields').hidden=format!=='xlsx';
+      setUiText(byId('result-file-label'), () => format.toUpperCase()+t("label.x060"), true);byId('result-sheet-fields').hidden=format!=='xlsx';
       const ident=csvJob;resetCSV(ident?{id:ident,status:'succeeded'}:null);
       if(ident)await loadResultFiles();
     }
@@ -1623,18 +1650,18 @@
     byId('csv-file').addEventListener('change',()=>run(async()=>{byId('result-sheet').replaceChildren();resetResultSort();byId('csv-search').value='';byId('result-viewer').disabled=true;await refreshResultViewer();await showCSV();}));
     byId('result-sheet').addEventListener('change',()=>run(()=>{resetResultSort();return showCSV();}));
     byId('csv-next').addEventListener('click',()=>run(()=>showCSV(csvNext ?? 0)));
-    byId('result-viewer').addEventListener('click',()=>run(async()=>{if(!confirm('Ergebnis im externen Viewer auf dem Server öffnen? Der Viewer erbt Serverrechte; keine Sandbox.'))return;const state=await api('/api/jobs/'+csvJob+'/viewer','POST',{kind:viewerKind(),path:byId('csv-file').value});byId('result-viewer-note').textContent=state.message;},byId('result-viewer')));
+    byId('result-viewer').addEventListener('click',()=>run(async()=>{if(!confirm(t("web.s456")))return;const state=await api('/api/jobs/'+csvJob+'/viewer','POST',{kind:viewerKind(),path:byId('csv-file').value});setUiText(byId('result-viewer-note'), () => state.message);},byId('result-viewer')));
     byId('result-first').addEventListener('click',()=>run(()=>showCSV()));
     byId('result-job').addEventListener('change',()=>run(async()=>{resetCSV({id:byId('result-job').value,status:'succeeded'});await loadResultFiles();}));
     byId('nav-results').addEventListener('click',()=>run(()=>navigate('results')));
-    byId('results-maximize').addEventListener('click',()=>{const full=byId('result-workplace').classList.toggle('maximized');byId('results-maximize').textContent=full?'Ansicht verkleinern':'Ansicht vergrößern';});
+    byId('results-maximize').addEventListener('click',()=>{const full=byId('result-workplace').classList.toggle('maximized');setUiText(byId('results-maximize'), () => full?t("web.s457"):t("web.s245"), true);});
     function renderLogState(state) {
       renderInputInventory(state,'log-inventory');
-      byId('log-job-status').textContent = state.phase+' · '+state.created_at+' · '+state.filename+' · '+state.id+' · '+[state.case_number,state.device_name].filter(Boolean).join(' · ');
+      setUiText(byId('log-job-status'), () => state.phase+' · '+state.created_at+' · '+state.filename+' · '+state.id+' · '+[state.case_number,state.device_name].filter(Boolean).join(' · '));
       byId('log-job-error').hidden = !state.error_detail;
-      byId('log-job-error').textContent = state.error_detail ? JSON.stringify(state.error_detail,null,2) : '';
-      byId('log-job-command').textContent = state.command;
-      byId('log-job-output').textContent = state.log_tail || 'Noch keine Toolausgabe.';
+      setUiText(byId('log-job-error'), () => state.error_detail ? JSON.stringify(state.error_detail,null,2) : '');
+      setUiText(byId('log-job-command'), () => state.command);
+      setUiText(byId('log-job-output'), () => state.log_tail || t("web.s458"), true);
       byId('download-diagnostics').disabled = false; byId('download-job-log').disabled = false;
     }
     async function loadSelectedLog() {
@@ -1661,10 +1688,10 @@
       jobsOffset = data.offset;
       logsRequest++; resetExplorer('log');
       const selectedMode = byId('job-mode-filter').value;
-      byId('job-mode-filter').replaceChildren(new Option('Alle Modi',''));
+      byId('job-mode-filter').replaceChildren(new Option(t("web.s229"),''));
       for (const mode of data.modes) byId('job-mode-filter').append(new Option(mode.name,mode.id));
       byId('job-mode-filter').value = selectedMode;
-      byId('job-search-count').textContent = data.total ? (data.offset+1)+'–'+Math.min(data.offset+data.jobs.length,data.total)+' von '+data.total+' Treffern' : 'Keine Treffer';
+      setUiText(byId('job-search-count'), () => data.total ? t('logs.matches',{first:data.offset+1,last:Math.min(data.offset+data.jobs.length,data.total),total:data.total}) : t("web.s459"), true);
       byId('jobs-prev').disabled = data.offset === 0;
       byId('jobs-next').disabled = data.offset+data.jobs.length >= data.total;
       byId('log-job').replaceChildren();
@@ -1673,17 +1700,17 @@
         byId('log-job').append(new Option(state.created_at+' · '+state.filename+' · '+state.phase,state.id));
         const card = document.createElement('div'); card.className = 'result-card'; card.dataset.job = state.id;
         const info = document.createElement('div'), title = document.createElement('strong'), details = document.createElement('p');
-        title.textContent = state.filename; details.textContent = state.phase+' · '+state.mode_name+' · '+state.created_at+' · '+[state.case_number,state.device_name].filter(Boolean).join(' · ');
+        setUiText(title, () => state.filename); setUiText(details, () => state.phase+' · '+state.mode_name+' · '+state.created_at+' · '+[state.case_number,state.device_name].filter(Boolean).join(' · '));
         info.append(title,details);
-        const button = document.createElement('button'); button.className = 'secondary'; button.textContent = 'Anzeigen';
+        const button = document.createElement('button'); button.className = 'secondary'; setUiText(button, () => 'Anzeigen');
         button.addEventListener('click',() => run(async () => {byId('log-job').value = state.id; await loadSelectedLog(); byId('log-job-status').scrollIntoView({block:'center'});}));
         card.append(info,button); byId('job-results').append(card);
       }
       if (data.jobs.some(state => state.id === previous)) byId('log-job').value = previous;
       if (!data.jobs.length) {
         resetExplorer('log'); byId('log-inventory').replaceChildren();
-        byId('log-job-status').textContent = 'Keine Aufbereitungen für diese Filter gefunden.';
-        for (const id of ['log-job-error','log-job-command','log-job-output']) byId(id).textContent = '';
+        setUiText(byId('log-job-status'), () => t("web.s460"), true);
+        for (const id of ['log-job-error','log-job-command','log-job-output']) setUiText(byId(id), () => '');
         byId('log-job-error').hidden = true;
         byId('download-diagnostics').disabled = true; byId('download-job-log').disabled = true;
         for (const id of ['log-report','log-report-json','log-archive','log-cleanup','log-download']) byId(id).disabled = true; byId('log-cancel-archive').hidden = true;
@@ -1693,7 +1720,7 @@
     }
     async function downloadLogFile(path, name) {
       const response = await fetch(path,{headers:{Authorization:'Bearer '+token}});
-      if (!response.ok) throw new Error('Diagnosedownload fehlgeschlagen.');
+      if (!response.ok) throw new Error(t("web.s461"));
       const url = URL.createObjectURL(await response.blob()), link = document.createElement('a');
       link.href = url; link.download = name; document.body.append(link); link.click(); link.remove();
       setTimeout(() => URL.revokeObjectURL(url),1000);
@@ -1703,25 +1730,25 @@
       const requestToken = token, data = await api('/api/feedback');
       if (requestToken !== token || byId('workspace').hidden) return;
       byId('feedback-list').replaceChildren();
-      const labels = {bug:'Bug',wish:'Wunsch',feedback:'Feedback'};
+      const labels = {bug:'Bug',wish:t("web.s266"),feedback:t("web.s021")};
       for (const item of data.items) {
         const article = document.createElement('article'); article.className = 'tool';
         const title = document.createElement('strong'), meta = document.createElement('p'), text = document.createElement('pre');
-        title.textContent = item.title; meta.textContent = labels[item.category]+' · '+item.created_at+' · Version '+item.app_version;
-        text.textContent = item.text; article.append(title,meta,text); byId('feedback-list').append(article);
+        setUiText(title, () => item.title); setUiText(meta, () => ({bug:t('label.feedback_bug'),wish:t('web.s266'),feedback:t('web.s021')})[item.category]+' · '+item.created_at+t('label.version')+item.app_version,true);
+        setUiText(text, () => item.text); article.append(title,meta,text); byId('feedback-list').append(article);
       }
-      if (!data.items.length) byId('feedback-list').textContent = 'Noch kein Feedback gespeichert.';
+      if (!data.items.length) setUiText(byId('feedback-list'), () => t("web.s462"), true);
     }
     byId('open-feedback').addEventListener('click',() => run(async () => {
-      byId('feedback-message').textContent = ''; byId('feedback-dialog').showModal(); await loadFeedback();
+      setUiText(byId('feedback-message'), () => ''); byId('feedback-dialog').showModal(); await loadFeedback();
     }));
     byId('close-feedback').addEventListener('click',() => byId('feedback-dialog').close());
     byId('feedback-form').addEventListener('submit',event => {
       event.preventDefault(); run(async () => {
         try {
           await api('/api/feedback','POST',{category:byId('feedback-category').value,title:byId('feedback-subject').value,text:byId('feedback-text').value});
-          byId('feedback-form').reset(); byId('feedback-message').textContent = 'Lokal gespeichert. Es wurde nichts versendet.'; await loadFeedback();
-        } catch (error) {byId('feedback-message').textContent = error.message;}
+          byId('feedback-form').reset(); setUiText(byId('feedback-message'), () => t("web.s463"), true); await loadFeedback();
+        } catch (error) {setUiText(byId('feedback-message'), () => error.message);}
       },byId('save-feedback'));
     });
     byId('export-feedback').addEventListener('click',() => run(() => downloadLogFile('/api/feedback/export','Feedback.json')));
@@ -1729,10 +1756,10 @@
       const requestToken = token, preview = await api('/api/diagnostics/preview','POST');
       if (requestToken !== token || byId('workspace').hidden) return;
       diagnosticsTicket = preview.ticket; byId('diagnostics-files').replaceChildren();
-      byId('diagnostics-message').textContent = preview.message;
+      setUiText(byId('diagnostics-message'), () => preview.message);
       for (const file of preview.files) {
         const details = document.createElement('details'), summary = document.createElement('summary'), pre = document.createElement('pre');
-        summary.textContent = file.name+' · '+file.bytes+' Bytes'; pre.textContent = file.text; pre.style.maxHeight = '32vh'; pre.style.overflow = 'auto';
+        setUiText(summary, () => file.name+' · '+file.bytes+t("label.bytes"), true); setUiText(pre, () => file.text); pre.style.maxHeight = '32vh'; pre.style.overflow = 'auto';
         details.append(summary,pre); byId('diagnostics-files').append(details);
       }
       byId('export-diagnostics').disabled = false; byId('diagnostics-dialog').showModal();
@@ -1741,11 +1768,11 @@
     byId('export-diagnostics').addEventListener('click',() => run(async () => {
       try {
         const response = await fetch('/api/diagnostics/export',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({ticket:diagnosticsTicket})});
-        if (!response.ok) {const error = await response.json(); throw new Error(error.detail || 'Diagnoseexport fehlgeschlagen.');}
+        if (!response.ok) {const error = await response.json(); throw new Error(error.detail || t("web.s464"));}
         const url = URL.createObjectURL(await response.blob()), link = document.createElement('a');
         link.href = url; link.download = 'Diagnosepaket.zip'; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url),1000);
-        diagnosticsTicket = null; byId('diagnostics-message').textContent = 'Exportiert. Für einen weiteren Export bitte eine neue Vorschau erstellen.';
-      } catch (error) {diagnosticsTicket = null; byId('diagnostics-message').textContent = error.message;}
+        diagnosticsTicket = null; setUiText(byId('diagnostics-message'), () => t("web.s465"), true);
+      } catch (error) {diagnosticsTicket = null; setUiText(byId('diagnostics-message'), () => error.message);}
     },byId('export-diagnostics')).finally(() => {byId('export-diagnostics').disabled = !diagnosticsTicket;}));
     byId('nav-logs').addEventListener('click', () => run(() => navigate('logs')));
     byId('job-search').addEventListener('submit',event => {event.preventDefault(); jobsOffset = 0; run(() => loadJobLogs());});
@@ -1768,12 +1795,12 @@
         const result = await api('/api/settings/processing','PUT',{
           max_upload_bytes:Math.round(Number(byId('upload-limit-gib').value)*1024**3),
           max_extract_bytes:Math.round(Number(byId('extract-limit-tb').value)*1e12)});
-        byId('limits-message').textContent = 'Gespeichert. Gilt für neue Läufe; laufende Aufbereitungen behalten ihre Limits.';
+        setUiText(byId('limits-message'), () => t("web.s466"), true);
         byId('upload-limit-gib').value = result.max_upload_bytes/1024**3;
         byId('extract-limit-tb').value = result.max_extract_bytes/1e12;
       },byId('save-limits'));
     });
-    function updateFollowButton() {byId('follow-output').textContent = followOutput ? 'Live folgen: an' : 'Zur neuesten Ausgabe';}
+    function updateFollowButton() {setUiText(byId('follow-output'), () => followOutput ? t("web.s067") : t("web.s467"), true);}
     byId('run-live-output').addEventListener('scroll', () => {
       const output = byId('run-live-output'); followOutput = output.scrollHeight-output.scrollTop-output.clientHeight < 32;
       updateFollowButton();
@@ -1790,7 +1817,7 @@
     byId('mode-format').addEventListener('change',updateEffortOptions);
     byId('mode-form').addEventListener('submit', event => {
       event.preventDefault(); run(async () => {
-        byId('mode-message').textContent = '';
+        setUiText(byId('mode-message'), () => '');
         const payload = {name:byId('mode-name').value,description:byId('mode-description').value,
           evidence_format:byId('mode-format').value,effort:byId('mode-effort').value,
           source_folder:byId('mode-source').value,extract_folder:byId('mode-source').value,
@@ -1800,26 +1827,26 @@
           await api('/api/settings/modes'+(editingModeId ? '/'+editingModeId : ''),
             editingModeId ? 'PUT' : 'POST',payload);
           resetModeEditor(); await loadModes();
-          byId('modes-message').textContent = 'Modus gespeichert. Es wurde nichts ausgeführt.';
+          setUiText(byId('modes-message'), () => t("web.s468"), true);
           byId('mode-list-title').focus({preventScroll:true});
           byId('mode-list-title').scrollIntoView({block:'start',behavior:'smooth'});
-        } catch (error) {byId('mode-message').textContent = error.message; throw error;}
+        } catch (error) {setUiText(byId('mode-message'), () => error.message); throw error;}
       },byId('save-mode'));
     });
     byId('browse-tool').addEventListener('click', () => {
-      pickerPurpose = 'tool'; byId('picker-title').textContent = 'Tool oder Ordner auswählen'; byId('picker-select-folder').hidden = false;
+      pickerPurpose = 'tool'; setUiText(byId('picker-title'), () => t("web.s277"), true); byId('picker-select-folder').hidden = false;
       const startPath = byId('tool-path').value.trim() || lastToolFolder;
       byId('path-picker').showModal(); byId('picker-address').value = startPath || '';
       byId('picker-roots').replaceChildren(); pickerFolder = null;
       navigatePicker(startPath);
     });
     byId('browse-workspace').addEventListener('click',() => {
-      pickerPurpose = 'workspace'; byId('picker-title').textContent = 'Arbeitslaufwerk / Zielordner auswählen';
+      pickerPurpose = 'workspace'; setUiText(byId('picker-title'), () => t("web.s469"), true);
       byId('picker-select-folder').hidden = false; byId('path-picker').showModal();
       pickerFolder = null; byId('picker-roots').replaceChildren(); navigatePicker(byId('workspace-folder').value.trim() || null);
     });
     byId('browse-evidence').addEventListener('click', () => {
-      pickerPurpose = 'local'; byId('picker-title').textContent = 'Lokale ZIP-Datei auswählen'; byId('picker-select-folder').hidden = true;
+      pickerPurpose = 'local'; setUiText(byId('picker-title'), () => t("web.s470"), true); byId('picker-select-folder').hidden = true;
       const startPath = byId('local-zip-path').value.trim() || lastEvidenceFolder;
       byId('path-picker').showModal(); byId('picker-address').value = startPath || '';
       byId('picker-roots').replaceChildren(); pickerFolder = null; navigatePicker(startPath);
@@ -1844,23 +1871,23 @@
     });
     for (const id of ['picker-close','picker-cancel']) byId(id).addEventListener('click',closePicker);
     byId('path-picker').addEventListener('cancel',closePicker);
-    for (const id of ['tool-name','tool-path']) byId(id).addEventListener('input', () => {byId('path-result').textContent = '';});
+    for (const id of ['tool-name','tool-path']) byId(id).addEventListener('input', () => {setUiText(byId('path-result'), () => '');});
     byId('check-path').addEventListener('click', () => run(async () => {
       const payload = toolPayload(); if (!payload) return;
       const result = await api('/api/settings/tools/check','POST',payload);
-      byId('path-result').textContent = result.message + '. Es wurde kein Tool ausgeführt.';
+      setUiText(byId('path-result'), () => result.message + t("web.s471"), true);
     }, byId('check-path')));
     byId('tool-form').addEventListener('submit', event => {
       event.preventDefault(); run(async () => {
         const payload = toolPayload(); if (!payload) return;
         const result = await api('/api/settings/tools'+(editingId ? '/'+editingId : ''),editingId ? 'PUT' : 'POST',payload);
-        resetEditor(); await loadTools(); message('Tool gespeichert. '+result.message+'.');
+        resetEditor(); await loadTools(); message(t("web.s472")+result.message+'.');
       }, byId('save-tool'));
     });
     byId('show-token').addEventListener('click', () => {
       const show = byId('current-token').hidden; byId('current-token').hidden = !show;
-      byId('current-token').textContent = show ? token : '';
-      byId('show-token').textContent = show ? 'Token ausblenden' : 'Aktuellen Token anzeigen';
+      setUiText(byId('current-token'), () => show ? token : '');
+      setUiText(byId('show-token'), () => show ? t("web.s473") : t("web.s145"), true);
     });
     function invalidateImport() {
       importTicket = null; importGeneration++;
@@ -1872,7 +1899,7 @@
       byId('apply-config').disabled = !importTicket ||
         byId('import-strategy').value === 'replace' && !byId('replace-confirm').checked;
     }
-    byId('config-file').addEventListener('change', () => {invalidateImport(); byId('config-message').textContent = '';});
+    byId('config-file').addEventListener('change', () => {invalidateImport(); setUiText(byId('config-message'), () => '');});
     byId('import-strategy').addEventListener('change',invalidateImport);
     byId('replace-confirm').addEventListener('change',updateImportButton);
     byId('export-config').addEventListener('click', () => run(async () => {
@@ -1881,65 +1908,95 @@
       const link = document.createElement('a'); link.href = url;
       link.download = 'PostProcessingMagic-config-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
       document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url),1000);
-      byId('config-message').textContent = 'Konfiguration exportiert: '+data.tools.length+' gemeinsame Tools, '+data.modes.length+' Forensik-Modi und '+data.malware_modes.length+' Malware-Module.';
+      setUiText(byId('config-message'), () => t("web.s474")+data.tools.length+t("label.x065")+data.modes.length+t("web.s475")+data.malware_modes.length+t("label.x066"), true);
     },byId('export-config')));
     byId('preview-config').addEventListener('click', () => run(async () => {
       invalidateImport(); const generation = importGeneration;
       const file = byId('config-file').files[0];
-      if (!file) throw new Error('Bitte eine JSON-Konfigurationsdatei auswählen.');
-      if (file.size > 4*1024*1024) throw new Error('Konfigurationsdatei zu groß. Maximal 4 MiB.');
+      if (!file) throw new Error(t("web.s476"));
+      if (file.size > 4*1024*1024) throw new Error(t("web.s477"));
       let data;
-      try {data = JSON.parse(await file.text());} catch {throw new Error('Die Datei enthält kein gültiges JSON.');}
+      try {data = JSON.parse(await file.text());} catch {throw new Error(t("web.s478"));}
       if (generation !== importGeneration) return;
       const result = await api('/api/settings/configuration/preview','POST',{
         strategy:byId('import-strategy').value,document:data});
       if (generation !== importGeneration || byId('workspace').hidden) return;
       byId('config-preview').hidden = false;
-      byId('config-preview-summary').textContent = (result.valid ? 'Prüfung erfolgreich. ' : 'Import gesperrt. ')+
-        'Nach dem Import: '+result.total_tools+' gemeinsame Tools, '+result.total_modes+' Forensik-Modi und '+result.total_malware_modes+' Malware-Module.';
+      setUiText(byId('config-preview-summary'), () => (result.valid ? t("web.s479") : t("web.s480"))+
+        t("web.s481")+result.total_tools+t("label.x065")+result.total_modes+t("web.s475")+result.total_malware_modes+t("label.x066"), true);
       if (result.limits) {
         const limits = document.createElement('p'); limits.className = 'help';
-        limits.textContent = 'Verarbeitungslimits '+(result.limits.changed ? 'werden geändert: ' : 'bleiben unverändert: ')+
-          result.limits.after.max_upload_bytes+' Bytes Upload, '+result.limits.after.max_extract_bytes+' Bytes entpackt.';
+        setUiText(limits, () => t('label.processing_limits')+(result.limits.changed ? t("web.s482") : t("web.s483"))+
+          result.limits.after.max_upload_bytes+t("web.s484")+result.limits.after.max_extract_bytes+t("web.s485"), true);
         byId('config-preview-changes').append(limits);
       }
-      for (const [kind,title] of [['tools','Tools'],['modes','Forensik-Modi'],['malware_modes','Malware-Module']]) {
+      for (const [kind,title] of [['tools',t("web.s105")],['modes',t("web.s109")],['malware_modes',t("web.s110")]]) {
         const change = result.changes[kind] || {added:[],updated:[],removed:[],unchanged:0}, paragraph = document.createElement('p');
-        paragraph.textContent = title+': '+change.added.length+' neu, '+change.updated.length+' geändert, '+
-          change.removed.length+' entfallen, '+change.unchanged+' unverändert.';
+        setUiText(paragraph, () => title+': '+change.added.length+t("label.x067")+change.updated.length+t("web.s486")+
+          change.removed.length+t("label.x068")+change.unchanged+t("web.s487"), true);
         byId('config-preview-changes').append(paragraph);
-        for (const [key,label] of [['added','Neu'],['updated','Geändert'],['removed','Entfällt']]) {
+        for (const [key,label] of [['added',t("label.x064")],['updated',t("web.s488")],['removed',t("web.s489")]]) {
           if (!change[key].length) continue;
           const names = document.createElement('p'); names.className = 'help';
-          names.textContent = label+': '+change[key].join(', '); byId('config-preview-changes').append(names);
+          setUiText(names, () => label+': '+change[key].join(', ')); byId('config-preview-changes').append(names);
         }
       }
       for (const [id,items] of [['config-preview-errors',result.errors],['config-preview-warnings',result.warnings]]) {
-        for (const item of items) {const li = document.createElement('li'); li.textContent = item; byId(id).append(li);}
+        for (const item of items) {const li = document.createElement('li'); setUiText(li, () => item); byId(id).append(li);}
       }
       importTicket = result.ticket || null;
       byId('replace-confirm-label').hidden = result.strategy !== 'replace';
-      updateImportButton(); byId('config-message').textContent = 'Vorschau geprüft. Noch nichts importiert.';
+      updateImportButton(); setUiText(byId('config-message'), () => t("web.s490"), true);
     },byId('preview-config')));
     byId('apply-config').addEventListener('click', () => {
       run(async () => {
-        if (!importTicket) throw new Error('Bitte zuerst den Import prüfen.');
+        if (!importTicket) throw new Error(t("web.s491"));
         try {
           const result = await api('/api/settings/configuration/apply','POST',{
             ticket:importTicket,confirm_replace:byId('replace-confirm').checked});
           invalidateImport(); resetEditor(); resetModeEditor(); savedModes = [];
           byId('static-editor').hidden=true; staticEditId=null; staticSteps=[]; staticModules=[];
-          byId('config-message').textContent = 'Import abgeschlossen: '+result.total_tools+' Tools, '+
-            result.total_modes+' Forensik-Modi und '+result.total_malware_modes+' Malware-Module. Kein Tool wurde ausgeführt. Vorherige Konfiguration gesichert unter: '+result.backup_file;
+          setUiText(byId('config-message'), () => t("web.s492")+result.total_tools+t("label.tools_count")+
+            result.total_modes+t("web.s475")+result.total_malware_modes+t("web.s493")+result.backup_file, true);
         } catch (error) {
-          invalidateImport(); byId('config-message').textContent = error.message; throw error;
+          invalidateImport(); setUiText(byId('config-message'), () => error.message); throw error;
         }
       },byId('apply-config')).finally(updateImportButton);
     });
     byId('logout').addEventListener('click', () => {
       token = ''; sessionStorage.removeItem('ppm-token'); hideWorkspace(); message('Abgemeldet.');
     });
-    if (token) run(async () => {await connect(); await navigate('overview');});
+    byId('onboarding-close').addEventListener('click',() => run(async () => {
+      await api('/api/settings/interface','PUT',{onboarding_dismissed:true}); byId('onboarding').hidden=true;
+    }));
+    for (const [id,section] of [['onboarding-tools','tools'],['onboarding-modes','modes']]) byId(id).addEventListener('click',() => run(async () => {
+      await navigate('settings'); await showSettings(section);
+    }));
+    byId('interface-locale').addEventListener('change',() => run(async () => {
+      const previous=I18n.locale, choice=byId('interface-locale').value;
+      try {
+        if (token && !byId('workspace').hidden) await api('/api/settings/interface','PUT',{locale:choice});
+        await I18n.setLocale(choice); refreshUiText();
+        if (typeof updateWorkspacePresentation === 'function') updateWorkspacePresentation();
+        if (!token || byId('workspace').hidden) return;
+        await connect();
+        if (currentPage==='logs') await loadJobLogs();
+        else if (currentPage==='results' && csvJob && byId('csv-file').value) await showCSV();
+        else if (currentPage==='overview') {
+          if (workspaceArea==='malware') {await loadStaticPreparation(); if(staticJobId) await refreshStaticJob();}
+          else {const preview=!byId('run-plan').hidden; await loadPreparation(); if(activeJobId) await refreshJob(); else if(preview) previewPreparation();}
+        } else if (currentPage==='settings') {
+          if(currentSettingsSection==='tools') await loadTools();
+          else if(currentSettingsSection==='modes') {await loadModes(); if(!byId('mode-editor').hidden) renderModeSteps();}
+          else if(currentSettingsSection==='malware') {await loadStaticModules(); if(!byId('static-editor').hidden) renderStaticSteps();}
+          else if(currentSettingsSection==='processing') {await loadQueue(); await loadStorage(); await loadWorkspaces(true);}
+          else if(currentSettingsSection==='transfer' && !byId('config-preview').hidden) {invalidateImport();setUiText(byId('config-message'),()=>t('interface.preview_again'),true);}
+        }
+        if(byId('path-picker').open && pickerFolder) await browsePath(pickerFolder,byId('picker-search').value);
+        if(byId('feedback-dialog').open) await loadFeedback();
+      } catch(error) {byId('interface-locale').value=I18n.locale===choice ? choice : previous; throw error;}
+    }));
+    I18n.ready.then(() => {if (token) run(async () => {await connect(); await navigate('overview');});}).catch(error => message(error.message,true));
   </script>
   <script src="/malware.js"></script>
 </body>

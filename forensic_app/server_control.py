@@ -1,4 +1,5 @@
 """Drain admission and worker claims in the same SQLite transaction domain."""
+
 import logging
 import sqlite3
 import threading
@@ -6,12 +7,14 @@ from contextlib import closing
 
 from fastapi import HTTPException
 
+from forensic_app.app_errors import ErrorText
+
 logger = logging.getLogger(__name__)
 
 
 def accepting(connection):
     if connection.execute('SELECT stopping FROM server_control WHERE id=1').fetchone()[0]:
-        raise HTTPException(409,'Server wird gestoppt. Neue Aufträge nach erneutem Start möglich.')
+        raise HTTPException(409,ErrorText('error.80584b31b1b6'))
 
 
 def draining(connection):
@@ -39,7 +42,7 @@ class ServerControl:
 
     def request(self):
         if self.on_shutdown is None:
-            raise HTTPException(409,'Serversteuerung in diesem Testmodus nicht verfügbar.')
+            raise HTTPException(409,ErrorText('error.00ebc3025f62'))
         with self.lock:
             with closing(sqlite3.connect(self.storage.database)) as c,c:
                 c.execute('BEGIN IMMEDIATE')

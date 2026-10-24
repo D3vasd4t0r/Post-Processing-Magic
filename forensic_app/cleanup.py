@@ -15,6 +15,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, StrictBool, field_validator
 
+from forensic_app.app_errors import AppValueError, ErrorText, error_detail
 from forensic_app.modes import ModeDraft
 from forensic_app.workspaces import job_root, registered_root
 
@@ -37,7 +38,7 @@ class Apply(BaseModel):
     @classmethod
     def must_confirm(cls, value):
         if not value:
-            raise ValueError('Löschung muss ausdrücklich bestätigt werden.')
+            raise AppValueError('error.2648260ca025')
         return value
 
 
@@ -56,24 +57,24 @@ class Cleanup:
         from forensic_app.server_control import accepting
         accepting(c)
         if c.execute('SELECT active FROM cleanup_state WHERE id=1').fetchone()[0]:
-            raise HTTPException(409,'Eine Bereinigung läuft bereits.')
+            raise HTTPException(409,ErrorText('error.90c97e3b2151'))
         if c.execute("SELECT count(*) FROM archive_requests WHERE status IN ('queued','running')").fetchone()[0]:
-            raise HTTPException(409,'Erst offene Archivierungen abschließen oder abbrechen.')
+            raise HTTPException(409,ErrorText('error.5b20cd9b1495'))
         if c.execute('SELECT count(*) FROM jobs WHERE status NOT IN (?,?,?,?)',TERMINAL).fetchone()[0]:
-            raise HTTPException(409,'Erst alle offenen Aufträge abschließen oder abbrechen. Währenddessen ist Bereinigen gesperrt.')
+            raise HTTPException(409,ErrorText('error.da5a487eb1b1'))
 
     def checked(self, path, root=None):
         root = Path(root) if root is not None else self.storage.root.resolve()
         if not path.is_absolute() or not path.is_relative_to(root):
-            raise ValueError('Pfad außerhalb des Datenordners.')
+            raise AppValueError('error.601b0357277b')
         current = root
         for part in path.relative_to(root).parts:
             current /= part
             info = current.lstat()
             if stat.S_ISLNK(info.st_mode) or getattr(info,'st_file_attributes',0) & stat.FILE_ATTRIBUTE_REPARSE_POINT:
-                raise ValueError('Verknüpfung/umgeleiteter Pfad wird nicht gelöscht.')
+                raise AppValueError('error.b60dcf1e9220')
         if not path.resolve().is_relative_to(root):
-            raise ValueError('Aufgelöster Pfad außerhalb des Datenordners.')
+            raise AppValueError('error.df83041a66f3')
         return path.lstat()
 
     def manifest(self, category, job_id=None):
@@ -83,7 +84,7 @@ class Cleanup:
         protected, targets = [], []
         for ident, body in rows:
             if str(UUID(ident)) != ident:
-                raise HTTPException(409,'Ungültige Auftrags-ID in der Datenbank; keine Bereinigung.')
+                raise HTTPException(409,ErrorText('error.dc6d54feda5e'))
             plan = json.loads(body)
             if plan.get('source_kind') == 'local':
                 protected.append(Path(plan['local_input']['path']).resolve())
@@ -106,7 +107,7 @@ class Cleanup:
         def walk(path, root, parent_checked=False):
             nonlocal skipped
             if len(records) >= 200_000 or time.monotonic()-start > 60:
-                raise HTTPException(422,'Umfang der Löschvorschau zu groß. Es wurde nichts gelöscht.')
+                raise HTTPException(422,ErrorText('error.842626c1a964'))
             if any(path == p or path.is_relative_to(p) for p in protected):
                 return
             try:
@@ -114,14 +115,14 @@ class Cleanup:
                 # are always skipped. Application rechecks every complete path.
                 info = path.lstat() if parent_checked else self.checked(path,root)
                 if stat.S_ISLNK(info.st_mode) or getattr(info,'st_file_attributes',0) & stat.FILE_ATTRIBUTE_REPARSE_POINT:
-                    raise ValueError('Verknüpfung wird übersprungen.')
+                    raise AppValueError('error.35c0509a1f0d')
             except FileNotFoundError:
                 return
             except ValueError:
                 skipped += 1
                 return
             except OSError as exc:
-                raise HTTPException(409,'Löschvorschau nicht vollständig lesbar; keine Löschung: '+str(exc)) from exc
+                raise HTTPException(409,ErrorText('error.f91a33ed8191', p0=error_detail(exc))) from exc
             directory = stat.S_ISDIR(info.st_mode)
             if directory:
                 for child in sorted(path.iterdir()):
@@ -151,7 +152,7 @@ class Cleanup:
             now = time.monotonic()
             self.tickets = {key:value for key,value in self.tickets.items() if value[0] > now}
             if len(self.tickets) >= 16:
-                raise HTTPException(429,'Zu viele offene Löschvorschauen.')
+                raise HTTPException(429,ErrorText('error.575d65995bcc'))
             self.tickets[ticket] = (now+600,category,digest,job_id)
         return {'ticket':ticket,'category':category,'label':KINDS[category],
                 'files':sum(not r['directory'] for r in records),'bytes':sum(r['size'] for r in records),
@@ -165,7 +166,7 @@ class Cleanup:
         with self.lock:
             value = self.tickets.pop(ticket,None)
         if not value or value[0] < time.monotonic():
-            raise HTTPException(409,'Löschvorschau abgelaufen oder bereits verwendet. Neu anzeigen lassen.')
+            raise HTTPException(409,ErrorText('error.d12ac4be3406'))
         _, category, digest, job_id = value
         with closing(sqlite3.connect(self.storage.database)) as c, c:
             c.execute('BEGIN IMMEDIATE')
@@ -175,7 +176,7 @@ class Cleanup:
         try:
             records, current, _ = self.manifest(category,job_id)
             if current != digest:
-                raise HTTPException(409,'Dateibestand seit Vorschau geändert. Nichts gelöscht; neue Vorschau nötig.')
+                raise HTTPException(409,ErrorText('error.6693e8496441'))
             with closing(sqlite3.connect(self.storage.database)) as c, c:
                 event = c.execute("INSERT INTO cleanup_events(category,status,detail) VALUES (?,'running',?)",(category,json.dumps({"actor":"authenticated-user"}))).lastrowid
             deleted, removed_bytes, errors = 0, 0, []
@@ -185,7 +186,7 @@ class Cleanup:
                 try:
                     info = self.checked(path,root)
                     if not item['directory'] and (info.st_size,info.st_mtime_ns,info.st_ino) != (item['size'],item['mtime'],item['inode']):
-                        raise ValueError('Datei seit Vorschau verändert.')
+                        raise AppValueError('error.3a22d34b6b0b')
                     if item['directory']:
                         path.rmdir()
                     else:

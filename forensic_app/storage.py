@@ -1,3 +1,4 @@
+
 import json
 import os
 import sqlite3
@@ -6,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO
 from uuid import uuid4
+
+from forensic_app.app_errors import AppValueError
 
 
 def default_data_dir() -> Path:
@@ -136,13 +139,12 @@ class Storage:
                 used_by = [mode_name for mode_name, mode_body in connection.execute("SELECT name,body_json FROM mode_drafts")
                            if any(step.get("tool_id") == tool_id for step in json.loads(mode_body).get("steps", []))]
                 if used_by:
-                    raise ValueError("Tool ist in folgenden Modi eingebunden: "+", ".join(used_by)+
-                                     ". Löschen gesperrt; Verknüpfungen bleiben erhalten.")
+                    raise AppValueError('error.e34bff9c3716', p0=', '.join(used_by))
             if connection.execute("SELECT 1 FROM sqlite_master WHERE name='malware_modes'").fetchone():
                 names = [name for name,body in connection.execute('SELECT name,body_json FROM malware_modes')
                          if any(step.get('tool_id') == tool_id for step in json.loads(body).get('steps',[]))]
                 if names:
-                    raise ValueError('Tool ist in Malware-Modulen eingebunden: '+', '.join(names)+'. Verknüpfungen bleiben erhalten.')
+                    raise AppValueError('error.cb4c04abf13f', p0=', '.join(names))
             connection.execute("DELETE FROM tool_locations WHERE id = ?", (tool_id,))
             connection.execute(
                 "INSERT INTO configuration_events "

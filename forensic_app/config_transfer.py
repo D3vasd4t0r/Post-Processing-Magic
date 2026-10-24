@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from starlette.concurrency import run_in_threadpool
 
 from forensic_app import __version__
+from forensic_app.app_errors import AppValueError, ErrorText, request_locale
 from forensic_app.malware_modes import MalwareMode, MalwareModes
 from forensic_app.modes import EFFORTS, ModeDraft
 from forensic_app.processing_settings import ProcessingLimits, read_limits, write_limits
@@ -53,7 +54,7 @@ class ConfigurationFile(BaseModel):
     @model_validator(mode='after')
     def complete_unified_document(self):
         if self.schema_version==3 and 'malware_modes' not in self.model_fields_set:
-            raise ValueError('Schema 3 muss Forensik-Modi und Malware-Module enthalten. Leere Bereiche als leere Listen angeben.')
+            raise AppValueError('error.ec9b73ddee1a')
         return self
 
 
@@ -103,9 +104,9 @@ def validate_state(state: dict) -> list[str]:
         ids, names = set(), set()
         for item in state.get(kind,[]):
             if item["id"] in ids:
-                errors.append(f"Doppelte ID in {kind}: {item['id']}")
+                errors.append(ErrorText('config.duplicate_id', kind=kind, ident=item['id']))
             if item["name"].casefold() in names:
-                errors.append(f"Doppelter Name in {kind}: {item['name']}")
+                errors.append(ErrorText('config.duplicate_name', kind=kind, name=item['name']))
             ids.add(item["id"])
             names.add(item["name"].casefold())
     tools = {tool["id"] for tool in state["tools"]}
@@ -113,14 +114,14 @@ def validate_state(state: dict) -> list[str]:
     for mode in [*state['modes'],*state.get('malware_modes',[])]:
         effort = mode["effort"]
         if effort not in EFFORTS:
-            errors.append(f"{mode['name']}: unbekannte Aufwandsstufe {effort}.")
+            errors.append(ErrorText('config.unknown_effort', name=mode['name'], effort=effort))
         slot = (mode["evidence_format"], effort)
         if slot in slots:
-            errors.append(f"{mode['evidence_format']} / {effort} ist mehrfach belegt.")
+            errors.append(ErrorText('config.slot_conflict', format=mode['evidence_format'], effort=effort))
         slots.add(slot)
         for step in mode.get("steps", []):
             if step.get("tool_id") is not None and step["tool_id"] not in tools:
-                errors.append(f"{mode['name']}: Toolreferenz für '{step['name']}' fehlt.")
+                errors.append(ErrorText('config.missing_tool', name=mode['name'], step=step['name']))
     return list(dict.fromkeys(errors))
 
 
@@ -179,11 +180,11 @@ class ConfigurationTransfer:
         for tool in after["tools"]:
             status = inspect_path(tool["path"])
             if status["kind"] in ("missing", "unavailable"):
-                warnings.append(f"{tool['name']}: {status['message']}. Pfad nach Import prüfen.")
+                warnings.append(ErrorText('config.missing_path', name=tool['name'], status=status['message']))
         for mode in after["modes"]:
             if not mode.get("steps") or any((not step.get("script") if step.get("type") == "powershell" else step.get("tool_id") is None)
                                           for step in mode.get("steps", [])):
-                warnings.append(f"{mode['name']}: unvollständiger Entwurf; es wird nichts ausgeführt.")
+                warnings.append(ErrorText('config.incomplete', name=mode['name']))
         result = {"valid": not errors, "errors": errors, "warnings": warnings,
                   "strategy": request.strategy, "changes": summary,
                   "total_tools": len(after["tools"]), "total_modes": len(after["modes"]),"total_malware_modes":len(after["malware_modes"])}
@@ -193,7 +194,7 @@ class ConfigurationTransfer:
                 now = time.monotonic()
                 self.tickets = {key: value for key, value in self.tickets.items() if value["expires"] > now}
                 if len(self.tickets) >= 32:
-                    raise HTTPException(429, "Zu viele offene Importvorschauen. Bitte später erneut prüfen.")
+                    raise HTTPException(429, ErrorText('error.9834eab14186'))
                 ticket = secrets.token_urlsafe(24)
                 self.tickets[ticket] = {"expires": now + TICKET_TTL, "before": fingerprint(before),
                                         "after": after, "strategy": request.strategy, "summary": summary}
@@ -205,15 +206,15 @@ class ConfigurationTransfer:
             preview = self.tickets.get(request.ticket)
             if preview is None or preview["expires"] <= time.monotonic():
                 self.tickets.pop(request.ticket, None)
-                raise HTTPException(409, "Importvorschau ist abgelaufen. Bitte erneut prüfen.")
+                raise HTTPException(409, ErrorText('error.658836555ad3'))
             if preview["strategy"] == "replace" and not request.confirm_replace:
-                raise HTTPException(422, "Vollständiges Ersetzen muss ausdrücklich bestätigt werden.")
+                raise HTTPException(422, ErrorText('error.e82b2ef2795d'))
             with closing(sqlite3.connect(self.storage.database)) as connection, connection:
                 connection.execute("BEGIN IMMEDIATE")
                 before = snapshot(connection)
                 if fingerprint(before) != preview["before"]:
                     del self.tickets[request.ticket]
-                    raise HTTPException(409, "Konfiguration wurde inzwischen geändert. Bitte Vorschau erneuern.")
+                    raise HTTPException(409, ErrorText('error.89bad8961c91'))
                 backup_dir = self.storage.root / "config" / "backups"
                 backup_dir.mkdir(parents=True, exist_ok=True)
                 backup_path = backup_dir / f"before-import-{uuid4()}.json"
@@ -248,13 +249,15 @@ async def read_payload(request: Request, model):
     async for chunk in request.stream():
         body.extend(chunk)
         if len(body) > MAX_IMPORT_BYTES:
-            raise HTTPException(413, "Konfigurationsdatei zu groß. Maximal 4 MiB.")
+            raise HTTPException(413, ErrorText('error.63138b3742eb'))
     try:
         return model.model_validate_json(body)
     except ValidationError as exc:
-        errors = [".".join(str(part) for part in error["loc"])+": "+error["msg"]
+        errors = [".".join(str(part) for part in error["loc"])+": "+
+                  (error['ctx']['error'].text.localized(request_locale.get())
+                   if isinstance(error.get('ctx',{}).get('error'),AppValueError) else error['msg'])
                   for error in exc.errors(include_input=False)[:20]]
-        raise HTTPException(422, "Ungültige Konfiguration: "+"; ".join(errors)) from exc
+        raise HTTPException(422, ErrorText('error.18f52c0145c2', p0='; '.join(errors))) from exc
 
 
 def configuration_router(service: ConfigurationTransfer, authorize) -> APIRouter:
@@ -277,8 +280,8 @@ def configuration_router(service: ConfigurationTransfer, authorize) -> APIRouter
         try:
             return await run_in_threadpool(service.apply, payload)
         except OSError as exc:
-            raise HTTPException(500, "Konfiguration konnte nicht gesichert werden. Import nicht angewendet.") from exc
+            raise HTTPException(500, ErrorText('error.ae5f493ed498')) from exc
         except sqlite3.Error as exc:
-            raise HTTPException(500, "Import fehlgeschlagen. Bisherige Konfiguration bleibt erhalten.") from exc
+            raise HTTPException(500, ErrorText('error.032c3f018b44')) from exc
 
     return router

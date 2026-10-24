@@ -11,6 +11,7 @@ import threading
 import time
 from pathlib import Path, PureWindowsPath
 
+from forensic_app.app_errors import AppValueError
 from forensic_app.artifacts import ArchiveQueue, make_archive, prepare_report, utc
 from forensic_app.jobs import JobStore
 from forensic_app.kape_plan import sha256_file
@@ -44,11 +45,11 @@ def relative_path(value):
 def execute(plan, work: Path, check, emit):
     timeout_seconds = plan.get("timeout_seconds", MAX_RUN_SECONDS)
     if type(timeout_seconds) is not int or not 1 <= timeout_seconds <= MAX_COMMAND_TIMEOUT_SECONDS:
-        raise ValueError("Ungültiges Zeitlimit im Auftragssnapshot.")
+        raise AppValueError('error.9c2c0a47b7e5')
     if not is_admin() and not plan.get("test_no_admin"):
         raise PermissionError("KAPE benötigt Administratorrechte. App neu starten und Windows-UAC bestätigen.")
     if sha256_file(Path(plan["tool"]["path"])) != plan["tool"]["sha256"]:
-        raise ValueError("Tooldatei wurde seit der Auftragserstellung geändert. Neuer Lauf erforderlich.")
+        raise AppValueError('error.2031fed8cf82')
     guard, process = ProcessGuard(), None
     chunks, started = queue.Queue(maxsize=256), time.monotonic()
     reader_stop, reader_thread = threading.Event(), None
@@ -82,7 +83,7 @@ def execute(plan, work: Path, check, emit):
         while True:
             check()
             if time.monotonic()-started > timeout_seconds:
-                raise ValueError(f"Zeitlimit von {timeout_seconds} Sekunden für diesen Befehl überschritten.")
+                raise AppValueError('error.4186d8e12fb2', p0=f'{timeout_seconds}')
             try:
                 chunk = chunks.get(timeout=0.25)
                 if chunk is None:
@@ -131,9 +132,9 @@ def process_job(store: JobStore, ident: str, plan: dict, stop, runner=execute):
             from forensic_app.malware_modes import compile_static, implementation_hash
             expected = compile_static(plan['mode'])
             if plan['tool'].get('sha256') != implementation_hash():
-                raise ValueError('Interne Prüfimplementation hat sich seit der Auftragserstellung geändert. Neuen Lauf anlegen.')
+                raise AppValueError('error.ef104abdc111')
             if [(c.get('kind'),c.get('inspector'),c.get('id')) for c in plan.get('commands',[])] != [(c['kind'],c['inspector'],c['id']) for c in expected['commands']]:
-                raise ValueError('Malware-Auftrag enthält nicht freigegebene Befehlsblöcke.')
+                raise AppValueError('error.874f67cead3e')
             store.update(ident,status='running',phase='Einzeldatei prüfen, kopieren und hashen')
             plan = copy.deepcopy(plan)
             plan['static_input'] = prepare_sample(store,ident,plan,work,check)
@@ -150,7 +151,7 @@ def process_job(store: JobStore, ident: str, plan: dict, stop, runner=execute):
                 store.update(ident, phase="Lokale ZIP prüfen und hashen")
                 with locked_input(archive_path) as original:
                     if input_identity(original) != {key: local[key] for key in ("size", "mtime_ns", "device", "inode")}:
-                        raise ValueError("Lokale ZIP wurde seit der Auswahl verändert oder ersetzt. Bitte erneut auswählen und Run starten.")
+                        raise AppValueError('error.750bf3977c9b')
                     checksum, sha1, read, reported = hashlib.sha256(), hashlib.sha1(), 0, 0
                     while chunk := original.read(8*1024**2):
                         check()
@@ -192,8 +193,7 @@ def process_job(store: JobStore, ident: str, plan: dict, stop, runner=execute):
                     store.log(ident, f"Laufwerksordner automatisch erkannt: {configured} → {resolved}. Archivnamen unverändert.\n")
                 else:
                     found = ", ".join(path.name for path in drives) or "keine einzelnen Laufwerksordner"
-                    raise ValueError(f"KAPE-Quellordner fehlt: {plan['source']}. Gefundene Laufwerksordner: {found}. "
-                                     "Automatische Auswahl nur bei genau einem eindeutigen Laufwerk möglich.")
+                    raise AppValueError('error.b123dfe0057a', p0=f"{plan['source']}", p1=f'{found}')
         store.update(ident, effective_json=json.dumps(plan, ensure_ascii=False))
         (work / "effective-configuration.json").write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
         check()
@@ -219,7 +219,7 @@ def process_job(store: JobStore, ident: str, plan: dict, stop, runner=execute):
                 check()
                 directory = work / relative_path(command.get("working_directory", "."))
                 if not directory.is_dir() or not directory.resolve().is_relative_to(work.resolve()):
-                    raise ValueError(f"Arbeitsordner für Befehl {index+1} fehlt oder liegt außerhalb der Aufbereitung: {directory}")
+                    raise AppValueError('error.561271236d4d', p0=f'{index + 1}', p1=f'{directory}')
                 executable = dict(plan, **command)
                 executable["test_no_admin"] = plan.get("test_no_admin", False)
                 title = "Statische Prüfung" if command.get("kind") == "static" else "PowerShell" if command.get("kind") == "powershell" else "KAPE"
@@ -238,7 +238,7 @@ def process_job(store: JobStore, ident: str, plan: dict, stop, runner=execute):
                 if title == "KAPE" and "administrator privileges not found" in store.get(ident)["log_tail"].casefold():
                     raise PermissionError(f"KAPE meldet fehlende Administratorrechte trotz Exitcode {code}. App neu starten und Windows-UAC bestätigen.")
                 if code != 0:
-                    raise ValueError(f"{title}-Befehl {index+1} wurde mit Exitcode {code} beendet. Siehe Kommandozeile/Live-Ausgabe.")
+                    raise AppValueError('error.022f1781e603', p0=f'{title}', p1=f'{index + 1}', p2=f'{code}')
                 store.update(ident, completed=index+1)
         check()
         store.update(ident, phase="Ergebnis prüfen und Abschlussbericht erstellen")

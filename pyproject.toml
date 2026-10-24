@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "post-processing-magic"
-version = "0.29.0"
+version = "0.30.0"
 description = "Windows launcher and local web service for forensic post-processing"
 requires-python = ">=3.12"
 dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.34,<1", "cryptography>=46,<51"]
@@ -16,7 +16,7 @@ dev = ["pytest>=8,<10", "httpx>=0.28,<1", "ruff>=0.11,<1", "pyinstaller>=6.22.1,
 post-processing-magic = "forensic_app.launcher:main"
 
 [tool.setuptools.package-data]
-forensic_app = ["web/*.html","assets/*.ico"]
+forensic_app = ["web/*.html","web/*.js","locales/*.json","assets/*.ico"]
 
 [tool.setuptools.packages.find]
 include = ["forensic_app*"]

@@ -7,6 +7,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from forensic_app.app_errors import AppValueError, ErrorText, error_detail
 from forensic_app.file_browser import BrowseRequest, browse
 from forensic_app.local_paths import validate_local_path
 from forensic_app.storage import Storage
@@ -21,7 +22,7 @@ class ToolLocation(BaseModel):
     @classmethod
     def no_control_characters(cls, value: str) -> str:
         if any(ord(char) < 32 or ord(char) == 127 for char in value):
-            raise ValueError("Steuerzeichen sind nicht erlaubt.")
+            raise AppValueError('error.92ba731cf2d1')
         return value
 
     @field_validator("path")
@@ -62,9 +63,9 @@ def settings_router(storage: Storage, authorize) -> APIRouter:
         try:
             storage.save_tool(tool_id, tool.name, tool.path, create=create)
         except KeyError as exc:
-            raise HTTPException(404, "Tool-Eintrag nicht gefunden.") from exc
+            raise HTTPException(404, ErrorText('error.e5eda5fc7128')) from exc
         except sqlite3.IntegrityError as exc:
-            raise HTTPException(409, "Dieser Toolname ist bereits vergeben.") from exc
+            raise HTTPException(409, ErrorText('error.6372f02edf1b')) from exc
         return {"id": tool_id, **tool.model_dump(), **inspect_path(tool.path)}
 
     @router.post("", status_code=201)
@@ -80,9 +81,9 @@ def settings_router(storage: Storage, authorize) -> APIRouter:
         try:
             storage.delete_tool(tool_id)
         except KeyError as exc:
-            raise HTTPException(404, "Tool-Eintrag nicht gefunden.") from exc
+            raise HTTPException(404, ErrorText('error.e5eda5fc7128')) from exc
         except ValueError as exc:
-            raise HTTPException(409, str(exc)) from exc
+            raise HTTPException(409, error_detail(exc)) from exc
         return Response(status_code=204)
 
     return router

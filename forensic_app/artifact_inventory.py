@@ -11,6 +11,8 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
+from forensic_app.app_errors import AppValueError
+
 MAX_ENTRIES = 500_000
 MAX_SECONDS = 10.0
 MAX_SAMPLES_PER_GROUP = 5
@@ -192,10 +194,10 @@ def collect_inventory(
     """
     root = Path(extracted_root)
     if max_entries < 1 or max_seconds <= 0 or max_samples_per_group < 0:
-        raise ValueError("Inventory limits must be positive (sample limit may be zero).")
+        raise AppValueError('error.bb0a3b904e83')
     root_info = root.lstat()
     if _is_link_or_reparse(root_info) or not stat.S_ISDIR(root_info.st_mode):
-        raise ValueError("Inventory root must be a regular directory without a link or reparse point.")
+        raise AppValueError('error.71e90fd28ebd')
 
     groups = {
         key: {"label": label, "files": 0, "bytes": 0, "samples": []}

@@ -10,6 +10,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from forensic_app.app_errors import AppValueError, ErrorText, error_detail
 from forensic_app.storage import Storage
 
 EFFORTS = ("schnell", "Medium", "langsam")
@@ -56,7 +57,7 @@ class CommandStep(BaseModel):
     @classmethod
     def script_text(cls, value):
         if any(ord(char) < 32 and char not in "\n\r\t" for char in value) or "\x7f" in value:
-            raise ValueError("Unzulässige Steuerzeichen im PowerShell-Block.")
+            raise AppValueError('error.e06af35db5dc')
         return value
 
     @field_validator("working_directory")
@@ -67,14 +68,14 @@ class CommandStep(BaseModel):
     @model_validator(mode="after")
     def powershell_without_tool(self):
         if self.type == "powershell" and self.tool_id is not None:
-            raise ValueError("PowerShell-Blöcke benötigen keine Toolreferenz.")
+            raise AppValueError('error.5e3177b9d826')
         return self
 
     @field_validator("id", "name", "tool_id", "tool_hint", "parameters")
     @classmethod
     def no_control_characters(cls, value):
         if value is not None and any(ord(char) < 32 and char not in "\t" for char in value):
-            raise ValueError("Ein Befehlsblock darf keine Zeilenumbrüche oder Steuerzeichen enthalten.")
+            raise AppValueError('error.acf612c9ffc9')
         return value
 
 
@@ -99,14 +100,14 @@ class ModeDraft(BaseModel):
     @classmethod
     def plain_label(cls, value: str) -> str:
         if any(ord(char) < 32 or ord(char) == 127 for char in value):
-            raise ValueError("Name und Aufwand dürfen keine Steuerzeichen enthalten.")
+            raise AppValueError('error.5470d481e99d')
         return value
 
     @field_validator("description", "command_reference")
     @classmethod
     def readable_text(cls, value: str) -> str:
         if any(ord(char) < 32 and char not in "\n\r\t" for char in value):
-            raise ValueError("Unzulässige Steuerzeichen im Text.")
+            raise AppValueError('error.db899ec5bb2c')
         return value
 
     @field_validator("source_folder", "extract_folder", "output_folder")
@@ -114,26 +115,26 @@ class ModeDraft(BaseModel):
     def job_relative_folder(cls, value: str) -> str:
         path = PureWindowsPath(value)
         if path.drive or path.root or not path.parts or ".." in path.parts:
-            raise ValueError("Nur relative Unterordner innerhalb der Aufbereitung verwenden.")
+            raise AppValueError('error.96afd1b7e254')
         for part in path.parts:
             if any(ord(char) < 32 or char in '<>:"|?*' for char in part):
-                raise ValueError("Ungültiger Ordnername.")
+                raise AppValueError('error.3fb0f798aede')
             if part.endswith((".", " ")) or PureWindowsPath(part).is_reserved():
-                raise ValueError("Dieser Ordnername ist unter Windows nicht verwendbar.")
+                raise AppValueError('error.6fa31806fec6')
         return str(path)
 
     @model_validator(mode="after")
     def separate_input_output(self):
         if self.evidence_format != "ZIP":
-            raise ValueError("Version 1 unterstützt nur ZIP (KAPE-Target). E01 und VMDK sind in Planung.")
+            raise AppValueError('error.56426b59dc07')
         source = PureWindowsPath(self.source_folder)
         output = PureWindowsPath(self.output_folder)
         extraction = PureWindowsPath(self.extract_folder)
         if (source.is_relative_to(output) or output.is_relative_to(source)
                 or extraction.is_relative_to(output) or output.is_relative_to(extraction)):
-            raise ValueError("Eingabe- und Ergebnisordner müssen getrennt sein.")
+            raise AppValueError('error.5944fae73ffc')
         if len({step.id for step in self.steps}) != len(self.steps):
-            raise ValueError("Befehlsblöcke müssen unterschiedliche IDs haben.")
+            raise AppValueError('error.ad18c2ea29f4')
         return self
 
 
@@ -263,7 +264,7 @@ class ModeStore:
                              and previous.get("evidence_format", "ZIP") == draft.evidence_format
                              and canonical_effort(previous["effort"]) == draft.effort)
             if draft.effort not in EFFORTS and not keep_own_slot:
-                raise ValueError("Bitte schnell, Medium oder langsam als Aufwand wählen.")
+                raise AppValueError('error.0175af1d7db6')
             # BEGIN IMMEDIATE serializes the slot check and write, including concurrent requests.
             for existing_id, existing_body in connection.execute("SELECT id, body_json FROM mode_drafts"):
                 if existing_id == mode_id:
@@ -276,7 +277,7 @@ class ModeStore:
             tool_ids = {row[0] for row in connection.execute("SELECT id FROM tool_locations")}
             for step in draft.steps:
                 if step.tool_id is not None and step.tool_id not in tool_ids:
-                    raise ValueError(f"Tool für Schritt '{step.name}' wurde nicht gefunden.")
+                    raise AppValueError('error.54e8ebd5c0f4', p0=f'{step.name}')
             if create:
                 connection.execute(
                     "INSERT INTO mode_drafts(id, name, body_json) VALUES (?, ?, ?)",
@@ -314,13 +315,13 @@ def modes_router(store: ModeStore, authorize) -> APIRouter:
         try:
             return store.save(mode_id, draft, create=create)
         except KeyError as exc:
-            raise HTTPException(404, "Modus nicht gefunden.") from exc
+            raise HTTPException(404, ErrorText('error.ffd5597c4261')) from exc
         except sqlite3.IntegrityError as exc:
-            raise HTTPException(409, "Dieser Modusname ist bereits vergeben.") from exc
+            raise HTTPException(409, ErrorText('error.d589172e07d8')) from exc
         except SlotConflict as exc:
-            raise HTTPException(409, str(exc)) from exc
+            raise HTTPException(409, error_detail(exc)) from exc
         except ValueError as exc:
-            raise HTTPException(422, str(exc)) from exc
+            raise HTTPException(422, error_detail(exc)) from exc
 
     @router.post("", status_code=201)
     def create_mode(draft: ModeDraft):
@@ -335,7 +336,7 @@ def modes_router(store: ModeStore, authorize) -> APIRouter:
         try:
             store.delete(mode_id)
         except KeyError as exc:
-            raise HTTPException(404, "Modus nicht gefunden.") from exc
+            raise HTTPException(404, ErrorText('error.ffd5597c4261')) from exc
         return Response(status_code=204)
 
     return router

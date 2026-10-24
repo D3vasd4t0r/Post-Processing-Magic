@@ -426,3 +426,15 @@ def test_result_workplace_xlsx_authorization_and_sorting(setup):
     with sqlite3.connect(storage.database) as c:
         c.execute("INSERT INTO archive_requests(job_id,status) VALUES (?,'queued')",(ident,))
     assert client.get(endpoint,params={'format':'all'}).status_code==409
+
+
+def test_job_locale_is_frozen_and_old_plan_unchanged(setup):
+    client,storage,mode,_=setup
+    first=upload(client,mode).json()['id']
+    original=plan_for(storage,first)
+    assert original['locale']=='de'
+    client.put('/api/settings/interface',json={'locale':'en'})
+    second=upload(client,mode).json()['id']
+    assert plan_for(storage,second)['locale']=='en'
+    assert plan_for(storage,first)==original
+    assert client.get('/api/jobs/'+first).json()['locale']=='de'

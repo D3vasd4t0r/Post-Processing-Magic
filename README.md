@@ -2,19 +2,22 @@
 
 KI-gestütztes Entwicklungsprojekt für die lokale Nachbearbeitung von DFIR-Evidencen unter Windows.
 
-**Dieser Entwicklungszweig: 0.29.0, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
+**Dieser Entwicklungszweig: 0.30.0, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
 
-[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.29.0](docs/releases/0.29.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
+[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.30.0](docs/releases/0.30.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
 
-## Was ist neu in 0.29.0?
+## Was ist neu in 0.30.0?
 
-- Getrennte CSV-/XLSX-Untertabs und Dateilisten in der Ergebnisansicht.
-- Sortierung per Tabellenüberschrift (auf-/absteigend), mit Pfeil, Tastaturbedienung und Fokus. Konservative Sortiertypen aus dem gesamten begrenzten Ausschnitt; optionaler Typwechsel direkt im Header, keine Sortier-Choicebox.
-- Zwei zusätzliche enge Pfadgruppen: Windows-Suchindex und Windows-Aktivitätsdatenbank. Nur Dateifunde, keine Inhalts- oder Aktivitätsbefunde; Altaufträge bleiben unverändert.
+- **Deutsch/Englisch offline:** Sprachwahl für beide Webbereiche und das Serverfenster, einschließlich Dialogen und bekannten App-Fehlermeldungen. Gemeinsam pro Instanz gespeichert; offene Formulare behalten ihre Eingaben.
+- **Toolhinweis beim ersten Start:** fehlende Zuordnungen/Programme unterstützter Forensikabläufe und getrennte optionale Ergebnis-Viewer, mit Links zu den Einstellungen. Schließen wird gemerkt; keine Installation oder Ausführung.
+- **Berichte in Auftragssprache:** neue Aufträge frieren die Sprache beim Start ein. HTML und Druckansicht folgen diesem Snapshot; historische Aufträge bleiben standardmäßig deutsch. JSON, Befehle, Rohbefunde, Nutzernamen und Logs unverändert.
 
 ## Funktionsumfang
 
 ### Gemeinsame Einstellungen und Konfiguration
+
+- Sprachwahl Deutsch/Englisch, lokal gebündelte Kataloge ohne Übersetzungsdienst. Web und Serverfenster teilen die serverlokale Präferenz; sie gehört nicht zum portablen Workflowexport. Vor Anmeldung kann der Browser seine lokale Wahl nutzen. Betriebssystemdialoge und fremde technische Fehler bleiben in ihrer ursprünglichen Sprache.
+- Schließbare Einrichtungshilfe für unterstützte gespeicherte Forensikschritte. Optionale Timeline-Explorer-/EZViewer-Einträge sperren keine Verarbeitung und gelten durch bloßes Speichern noch nicht als geprüft.
 
 - Einstellungen gelten unabhängig vom aktiven Arbeitsbereich: **Tools**, **Allgemein** und **Konfiguration** gemeinsam; **Forensik-Modi** und **Malware-Module** in eigenen, jederzeit erreichbaren Kategorien.
 - Nur auf der Hauptseite zwischen blauem Forensik- und rotem Malware-Bereich wechseln. Die Einstellungen zeigen immer dieselbe gemeinsame Ansicht und merken die zuletzt gewählte Kategorie.

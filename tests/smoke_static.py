@@ -73,17 +73,31 @@ def main():
                 assert z.testzip() is None
                 assert any(n.endswith('Pruefung-structure.json') for n in z.namelist())
                 assert not any(n.endswith(('.exe','.pdf','.docm','.bin')) for n in z.namelist())
+        # Offline catalogs, shared preferences, and immutable report language in the real EXE.
+        with urlopen(session.url+'/locales/web/en.json',timeout=10) as response:
+            assert json.load(response)['web.s495'].startswith('Shared configuration')
+        assert not api('/api/settings/onboarding')['dismissed']
+        api('/api/settings/interface','PUT',{'locale':'en','onboarding_dismissed':True})
+        english_id=api('/api/jobs/local','POST',{'workspace':'malware','mode_id':ids['PDF'],'path':str(folder/'own.pdf')})['id']
+        english_state=wait(lambda:(s if (s:=api('/api/jobs/'+english_id))['status'] in ('succeeded','failed','interrupted') else None))
+        assert english_state['status']=='succeeded' and english_state['locale']=='en'
+        raw_before=api('/api/jobs/'+english_id+'/report?format=json',raw=True)
+        assert '<html lang="en">' in api('/api/jobs/'+english_id+'/report',raw=True).decode('utf-8')
+        api('/api/settings/interface','PUT',{'locale':'de'})
+        assert '<html lang="en">' in api('/api/jobs/'+english_id+'/report',raw=True).decode('utf-8')
+        assert api('/api/jobs/'+english_id+'/report?format=json',raw=True)==raw_before
+        assert api('/api/settings/onboarding')['dismissed']
         assert api('/api/jobs?workspace=forensics')['total']==0
-        assert api('/api/jobs?workspace=malware')['total']==3
+        assert api('/api/jobs?workspace=malware')['total']==4
         exported=api('/api/settings/configuration/export')
         assert exported['schema_version']==3 and len(exported['malware_modes'])==3
         session.stop();wait(lambda:not session.poll()['alive'])
         session.start();wait_ready(session)
-        assert api('/api/jobs?workspace=malware')['total']==3
+        assert api('/api/jobs?workspace=malware')['total']==4
         assert len(api('/api/settings/malware')['modes'])==3
         session.stop();wait(lambda:not session.poll()['alive'])
         report={'passed':True,'version':__version__,'checks':['PDF local static run','Office upload static run','PE upload static run',
-            'originals and hashes','HTML reports and sample-free ZIPs','separate histories and schema 3 configuration','restart persistence']}
+            'originals and hashes','HTML reports and sample-free ZIPs','separate histories and schema 3 configuration','restart persistence','offline DE/EN catalogs and frozen English report with unchanged raw JSON']}
         (folder/'report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
         print(json.dumps({'passed':True,'report':str(folder/'report.json'),'checks':len(report['checks'])}))
     finally:

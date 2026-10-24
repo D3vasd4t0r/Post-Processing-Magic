@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from forensic_app.app_errors import ErrorText, error_detail
 from forensic_app.local_paths import validate_local_path
 
 MAX_SCAN = 10_000
@@ -38,7 +39,7 @@ def browse(request: BrowseRequest) -> dict:
         if selected:
             path = path.parent
         if not path.is_dir():
-            raise HTTPException(400, "Dieser Pfad ist kein Ordner und keine reguläre Datei.")
+            raise HTTPException(400, ErrorText('error.72727e2a0903'))
         entries = []
         scanned = 0
         limited = False
@@ -74,10 +75,10 @@ def browse(request: BrowseRequest) -> dict:
             "limited": limited,
         }
     except FileNotFoundError as exc:
-        raise HTTPException(404, "Der Pfad wurde auf dem Server nicht gefunden.") from exc
+        raise HTTPException(404, ErrorText('error.f0cb45ac5d8e')) from exc
     except PermissionError as exc:
-        raise HTTPException(403, "Keine Berechtigung für diesen Ordner.") from exc
+        raise HTTPException(403, ErrorText('error.02465bc7b05e')) from exc
     except ValueError as exc:
-        raise HTTPException(422, str(exc)) from exc
+        raise HTTPException(422, error_detail(exc)) from exc
     except OSError as exc:
-        raise HTTPException(400, "Der Pfad kann auf dem Server nicht geöffnet werden.") from exc
+        raise HTTPException(400, ErrorText('error.5b88a9246724')) from exc

@@ -19,7 +19,7 @@ try {
     $sslPolicy = & $Python -c "import pathlib, ssl; p=pathlib.Path(ssl.__file__).with_name('codex-rejected-cas.pem'); print(p if p.is_file() else '')"
     $sslData = @()
     if ($sslPolicy) { $sslData = @('--add-data', ($sslPolicy.Trim() + ';.')) }
-    & $Python -m PyInstaller @sslData --noconfirm --noupx --onefile --windowed --icon 'forensic_app/assets/shield.ico' --name PostProcessingMagic --distpath $OutputDirectory --workpath $buildDirectory --add-data 'forensic_app/web:forensic_app/web' --add-data 'forensic_app/assets:forensic_app/assets' --collect-submodules uvicorn run_app.py
+    & $Python -m PyInstaller @sslData --noconfirm --noupx --onefile --windowed --icon 'forensic_app/assets/shield.ico' --name PostProcessingMagic --distpath $OutputDirectory --workpath $buildDirectory --add-data 'forensic_app/web:forensic_app/web' --add-data 'forensic_app/assets:forensic_app/assets' --add-data 'forensic_app/locales:forensic_app/locales' --collect-submodules uvicorn run_app.py
     if ($LASTEXITCODE -ne 0) { throw 'PyInstaller-Build fehlgeschlagen.' }
     & $Python -m pip freeze | Set-Content -LiteralPath (Join-Path $OutputDirectory 'build-environment.txt') -Encoding utf8
     if ($LASTEXITCODE -ne 0) { throw 'Paketinventar fehlgeschlagen.' }

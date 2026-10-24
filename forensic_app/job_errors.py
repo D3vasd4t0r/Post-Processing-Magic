@@ -2,10 +2,12 @@
 
 import traceback
 
+from forensic_app.app_errors import AppValueError
+
 
 def describe_error(exc: BaseException, stage: str) -> dict:
     original = str(exc).strip()
-    kind = type(exc).__name__
+    kind = "ValueError" if isinstance(exc, AppValueError) else type(exc).__name__
     message = original or ("Upload-Verbindung wurde vor Abschluss getrennt." if kind == "ClientDisconnect"
                            else "Vorgang wurde abgebrochen oder die Verbindung unterbrochen.")
     hint = "Details und letzte Toolausgabe im Tab Logs prüfen."
@@ -21,5 +23,5 @@ def describe_error(exc: BaseException, stage: str) -> dict:
         hint = "Für große ZIPs Quelle 'Lokale Datei auf dem Server' verwenden; der Browserupload entfällt."
     elif kind == "BadZipFile":
         hint = "ZIP auf Vollständigkeit prüfen; geteilte oder beschädigte Archive werden nicht verarbeitet."
-    return {"type": kind, "phase": stage, "message": message, "recommendation": hint,
+    return {**({"error_code":exc.text.code,"error_params":exc.text.params} if isinstance(exc, AppValueError) else {}), "type": kind, "phase": stage, "message": message, "recommendation": hint,
             "traceback": "".join(traceback.format_exception(exc))[-16000:]}

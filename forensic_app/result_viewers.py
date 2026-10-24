@@ -4,6 +4,7 @@ Configured paths are ordinary shared tool records and travel with configuration
 export. Fingerprints identify tested invocation contracts, not a sandbox or proof
 of safety of the viewer, its dependencies, or the displayed result.
 """
+
 import hashlib
 import json
 import os
@@ -17,6 +18,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from forensic_app.app_errors import AppValueError, ErrorText, error_detail
 from forensic_app.explorer import local_client
 from forensic_app.result_access import result_file
 from forensic_app.windows_access import interactive_desktop
@@ -42,19 +44,19 @@ def configured(storage, kind):
 def checked_program(storage, kind):
     tool, _, exe_hash, dll_hash = configured(storage, kind)
     if tool is None:
-        raise ValueError('Viewer noch nicht als gemeinsames Tool gespeichert.')
+        raise AppValueError('error.d5bc8a09963c')
     path = Path(tool['path'])
     if not path.is_absolute() or path.name.casefold() != (VIEWERS[kind][1]+'.exe').casefold():
-        raise ValueError('Bitte die absolute Programmdatei des gewählten Viewers konfigurieren.')
+        raise AppValueError('error.cd41f0eff355')
     for candidate, expected in ((path, exe_hash), (path.with_suffix('.dll'), dll_hash)):
         no_links(candidate)
         info = candidate.lstat()
         if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size > 128*1024**2:
-            raise ValueError('Viewerdatei fehlt oder ist nicht regulär/begrenzt/unverknüpft.')
+            raise AppValueError('error.b3c64a9d7c1c')
         with candidate.open('rb') as source:
             actual = hashlib.file_digest(source, 'sha256').hexdigest()
         if actual != expected:
-            raise ValueError('Konfiguriert, aber diese Viewer-Version wurde noch nicht für den Dateiaufruf geprüft.')
+            raise AppValueError('error.25db03b6af49')
     return path
 
 
@@ -74,16 +76,16 @@ def viewer_router(service, authorize):
 
     def check(ident, path, kind, host):
         if not local_client(host):
-            raise HTTPException(403, 'Viewerstart ist nur direkt auf dem Server verfügbar.')
+            raise HTTPException(403, ErrorText('error.6c21c6a29f60'))
         if os.name != 'nt' or not interactive_desktop():
-            raise HTTPException(409, 'Keine interaktive Windows-Sitzung verfügbar.')
+            raise HTTPException(409, ErrorText('error.9a263312f43e'))
         return result_file(service.store, ident, path, (VIEWERS[kind][2],))
 
     def program(kind):
         try:
             return checked_program(service.storage,kind)
         except (ValueError,OSError) as exc:
-            raise HTTPException(409,str(exc)) from exc
+            raise HTTPException(409,error_detail(exc)) from exc
 
     @router.get('/api/jobs/{ident}/viewer')
     def availability(ident: str, request: Request, path: str = Query(max_length=240),
@@ -104,7 +106,7 @@ def viewer_router(service, authorize):
                                            stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
                                            close_fds=True)
         except (ValueError,OSError) as exc:
-            raise HTTPException(409,'Viewer konnte nicht gestartet werden: '+str(exc)) from exc
+            raise HTTPException(409,ErrorText('error.9ef1fb91cdf8', p0=error_detail(exc))) from exc
         with closing(sqlite3.connect(service.storage.database)) as connection, connection:
             connection.execute("INSERT INTO job_events(job_id,kind,payload) VALUES (?,'viewer',?)",
                                (ident,json.dumps({'action':'open-result-viewer','viewer':body.kind,'result':body.path,

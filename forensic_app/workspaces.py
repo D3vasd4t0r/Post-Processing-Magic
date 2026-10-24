@@ -1,4 +1,5 @@
 """Server-local work destinations, registered and frozen per job. No migration."""
+
 import json
 import os
 import shutil
@@ -11,6 +12,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 
+from forensic_app.app_errors import AppValueError, error_detail
 from forensic_app.local_paths import validate_local_path
 
 
@@ -20,7 +22,7 @@ def no_links(path):
         current /= part
         info = current.lstat()
         if stat.S_ISLNK(info.st_mode) or getattr(info,'st_file_attributes',0) & stat.FILE_ATTRIBUTE_REPARSE_POINT:
-            raise ValueError('Arbeitsziel enthält eine Verknüpfung oder Junction.')
+            raise AppValueError('error.b3e9165381f6')
 
 
 def registered_root(storage, value=None):
@@ -29,14 +31,14 @@ def registered_root(storage, value=None):
     if root == default or root == storage.root:
         return default
     if not root.is_absolute():
-        raise ValueError('Ungültiges gespeichertes Arbeitsziel.')
+        raise AppValueError('error.890b53b794b4')
     with closing(sqlite3.connect(storage.database)) as c:
         owner = c.execute('SELECT owner FROM workspace_roots WHERE path=?',(str(root),)).fetchone()
     if not owner:
-        raise ValueError('Arbeitsziel ist nicht für diese App registriert.')
+        raise AppValueError('error.caf6f13ab3b6')
     no_links(root)
     if json.loads((root/'.ppm-owner.json').read_text(encoding='utf-8')) != {'owner':owner[0]}:
-        raise ValueError('Arbeitsziel-Kennung fehlt oder wurde verändert.')
+        raise AppValueError('error.09b15b5aa17e')
     return root
 
 
@@ -46,7 +48,7 @@ def job_root(storage, plan):
 
 def job_paths(storage, plan, ident):
     if str(UUID(ident)) != ident:
-        raise ValueError('Ungültige Auftrags-ID.')
+        raise AppValueError('error.2f50ad74f414')
     root = job_root(storage,plan)
     for area in ['work','results','evidence']:
         no_links(root/area)
@@ -83,20 +85,20 @@ class Workspaces:
             base = base.resolve(strict=True)
             for known in all_roots(self.storage):
                 if any(base.is_relative_to(known/area) for area in ['work','results','evidence']):
-                    raise ValueError('Arbeitsziel darf nicht innerhalb von Auftragsdaten liegen.')
+                    raise AppValueError('error.61110f7d4fc3')
             if not base.is_dir():
-                raise ValueError('Bitte einen vorhandenen lokalen Ordner auswählen.')
+                raise AppValueError('error.754d4388d6a9')
             if os.name == 'nt':
                 import ctypes
                 if ctypes.windll.kernel32.GetDriveTypeW(str(base.anchor)) == 4:
-                    raise ValueError('Netzlaufwerke werden als Arbeitsziel nicht unterstützt.')
+                    raise AppValueError('error.cb444807dea3')
             with closing(sqlite3.connect(self.storage.database)) as c:
                 owner = c.execute('SELECT owner FROM workspace_settings WHERE id=1').fetchone()[0]
             selected = base/('PostProcessingMagic-Jobs-'+owner[:8])
             if selected.exists():
                 no_links(selected)
                 if not (selected/'.ppm-owner.json').is_file() or json.loads((selected/'.ppm-owner.json').read_text(encoding='utf-8')) != {'owner':owner}:
-                    raise ValueError('Vorhandener Zielordner gehört nicht zu dieser App.')
+                    raise AppValueError('error.1f0244e8fd33')
             else:
                 selected.mkdir()
                 (selected/'.ppm-owner.json').write_text(json.dumps({'owner':owner}),encoding='utf-8')
@@ -123,11 +125,11 @@ def workspace_router(workspaces, authorize):
         try:
             return workspaces.get()
         except (ValueError,OSError) as exc:
-            raise HTTPException(409,str(exc)) from exc
+            raise HTTPException(409,error_detail(exc)) from exc
     @router.put('')
     def save(value: Destination):
         try:
             return workspaces.save(value.folder)
         except (ValueError,OSError) as exc:
-            raise HTTPException(422,str(exc)) from exc
+            raise HTTPException(422,error_detail(exc)) from exc
     return router

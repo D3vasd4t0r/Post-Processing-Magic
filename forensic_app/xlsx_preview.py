@@ -15,6 +15,7 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+from forensic_app.app_errors import AppValueError
 from forensic_app.csv_preview import _sort_value, infer_column_types
 from forensic_app.workspaces import no_links
 
@@ -263,7 +264,7 @@ def _cell_value(cell: ET.Element, shared: list[str]) -> tuple[str, bool]:
     if kind == "s":
         try:
             if not value.isascii() or not value.isdecimal():
-                raise ValueError("invalid shared string index")
+                raise AppValueError('error.8eb67729270f')
             value = shared[int(value)]
         except (ValueError, IndexError) as exc:
             raise XLSXPreviewError("XLSX-Textindex ist ungültig.") from exc

@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from forensic_app.app_errors import ErrorText, error_detail
 from forensic_app.workspaces import all_roots, registered_root
 
 MAX_ENTRIES = 500_000
@@ -27,7 +28,7 @@ class StorageOverview:
             usage = shutil.disk_usage(self.storage.root)
             volume = {"total_bytes": usage.total, "used_bytes": usage.used, "free_bytes": usage.free}
         except OSError as exc:
-            raise HTTPException(409, "Freier Speicherplatz konnte nicht ermittelt werden: "+str(exc)) from exc
+            raise HTTPException(409, ErrorText('error.5e58436e8975', p0=error_detail(exc))) from exc
         locations = []
         for candidate in all_roots(self.storage):
             try:
@@ -40,7 +41,7 @@ class StorageOverview:
 
     def scan(self):
         if not self.lock.acquire(blocking=False):
-            raise HTTPException(409, "Eine Speichermessung läuft bereits. Bitte kurz warten.")
+            raise HTTPException(409, ErrorText('error.2877aadb8765'))
         try:
             start = time.monotonic()
             visited = 0

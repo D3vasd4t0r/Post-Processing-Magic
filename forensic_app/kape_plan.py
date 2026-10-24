@@ -8,12 +8,13 @@ import re
 import subprocess
 from pathlib import Path, PureWindowsPath
 
+from forensic_app.app_errors import AppValueError
 from forensic_app.modes import ModeDraft
 
 
 def windows_arguments(parameters: str) -> list[str]:
     if os.name != "nt":
-        raise ValueError("Die KAPE-Ausführung benötigt Windows.")
+        raise AppValueError('error.27bf8611e0e8')
     shell = ctypes.WinDLL("shell32", use_last_error=True)
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
     shell.CommandLineToArgvW.argtypes = [ctypes.c_wchar_p, ctypes.POINTER(ctypes.c_int)]
@@ -22,7 +23,7 @@ def windows_arguments(parameters: str) -> list[str]:
     count = ctypes.c_int()
     values = shell.CommandLineToArgvW('"kape.exe" '+parameters, ctypes.byref(count))
     if not values:
-        raise ValueError("Kommandozeilenparameter können nicht gelesen werden.")
+        raise AppValueError('error.1f5f5487c96e')
     try:
         return [values[index] for index in range(1, count.value)]
     finally:
@@ -65,40 +66,40 @@ def compile_kape(mode: dict, tools: list[dict], *, capture: bool = False) -> dic
     draft = ModeDraft.model_validate({key: value for key, value in mode.items()
                                     if key not in ("id", "status", "executable", "slot_conflict")})
     if len(draft.steps) != 1:
-        raise ValueError("Der erste Ausführungstest unterstützt genau einen KAPE-Befehl.")
+        raise AppValueError('error.28da36bd6f71')
     step = draft.steps[0]
     if step.working_directory != ".":
-        raise ValueError("KAPE verwendet den Arbeitsordner '.'; seine Ein-/Ausgabeordner stehen im Modus.")
+        raise AppValueError('error.528a1bcb67d3')
     tool = next((tool for tool in tools if tool["id"] == step.tool_id), None)
     if not tool:
-        raise ValueError("Dem KAPE-Befehl muss ein Tool zugeordnet sein.")
+        raise AppValueError('error.f27263d34004')
     executable = Path(tool["path"])
     if executable.name.casefold() != "kape.exe" or not executable.is_file():
-        raise ValueError("Für den ersten Test muss die vorhandene Programmdatei kape.exe zugeordnet sein.")
+        raise AppValueError('error.0d45f3f03bf5')
     args = windows_arguments(step.parameters)
     options, index = {}, 0
     while index < len(args):
         key = args[index]
         if key in options or key not in ("--msource", "--mdest", "--module", "--gui"):
-            raise ValueError("Erster KAPE-Test: nur --msource, --mdest, --module und optional --gui, jeweils einmal.")
+            raise AppValueError('error.a52600b8ab5b')
         if key == "--gui":
             options[key] = True
         else:
             index += 1
             if index >= len(args) or args[index].startswith("--"):
-                raise ValueError(f"Wert für {key} fehlt.")
+                raise AppValueError('error.d59815959f30', p0=f'{key}')
             options[key] = args[index]
         index += 1
     if not all(key in options for key in ("--msource", "--mdest", "--module")):
-        raise ValueError("--msource, --mdest und --module sind erforderlich.")
+        raise AppValueError('error.1f3c4c853f4e')
     source = ModeDraft.job_relative_folder(options["--msource"])
     output = ModeDraft.job_relative_folder(options["--mdest"])
     if not PureWindowsPath(source).is_relative_to(PureWindowsPath(draft.extract_folder)):
-        raise ValueError("--msource muss im konfigurierten Entpackziel liegen.")
+        raise AppValueError('error.f098f659e8d6')
     if PureWindowsPath(output) != PureWindowsPath(draft.output_folder):
-        raise ValueError("--mdest muss dem konfigurierten Ergebnisordner entsprechen.")
+        raise AppValueError('error.24811225fc18')
     if not re.fullmatch(r"[A-Za-z0-9_!$.-]+(?:,[A-Za-z0-9_!$.-]+)*", options["--module"]):
-        raise ValueError("Ungültige KAPE-Modulliste.")
+        raise AppValueError('error.22add3add444')
     result = {"mode": {"id": mode["id"], **draft.model_dump()}, "tool": dict(tool),
               "argv": [str(executable), *args], "source": source,
               "command": subprocess.list2cmdline([str(executable), *args])}
@@ -112,9 +113,9 @@ def compile_plan(mode: dict, tools: list[dict], *, capture: bool = False) -> dic
     draft = ModeDraft.model_validate({key: value for key, value in mode.items()
                                     if key not in ("id", "status", "executable", "slot_conflict")})
     if not draft.steps:
-        raise ValueError("Mindestens ein Befehlsblock ist erforderlich.")
+        raise AppValueError('error.ac5ae690f7df')
     if sum(step.type == "tool" for step in draft.steps) > 1:
-        raise ValueError("Aktuell ist ein KAPE-Toolblock mit beliebig angeordneten PowerShell-Blöcken unterstützt.")
+        raise AppValueError('error.df194ce02a33')
     commands, engine = [], None
     for step in draft.steps:
         if step.type == "tool":
@@ -124,11 +125,11 @@ def compile_plan(mode: dict, tools: list[dict], *, capture: bool = False) -> dic
             command["kind"] = "kape"
         else:
             if not step.script.strip():
-                raise ValueError(f"PowerShell-Block '{step.name}' enthält keinen Befehl.")
+                raise AppValueError('error.637e83bc5e94', p0=f'{step.name}')
             if engine is None:
                 path = Path(os.environ.get("SystemRoot", r"C:\Windows"))/"System32"/"WindowsPowerShell"/"v1.0"/"powershell.exe"
                 if not path.is_file():
-                    raise ValueError("Windows PowerShell wurde nicht gefunden.")
+                    raise AppValueError('error.73c675c5acca')
                 engine = {"id": "builtin-powershell", "name": "Windows PowerShell", "path": str(path)}
                 if capture:
                     engine.update(sha256=sha256_file(path), version=file_version(str(path)))
@@ -141,7 +142,7 @@ def compile_plan(mode: dict, tools: list[dict], *, capture: bool = False) -> dic
             encoded = base64.b64encode(wrapper.encode("utf-16-le")).decode("ascii")
             argv = [engine["path"], "-NoLogo", "-NoProfile", "-NonInteractive", "-OutputFormat", "Text", "-EncodedCommand", encoded]
             if len(subprocess.list2cmdline(argv)) > 30000:
-                raise ValueError("PowerShell-Block ist zu lang für die Windows-Kommandozeile.")
+                raise AppValueError('error.11f0109d3ff7')
             command = {"kind": "powershell", "tool": dict(engine), "argv": argv,
                        "command": 'PowerShell -NoProfile -NonInteractive\n'+step.script}
         command.update(id=step.id, name=step.name, working_directory=step.working_directory,

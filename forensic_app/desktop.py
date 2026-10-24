@@ -1,15 +1,20 @@
 """Native offline server control panel, separated from the API and analysis worker."""
 import logging
 import queue
+import sqlite3
 import threading
+import time
 import tkinter as tk
 import webbrowser
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from forensic_app import __version__
+from forensic_app.app_errors import AppValueError, ErrorText
+from forensic_app.desktop_i18n import DesktopError, DesktopTranslations
 from forensic_app.desktop_session import DesktopSession
 from forensic_app.diagnostics import Diagnostics
+from forensic_app.interface_preferences import InterfacePreferences
 from forensic_app.server_preferences import PreferenceStore, ServerPreferences
 from forensic_app.storage import InstanceLock, Storage
 from forensic_app.windows_access import is_admin
@@ -18,8 +23,9 @@ from forensic_app.windows_tray import TrayIcon
 BG, PANEL, EDGE, TEXT, MUTED, BLUE = '#07111f','#10233b','#294d70','#e7f0fc','#a7bdd6','#81c6ff'
 
 
-def draw_server_banner(canvas,administrator):
+def draw_server_banner(canvas,administrator,translate=None):
     """Decorative approved two-area header; live status stays below the banner."""
+    t = translate or DesktopTranslations().t
     canvas.delete('all')
     width=max(1,canvas.winfo_width()); scale=width/1008
     def points(values):
@@ -35,13 +41,13 @@ def draw_server_banner(canvas,administrator):
     canvas.create_polygon(points([50,28,85,41,82,81,70,100,50,115,30,100,18,81,15,41]),fill='#193f63',outline=BLUE,width=max(2,3*scale))
     canvas.create_line(points([50,49,50,91]),fill=BLUE,width=2*scale)
     canvas.create_line(points([33,70,67,70]),fill=BLUE,width=2*scale)
-    text(109,27,'DIGITALE FORENSIK',13,BLUE)
+    text(109,27,t('banner.forensics'),13,BLUE)
     text(109,61,'Post-Processing-Magic',27,bold=True)
-    text(109,101,'Gemeinsame Serversteuerung',14,MUTED)
-    text(584,27,'STATISCHE MALWARE-ANALYSE',13,'#ff9cac')
-    text(584,64,'Zwei Bereiche. Ein Server.',18)
-    text(584,104,'Version '+__version__,13,'#e0b7c1')
-    text(584,124,'Administratorrechte aktiv' if administrator else 'Synthetischer Test ohne Administratorrechte',12,'#e0b7c1',wrap=290)
+    text(109,101,t('banner.control'),14,MUTED)
+    text(584,27,t('banner.malware'),13,'#ff9cac')
+    text(584,64,t('banner.areas'),18)
+    text(584,104,t('banner.version',version=__version__),13,'#e0b7c1')
+    text(584,124,t('banner.admin') if administrator else t('banner.synthetic'),12,'#e0b7c1',wrap=290)
     canvas.create_oval(points([891,31,966,100]),outline='#ff9cac',width=3*scale)
     canvas.create_rectangle(points([905,82,951,111]),fill='#451d2d',outline='#ff9cac',width=3*scale)
     for x in [916,940]:canvas.create_oval(points([x-7,59,x+7,73]),fill='#ff9cac',outline='')
@@ -52,6 +58,11 @@ def draw_server_banner(canvas,administrator):
 class ServerWindow:
     def __init__(self,root,args):
         self.root,self.args = root,args
+        self.interface = InterfacePreferences(Storage(args.data_dir.expanduser().resolve()))
+        self.translations = DesktopTranslations(self.interface.get()['locale'])
+        self.bindings = []
+        self.locale_checked = 0
+        self.t = self.translations.t
         self.commands,self.events = queue.Queue(),queue.Queue(maxsize=4)
         self.tray_events = queue.Queue()
         self.task_events = queue.Queue()
@@ -84,44 +95,54 @@ class ServerWindow:
         outer.rowconfigure(7,weight=1)
         hero = tk.Canvas(outer,bg='#102b48',height=158,highlightthickness=1,highlightbackground=EDGE,takefocus=False)
         hero.grid(row=0,column=0,sticky='ew')
-        hero.bind('<Configure>',lambda event: draw_server_banner(hero,is_admin()))
+        self.hero = hero
+        hero.bind('<Configure>',lambda event: draw_server_banner(hero,is_admin(),self.t))
         status_frame = tk.Frame(outer,bg=BG)
         status_frame.grid(row=1,column=0,sticky='ew',pady=(18,12))
-        self.server_status = self.label(status_frame,'● Server startet…',bg=BG,size=14,bold=True)
+        self.server_status = self.localized_label(status_frame,'status.starting',bg=BG,size=14,bold=True)
         self.server_status.pack(side='left')
-        self.worker_status = self.label(status_frame,'Worker: wird geprüft',bg=BG,color=MUTED)
+        self.worker_status = self.localized_label(status_frame,'status.worker_check',bg=BG,color=MUTED)
         self.worker_status.pack(side='right')
-        self.activity = self.label(outer,'Server wird automatisch gestartet. Der Browser öffnet sich über den Button.',bg=BG,color=MUTED)
+        self.activity = self.localized_label(outer,'activity.initial',bg=BG,color=MUTED)
         self.activity.grid(row=2,column=0,sticky='ew',pady=(0,10))
         actions = tk.Frame(outer,bg=BG)
         actions.grid(row=3,column=0,sticky='ew')
         self.buttons = {}
-        for key,text,style_name in [('start','Server starten','Accent.TButton'),('stop','Server stoppen','TButton'),
-                                    ('force','Force Shutdown','Danger.TButton'),('browser','Browser öffnen','TButton')]:
+        for key,text,style_name in [('start',self.t('action.start'),'Accent.TButton'),('stop',self.t('action.stop'),'TButton'),
+                                    ('force',self.t('action.force'),'Danger.TButton'),('browser',self.t('action.browser'),'TButton')]:
             button = ttk.Button(actions,text=text,style=style_name,command=lambda item=key:self.action(item))
             button.pack(side='left',padx=(0,10))
             self.buttons[key] = button
+            self.bind_text(button,'action.'+key)
         maintenance = tk.Frame(outer,bg=BG)
         maintenance.grid(row=4,column=0,sticky='ew',pady=(10,0))
-        ttk.Button(maintenance,text='Servereinstellungen…',command=self.settings_dialog).pack(side='left',padx=(0,10))
-        self.diagnose_button = ttk.Button(maintenance,text='Diagnosepaket…',command=self.preview_diagnostics)
+        self.localized_button(maintenance,'action.settings',self.settings_dialog).pack(side='left',padx=(0,10))
+        self.diagnose_button = ttk.Button(maintenance,text=self.t('action.diagnostics'),command=self.preview_diagnostics)
         self.diagnose_button.pack(side='left')
+        self.bind_text(self.diagnose_button,'action.diagnostics')
+        self.localized_label(maintenance,'field.language',bg=BG,color=MUTED).pack(side='left',padx=(18,6))
+        self.language = tk.StringVar(value=self.translations.locale.upper())
+        chooser = ttk.Combobox(maintenance,textvariable=self.language,values=['DE','EN'],state='readonly',width=4)
+        chooser.pack(side='left')
+        chooser.bind('<<ComboboxSelected>>',self.choose_language)
         self.url_value,self.token_value = tk.StringVar(),tk.StringVar()
         credentials = tk.Frame(outer,bg=PANEL,padx=18,pady=12,highlightthickness=1,highlightbackground=EDGE)
         credentials.grid(row=5,column=0,sticky='ew',pady=(18,14))
         credentials.columnconfigure(1,weight=1)
-        for row,(title,value) in enumerate([('Serveradresse',self.url_value),('Access Token',self.token_value)]):
-            self.label(credentials,title,color=MUTED).grid(row=row,column=0,sticky='w',padx=(0,16),pady=6)
+        for row,(title,value) in enumerate([('field.address',self.url_value),('field.token',self.token_value)]):
+            self.localized_label(credentials,title,color=MUTED).grid(row=row,column=0,sticky='w',padx=(0,16),pady=6)
             entry = tk.Entry(credentials,textvariable=value,readonlybackground='#09182a',fg=TEXT,
                              state='readonly',font=('Consolas',11),relief='flat')
             entry.grid(row=row,column=1,sticky='ew',ipady=8,pady=6)
-            ttk.Button(credentials,text='Kopieren',command=lambda item=value:self.copy(item)).grid(row=row,column=2,padx=(12,0))
+            self.localized_button(credentials,'action.copy',lambda item=value:self.copy(item)).grid(row=row,column=2,padx=(12,0))
         heading = tk.Frame(outer,bg=BG)
         heading.grid(row=6,column=0,sticky='ew',pady=(0,8))
-        self.label(heading,'SERVERLOGS',bg=BG,color=BLUE,bold=True,size=10).pack(side='left')
+        self.localized_label(heading,'logs.heading',bg=BG,color=BLUE,bold=True,size=10).pack(side='left')
         self.follow = tk.BooleanVar(value=True)
-        tk.Checkbutton(heading,text='Aktueller Ausgabe folgen',variable=self.follow,bg=BG,fg=MUTED,
-                       selectcolor=PANEL,activebackground=BG,activeforeground=TEXT).pack(side='right')
+        self.follow_button = tk.Checkbutton(heading,text=self.t('logs.follow'),variable=self.follow,bg=BG,fg=MUTED,
+                       selectcolor=PANEL,activebackground=BG,activeforeground=TEXT)
+        self.follow_button.pack(side='right')
+        self.bind_text(self.follow_button,'logs.follow')
         terminal = tk.Frame(outer,bg=EDGE,padx=1,pady=1)
         terminal.grid(row=7,column=0,sticky='nsew')
         scroll = ttk.Scrollbar(terminal)
@@ -137,16 +158,95 @@ class ServerWindow:
         footer = tk.Frame(outer,bg=BG)
         footer.grid(row=8,column=0,sticky='ew',pady=(14,0))
         footer.columnconfigure(0,weight=1)
-        footer_note = self.label(footer,'X minimiert in den Infobereich. Serverlogs enthalten keine Tool-Liveausgabe.',bg=BG,color=MUTED,size=9)
+        footer_note = self.localized_label(footer,'footer.note',bg=BG,color=MUTED,size=9)
         footer_note.grid(row=0,column=0,sticky='ew',padx=(0,16))
         footer_note.bind('<Configure>',lambda event: footer_note.configure(wraplength=max(1,event.width)))
-        ttk.Button(footer,text='Beenden…',command=self.exit_requested).grid(row=0,column=1,sticky='e')
-        self.tray = TrayIcon(icon,self.tray_events.put)
+        self.localized_button(footer,'action.exit',self.exit_requested).grid(row=0,column=1,sticky='e')
+        self.tray = TrayIcon(icon,self.tray_events.put,translate=self.t)
         root.protocol('WM_DELETE_WINDOW',self.hide)
         self.thread = threading.Thread(target=self.background,daemon=True)
         self.thread.start()
         self.commands.put('start')
         root.after(100,self.tick)
+
+    def bind_text(self,widget,key):
+        self.bindings.append((widget,lambda: widget.configure(text=self.t(key))))
+        widget.configure(text=self.t(key))
+        return widget
+
+    def localized_label(self,parent,key,**options):
+        return self.bind_text(self.label(parent,self.t(key),**options),key)
+
+    def localized_button(self,parent,key,command):
+        return self.bind_text(ttk.Button(parent,command=command),key)
+
+    def bind_title(self,dialog,key):
+        self.bindings.append((dialog,lambda: dialog.title(self.t(key))))
+        dialog.title(self.t(key))
+
+    def choose_language(self,event=None):
+        try:
+            self.interface.update(locale=self.language.get().lower())
+            self.sync_language(force=True)
+        except (OSError,ValueError,sqlite3.Error) as exc:
+            messagebox.showerror(self.t('error.action'),self.error_text(exc),parent=self.root)
+
+    def error_text(self,exc):
+        if isinstance(exc,DesktopError):
+            return exc.translated(self.t)
+        if isinstance(exc,AppValueError):
+            return exc.text.localized(self.translations.locale)
+        detail = getattr(exc,'detail',None)
+        if isinstance(detail,ErrorText):
+            return detail.localized(self.translations.locale)
+        return str(exc)
+
+    def sync_language(self,force=False):
+        now = time.monotonic()
+        if not force and now-self.locale_checked < 1:
+            return False
+        self.locale_checked = now
+        try:
+            locale = self.interface.get()['locale']
+        except Exception:
+            logging.getLogger(__name__).exception('Interface preference read failed')
+            return False
+        if locale == self.translations.locale:
+            return False
+        self.translations.locale = locale
+        self.language.set(locale.upper())
+        live = []
+        for widget,refresh in self.bindings:
+            if widget.winfo_exists():
+                refresh()
+                live.append((widget,refresh))
+        self.bindings = live
+        draw_server_banner(self.hero,is_admin(),self.t)
+        self.tray.refresh_language()
+        if 'stopping' in self.latest:
+            self.refresh_status(self.latest)
+        return True
+
+    def refresh_status(self,latest):
+        alive,ready,stopping = latest['alive'],latest['ready'],latest['stopping']
+        title = self.t('status.stopping') if stopping and alive else self.t('status.running') if ready else self.t('status.starting') if alive else self.t('status.stopped')
+        self.server_status.configure(text=title,fg='#9ed9c8' if ready and not stopping else BLUE)
+        self.worker_status.configure(text=self.t('status.worker',state=self.t('worker.active') if latest['worker'] else self.t('worker.stopped')))
+        counts = latest.get('queue',{})
+        problem = latest.get('problem_i18n')
+        problem_text = latest.get('problem')
+        if problem:
+            parameters = dict(problem['parameters'])
+            if problem.get('detail_i18n'):
+                detail = problem['detail_i18n']
+                parameters['detail'] = ErrorText(detail['key'],**detail['parameters']).localized(self.translations.locale)
+            problem_text = ErrorText(problem['key'],**parameters).localized(self.translations.locale) if problem.get('catalog') == 'shared' else self.t(problem['key'],**parameters)
+        note = problem_text or self.t('activity.counts',running=len(counts.get('running',[])),waiting=counts.get('waiting',0),archiving=len(counts.get('archiving',[])),archive_waiting=counts.get('archive_waiting',0))
+        if stopping:
+            note = self.t('activity.stopping')
+        elif latest.get('restart_required'):
+            note = self.t('activity.restart')
+        self.activity.configure(text=note,wraplength=970)
 
     def label(self,parent,text,*,bg=PANEL,color=TEXT,size=11,bold=False):
         return tk.Label(parent,text=text,bg=bg,fg=color,font=('Segoe UI',size,'bold' if bold else 'normal'),anchor='w',justify='left')
@@ -168,8 +268,8 @@ class ServerWindow:
                             getattr(session,action)()
                     except Exception as exc:
                         logging.getLogger(__name__).exception('Serversteuerung fehlgeschlagen')
-                        session.problem = str(exc)
-                        self.task_events.put(('error',str(exc)))
+                        session.set_exception(exc)
+                        self.task_events.put(('error',exc))
                     finally:
                         self.working = False
                 except queue.Empty:
@@ -187,15 +287,16 @@ class ServerWindow:
     def tick(self):
         if self.closed.is_set():
             return
+        self.sync_language()
         while not self.task_events.empty():
             kind,value = self.task_events.get_nowait()
             self.diagnose_button.configure(state='normal')
             if kind == 'diagnosis':
                 self.diagnosis_dialog(value)
             elif kind == 'settings_saved':
-                messagebox.showinfo('Einstellungen gespeichert','Gespeichert. Änderungen gelten nach Server stoppen und Server starten. Ein laufender Auftrag wird nicht unterbrochen.',parent=self.root)
+                messagebox.showinfo(self.t('settings.saved_title'),self.t('settings.saved'),parent=self.root)
             elif kind == 'error':
-                messagebox.showerror('Aktion fehlgeschlagen',value,parent=self.root)
+                messagebox.showerror(self.t('error.action'),self.error_text(value),parent=self.root)
         while not self.tray_events.empty():
             event = self.tray_events.get_nowait()
             self.show()
@@ -207,17 +308,7 @@ class ServerWindow:
         if latest is not None:
             self.latest = latest
             alive,ready,stopping = latest['alive'],latest['ready'],latest['stopping']
-            title = '● Wartet auf laufende Arbeiten…' if stopping and alive else '● Server läuft' if ready else '● Server startet…' if alive else '● Server gestoppt'
-            self.server_status.configure(text=title,fg='#9ed9c8' if ready and not stopping else BLUE)
-            self.worker_status.configure(text='Worker: '+('aktiv' if latest['worker'] else 'gestoppt / nicht erreichbar'))
-            counts = latest.get('queue',{})
-            note = latest.get('problem') or ('Laufend: '+str(len(counts.get('running',[])))+' · Wartend: '+str(counts.get('waiting',0))+
-                ' · Archivierungen: '+str(len(counts.get('archiving',[])))+' laufend, '+str(counts.get('archive_waiting',0))+' wartend')
-            if stopping:
-                note = 'Neue Aufträge gesperrt. Laufende Arbeit wird beendet, wartende Aufträge bleiben zurückgehalten.'
-            elif latest.get('restart_required'):
-                note = 'Neue Servereinstellungen gespeichert – zum Anwenden Server stoppen und wieder starten.'
-            self.activity.configure(text=note,wraplength=970)
+            self.refresh_status(latest)
             self.url_value.set(latest['url'] if ready else '')
             self.token_value.set(latest['token'] if ready else '')
             for key,enabled in [('start',not alive),('stop',ready and not stopping),('force',alive),('browser',ready and not stopping)]:
@@ -251,15 +342,16 @@ class ServerWindow:
 
     def diagnosis_dialog(self,preview):
         dialog = tk.Toplevel(self.root,bg=BG)
-        dialog.title('Diagnosepaket – Vorschau')
+        self.bind_title(dialog,'diagnostics.title')
         dialog.geometry('850x650')
         dialog.transient(self.root)
-        self.label(dialog,preview['message'],bg=BG,color=MUTED).pack(anchor='w',padx=16,pady=12)
+        self.localized_label(dialog,'diagnostics.note',bg=BG,color=MUTED).pack(anchor='w',padx=16,pady=12)
         notebook = ttk.Notebook(dialog)
         notebook.pack(fill='both',expand=True,padx=16)
         for item in preview['files']:
             frame = tk.Frame(notebook,bg=PANEL)
-            notebook.add(frame,text=item['name']+' ('+str(item['bytes'])+' Bytes)')
+            notebook.add(frame,text=self.t('diagnostics.tab',name=item['name'],bytes=item['bytes']))
+            self.bindings.append((frame,lambda f=frame,i=item: notebook.tab(f,text=self.t('diagnostics.tab',name=i['name'],bytes=i['bytes']))))
             text = tk.Text(frame,bg=PANEL,fg=TEXT,wrap='word',font=('Consolas',10))
             scroll = ttk.Scrollbar(frame,command=text.yview)
             text.configure(yscrollcommand=scroll.set)
@@ -270,7 +362,7 @@ class ServerWindow:
         actions = tk.Frame(dialog,bg=BG)
         actions.pack(fill='x',padx=16,pady=16)
         def save():
-            target = filedialog.asksaveasfilename(parent=dialog,title='Diagnosepaket speichern',initialfile='Diagnosepaket.zip',defaultextension='.zip',filetypes=[('ZIP-Archiv','*.zip')])
+            target = filedialog.asksaveasfilename(parent=dialog,title=self.t('diagnostics.save_title'),initialfile=self.t('diagnostics.filename'),defaultextension='.zip',filetypes=[(self.t('file.zip'),'*.zip')])
             if not target:
                 return
             try:
@@ -285,51 +377,58 @@ class ServerWindow:
                     os.replace(temporary,destination)
                 finally:
                     temporary.unlink(missing_ok=True)
-                messagebox.showinfo('Diagnosepaket gespeichert','Das ZIP wurde lokal gespeichert. Es wurde nichts versendet.',parent=dialog)
+                messagebox.showinfo(self.t('diagnostics.saved_title'),self.t('diagnostics.saved'),parent=dialog)
                 dialog.destroy()
             except Exception as exc:
                 logging.getLogger(__name__).exception('Diagnoseexport fehlgeschlagen')
-                messagebox.showerror('Export fehlgeschlagen',str(exc),parent=dialog)
-        ttk.Button(actions,text='ZIP speichern…',command=save).pack(side='left')
-        ttk.Button(actions,text='Schließen',command=dialog.destroy).pack(side='right')
+                messagebox.showerror(self.t('error.export'),self.error_text(exc),parent=dialog)
+        self.localized_button(actions,'action.zip',save).pack(side='left')
+        self.localized_button(actions,'action.close',dialog.destroy).pack(side='right')
 
     def settings_dialog(self):
         preferences,revision = PreferenceStore(Storage(self.args.data_dir.expanduser().resolve())).get()
         if not revision:
             preferences = preferences.model_copy(update={'port':self.args.port,'lan':self.args.lan})
         dialog = tk.Toplevel(self.root,bg=BG,padx=24,pady=20)
-        dialog.title('Servereinstellungen')
+        self.bind_title(dialog,'settings.title')
         dialog.transient(self.root)
-        port,access,maximum,backups = (tk.StringVar(value=str(preferences.port)),tk.StringVar(value='LAN' if preferences.lan else 'Lokal'),
+        port,access,maximum,backups = (tk.StringVar(value=str(preferences.port)),tk.StringVar(value=self.t('access.lan') if preferences.lan else self.t('access.local')),
             tk.StringVar(value=str(preferences.log_max_bytes/1_000_000)),tk.StringVar(value=str(preferences.log_backups)))
-        for title,value in [('Port',port),('Maximale Größe je Serverlog (MB, dezimal)',maximum),('Anzahl älterer Serverlogdateien (1–20)',backups)]:
-            self.label(dialog,title,bg=BG).pack(anchor='w',pady=(8,2))
+        for title,value in [('field.port',port),('field.logsize',maximum),('field.backups',backups)]:
+            self.localized_label(dialog,title,bg=BG).pack(anchor='w',pady=(8,2))
             ttk.Entry(dialog,textvariable=value,width=52).pack(fill='x')
-        self.label(dialog,'Zugriff',bg=BG).pack(anchor='w',pady=(12,2))
-        ttk.Combobox(dialog,textvariable=access,values=['Lokal','LAN'],state='readonly').pack(fill='x')
-        self.label(dialog,'Lokal: nur dieser Rechner. LAN: Anmeldung und selbstsigniertes HTTPS.\nKeine automatische Firewalländerung. Änderungen gelten nach Serverneustart.\nLogrotation betrifft ausschließlich technische Serverlogs.',bg=BG,color=MUTED,size=10).pack(anchor='w',pady=16)
+        self.localized_label(dialog,'field.access',bg=BG).pack(anchor='w',pady=(12,2))
+        access_box = ttk.Combobox(dialog,textvariable=access,values=[self.t('access.local'),self.t('access.lan')],state='readonly')
+        access_box.current(1 if preferences.lan else 0)
+        access_box.pack(fill='x')
+        def refresh_access():
+            index = access_box.current()
+            access_box.configure(values=[self.t('access.local'),self.t('access.lan')])
+            access_box.current(max(0,index))
+        self.bindings.append((access_box,refresh_access))
+        self.localized_label(dialog,'settings.note',bg=BG,color=MUTED,size=10).pack(anchor='w',pady=16)
         error = self.label(dialog,'',bg=BG,color='#ffb7bd',size=10)
         error.pack(anchor='w')
         def save():
             try:
-                value = ServerPreferences(port=int(port.get()),lan=access.get()=='LAN',log_max_bytes=int(float(maximum.get().replace(',','.'))*1_000_000),log_backups=int(backups.get()))
+                value = ServerPreferences(port=int(port.get()),lan=access_box.current()==1,log_max_bytes=int(float(maximum.get().replace(',','.'))*1_000_000),log_backups=int(backups.get()))
             except (ValueError,OverflowError):
-                error.configure(text='Bitte Port 1–65535, Loggröße 0,1–100 MB und Anzahl 1–20 eingeben.')
+                self.bind_text(error,'settings.invalid')
                 return
             self.commands.put(('settings',value))
             dialog.destroy()
         row = tk.Frame(dialog,bg=BG)
         row.pack(fill='x',pady=(12,0))
-        ttk.Button(row,text='Speichern',command=save).pack(side='left')
-        ttk.Button(row,text='Abbrechen',command=dialog.destroy).pack(side='right')
+        self.localized_button(row,'action.save',save).pack(side='left')
+        self.localized_button(row,'action.cancel',dialog.destroy).pack(side='right')
 
     def action(self,action):
         if action == 'browser':
             if self.latest['ready']:
                 webbrowser.open(self.latest['url']+'/#token='+self.latest['token'])
             return
-        if action == 'force' and not messagebox.askyesno('Force Shutdown bestätigen',
-                'Server, Worker und gestartete Tools sofort beenden?\nLaufende Arbeiten werden unterbrochen und nicht automatisch wiederholt.',parent=self.root,icon='warning'):
+        if action == 'force' and not messagebox.askyesno(self.t('force.title'),
+                self.t('force.confirm'),parent=self.root,icon='warning'):
             return
         self.commands.put(action)
 
@@ -337,7 +436,7 @@ class ServerWindow:
         if self.tray.ready.is_set() and not self.tray.error and self.tray.hwnd:
             self.root.withdraw()
         else:
-            messagebox.showinfo('Infobereich nicht verfügbar','Das Serverfenster wird stattdessen in die Taskleiste minimiert.',parent=self.root)
+            messagebox.showinfo(self.t('tray.unavailable_title'),self.t('tray.taskbar'),parent=self.root)
             self.root.iconify()
 
     def show(self):
@@ -347,7 +446,7 @@ class ServerWindow:
     def exit_requested(self):
         if not self.latest['alive']:
             self.close()
-        elif messagebox.askyesno('Server stoppen und beenden','Neue Aufträge sperren, laufende Arbeit abschließen und danach das Serverfenster beenden?',parent=self.root):
+        elif messagebox.askyesno(self.t('exit.title'),self.t('exit.confirm'),parent=self.root):
             self.exiting = True
             self.action('stop')
 
@@ -367,6 +466,10 @@ def run_panel(args):
         return 0
     except Exception as exc:
         logging.getLogger(__name__).exception('Serverfenster fehlgeschlagen')
-        messagebox.showerror('Serverfenster konnte nicht gestartet werden',str(exc),parent=root)
+        try:
+            locale = InterfacePreferences(Storage(args.data_dir.expanduser().resolve())).get()['locale']
+        except (OSError,ValueError,sqlite3.Error):
+            locale = 'de'
+        messagebox.showerror(DesktopTranslations(locale).t('error.startup'),str(exc),parent=root)
         root.destroy()
         return 1

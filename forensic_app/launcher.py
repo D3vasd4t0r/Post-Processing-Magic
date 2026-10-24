@@ -1,3 +1,4 @@
+
 import argparse
 import json
 import logging
@@ -16,6 +17,7 @@ from urllib.request import urlopen
 import uvicorn
 
 from forensic_app.api import create_app
+from forensic_app.app_errors import AppValueError
 from forensic_app.certificates import ensure_certificate
 from forensic_app.server_preferences import PreferenceStore, prune_server_logs
 from forensic_app.storage import InstanceLock, Storage, default_data_dir
@@ -43,9 +45,9 @@ def parser() -> argparse.ArgumentParser:
 
 def validate(args: argparse.Namespace) -> None:
     if not 1 <= args.port <= 65535:
-        raise ValueError("Port muss zwischen 1 und 65535 liegen.")
+        raise AppValueError('error.28b81d33d4c1')
     if bool(args.tls_cert) != bool(args.tls_key):
-        raise ValueError("Zertifikat und privater Schlüssel müssen zusammen angegeben werden.")
+        raise AppValueError('error.939fe0f7951c')
     if args.tls_cert:
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(args.tls_cert, args.tls_key)
@@ -162,7 +164,9 @@ def main(argv: list[str] | None = None) -> int:
                 directory = args.data_dir.expanduser().resolve()/'logs'
                 directory.mkdir(parents=True,exist_ok=True)
                 (directory/'desktop-startup-error.json').write_text(
-                    json.dumps({'control_id':args.control_id,'message':str(exc)},ensure_ascii=False),encoding='utf-8')
+                    json.dumps({'control_id':args.control_id,'message':str(exc),
+                                **({'error_code':exc.text.code,'error_params':exc.text.params}
+                                   if isinstance(exc,AppValueError) else {})},ensure_ascii=False),encoding='utf-8')
             except OSError:
                 pass
         print(f"Start fehlgeschlagen: {exc}")

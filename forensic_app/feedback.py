@@ -1,4 +1,5 @@
 """Local feedback, explicit export only. Never attached to technical diagnostics."""
+
 import json
 import sqlite3
 from contextlib import closing
@@ -10,6 +11,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from forensic_app import __version__
+from forensic_app.app_errors import AppValueError, ErrorText
 
 
 class FeedbackDraft(BaseModel):
@@ -22,7 +24,7 @@ class FeedbackDraft(BaseModel):
     @classmethod
     def valid_text(cls,value):
         if any(ord(ch)<32 and ch not in '\n\r\t' for ch in value):
-            raise ValueError('Unzulässige Steuerzeichen.')
+            raise AppValueError('error.0e9b27f8ca9d')
         return value
 
 
@@ -40,7 +42,7 @@ class FeedbackStore:
         with closing(sqlite3.connect(self.storage.database)) as c,c:
             c.execute('BEGIN IMMEDIATE')
             if c.execute('SELECT count(*) FROM feedback').fetchone()[0] >= 1000:
-                raise HTTPException(409,'Maximal 1.000 lokale Feedbackeinträge erreicht.')
+                raise HTTPException(409,ErrorText('error.6b267cfc5a31'))
             c.execute('INSERT INTO feedback(id,category,title,text,app_version) VALUES (?,?,?,?,?)',
                       (ident,draft.category,draft.title,draft.text,__version__))
         return {'saved':True,'id':ident}
@@ -56,7 +58,7 @@ def feedback_router(store,authorize):
         data = bytearray()
         async for chunk in request.stream():
             if len(data)+len(chunk)>65536:
-                raise HTTPException(413,'Feedback ist zu groß (maximal 64 KiB Anfrage).')
+                raise HTTPException(413,ErrorText('error.3fa32ca426c4'))
             data.extend(chunk)
         try:
             value = FeedbackDraft.model_validate_json(data)
