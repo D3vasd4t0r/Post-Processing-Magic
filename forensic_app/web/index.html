@@ -130,6 +130,61 @@
     .result-preview-table th{color:#c9e6ff;background:#132b43}
     .result-header-sort{display:block;width:100%;text-align:left;background:transparent;color:inherit;border:0;padding:6px 0;white-space:nowrap}.result-header-sort:focus-visible{outline:2px solid #8acfff;outline-offset:2px}.result-header-kind{font-size:12px;padding:4px 6px;margin:4px 0;white-space:nowrap}[role="tab"][aria-selected="false"]{background:transparent;border:1px solid var(--edge)}
     #result-workplace.maximized{position:fixed;inset:12px;z-index:1000;overflow:auto;background:var(--panel,#102238)} #result-workplace label{margin-top:10px}#result-workplace .fields{grid-template-columns:repeat(4,minmax(0,1fr))}#result-workplace.maximized #csv-table{height:max(280px,calc(100vh - 500px))}@media(max-width:800px){#result-workplace .fields{grid-template-columns:1fr 1fr}} #csv-table th{position:sticky;top:0} #csv-search-button,#csv-next{margin-right:.5rem;margin-top:.5rem}
+
+    /* Persistent workspace shell. Login keeps its independent, compact landing. */
+    body.authenticated{max-width:none;margin:0;padding:24px 32px 24px 264px}
+    body.authenticated>header{padding:12px 18px;margin:0 180px 20px 0;border-radius:12px;box-shadow:none}
+    body.authenticated>header h1{font-size:1.05rem;margin:0}
+    body.authenticated>header .eyebrow{font-size:.62rem;letter-spacing:.03em}
+    body.authenticated>header .brand{gap:12px}
+    body.authenticated>header .brand-icon{width:36px;height:40px;border-radius:8px}
+    body.authenticated>header .brand-icon svg{width:24px;height:30px}
+    body.authenticated>header .brand p,body.authenticated .hero-shield,body.authenticated .scope-label,body.authenticated .workspace-shield{display:none}
+    body.authenticated #language-controls{position:absolute;right:32px;top:20px;margin:0;gap:8px}
+    #language-controls label{margin:0}
+    #workspace{max-width:1100px;margin:0 auto;min-width:0}
+    #main-navigation{position:fixed;left:0;top:0;bottom:0;width:232px;z-index:50;display:flex;flex-direction:column;align-items:stretch;flex-wrap:nowrap;border-radius:0;border-width:0 1px 0 0;margin:0;padding:24px 16px;overflow:auto;gap:8px}
+    #main-navigation button{min-height:44px;text-align:left;margin:0;width:100%;white-space:normal}
+    #main-navigation button[aria-current=page]{border-left:4px solid #9bd4ff}
+    body.malware #main-navigation button[aria-current=page]{border-left-color:#ffb7cf}
+    #main-navigation #logout{margin-top:auto}
+    .sidebar-brand{font-size:.95rem;font-weight:700;margin:4px 4px 24px;overflow-wrap:anywhere}
+    #main-navigation #admin-status{font-size:.75rem;padding:8px;white-space:normal;margin:8px 0 0}
+    #nav-overview::before{content:'▷ ';}#nav-settings::before{content:'⚙ ';}#nav-logs::before{content:'≡ ';}#nav-results::before{content:'▦ ';}#nav-feedback::before{content:'✎ ';}
+    .page-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:24px 0 16px}
+    .page-heading h1{font-size:1.75rem;margin:0;letter-spacing:-.035em}
+    #preparation-view{display:flex;gap:4px;flex-wrap:wrap}
+    #preparation-view button{min-height:44px}
+    #preparation-view button[aria-pressed=false]{background:transparent;color:inherit;border-color:var(--edge);box-shadow:none}
+    #preparation-view button[aria-pressed=true]{outline:2px solid currentColor;outline-offset:2px}
+    #presentation-message:empty{display:none}#presentation-message{color:#ffe0b3}
+    #custom-options{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    #custom-options button{padding:6px 12px;min-height:44px}
+    #page-title:focus{outline:none}#onboarding summary{cursor:pointer}
+    #workspace .panel{margin:20px 0}#overview,#malware-overview{max-width:880px}
+    body.simple-view #overview [data-advanced],body.simple-view #malware-overview [data-advanced]{display:none!important}
+    #onboarding{font-size:.9rem}#onboarding ul{max-height:160px;overflow:auto}
+    #menu-toggle,#nav-backdrop{display:none}
+    #workspace input,#workspace select,#workspace button{min-height:44px}
+    #workspace input[type=checkbox]{min-height:0}
+    #workspace .fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+    #workspace .fields>*,#workspace .columns>*,#workspace .panel{min-width:0}
+    #workspace p,#workspace pre{overflow-wrap:anywhere}
+    body.settings-view .area-switch,body.feedback-view .area-switch{display:none}
+    @media(max-width:980px){body.authenticated{padding-left:252px;padding-right:20px}body.authenticated #language-controls{right:20px}}
+    @media(max-width:760px){
+      body.authenticated{padding:80px 16px 20px;margin:0}
+      body.authenticated>header{margin:0 0 16px;padding:12px}
+      body.authenticated #language-controls{top:12px;right:16px}
+      #menu-toggle{display:block;position:fixed;top:12px;left:16px;z-index:61;min-height:44px}
+      #main-navigation{visibility:hidden;width:min(280px,85vw);padding-top:78px;z-index:60}
+      body.nav-open #main-navigation{visibility:visible}
+      body.nav-open #nav-backdrop{display:block;position:fixed;inset:0;z-index:55;background:#000b;border:0;border-radius:0;box-shadow:none}
+      #workspace .fields,#workspace .columns{grid-template-columns:1fr}
+      .page-heading{align-items:flex-start}.page-heading h1{font-size:1.6rem}
+      #preparation-view{width:100%}#preparation-view button{flex:1;padding:10px 8px;font-size:.92rem}
+      .actions button{max-width:100%;white-space:normal}#workspace .panel{padding:20px}
+    }
   </style>
 </head>
 <body>
@@ -151,12 +206,12 @@
         <path d="m32 5 25 10v22c0 16-11 27-25 34C18 64 7 53 7 37V15Z" stroke="currentColor" stroke-width="2"/>
         <path d="M32 16v42M17 31h30" stroke="currentColor" stroke-opacity=".45"/><circle cx="32" cy="36" r="11" stroke="currentColor" stroke-width="1.5"/>
       </svg></span>
-      <div><div class="eyebrow" data-i18n="web.s001">Digital Forensics · Workspace 0.31.0 · Entwicklung</div>
+      <div><div class="eyebrow" data-i18n="web.s001">Digital Forensics · Workspace 0.32.0 · Entwicklung</div>
         <h1 data-i18n="web.s002">Post-Processing-Magic</h1>
         <p data-i18n="web.s003">Dein Arbeitsbereich für die forensische Nachbearbeitung.</p></div>
     </div>
   </header>
-  <div class="actions" style="justify-content:flex-end"><label for="interface-locale" data-i18n="interface.language">Sprache</label><select id="interface-locale" style="width:auto"><option value="de">Deutsch</option><option value="en">English</option></select></div>
+  <div id="language-controls" class="actions" style="justify-content:flex-end"><label for="interface-locale" data-i18n="interface.language">Sprache</label><select id="interface-locale" style="width:auto"><option value="de">Deutsch</option><option value="en">English</option></select></div>
   <section class="panel" id="login">
     <h2 data-i18n="web.s004">Mit dem Dienst verbinden</h2>
     <p data-i18n="web.s005">Der Access Token ist dein Zugangsschlüssel. Beim automatischen Browserstart
@@ -177,43 +232,57 @@
     </details>
   </section>
   <main id="workspace" hidden>
-    <aside id="onboarding" class="panel" hidden aria-labelledby="onboarding-title">
-      <div class="heading"><h2 id="onboarding-title" data-i18n="onboarding.title">Tools einrichten</h2><button id="onboarding-close" class="secondary" aria-label="Hinweis schließen" data-i18n-aria-label="onboarding.close">×</button></div>
-      <p data-i18n="onboarding.intro">Benötigte Tools richten sich nach deinen gespeicherten unterstützten Abläufen. Speichern und Sprachwechsel starten kein Programm und laden nichts herunter.</p>
-      <ul id="onboarding-required"></ul><p id="onboarding-empty"></p>
-      <h3 data-i18n="onboarding.optional">Optionale Ergebnis-Viewer</h3><ul id="onboarding-optional"></ul><p id="onboarding-scope" class="help"></p>
-      <div class="actions"><button id="onboarding-tools" class="secondary" data-i18n="onboarding.tools">Toolverwaltung öffnen</button><button id="onboarding-modes" class="secondary" data-i18n="onboarding.modes">Forensik-Modi öffnen</button></div>
-    </aside>
+    <button id="menu-toggle" class="secondary" aria-expanded="false" aria-controls="main-navigation" data-i18n="nav.menu">Menü</button>
+    <button id="nav-backdrop" tabindex="-1" aria-label="Menü schließen" data-i18n-aria-label="nav.close"></button>
+    <nav id="main-navigation" aria-label="Hauptnavigation" data-i18n-aria-label="label.x001">
+      <p class="sidebar-brand">Post-Processing-Magic</p>
+      <button id="nav-overview" aria-current="page" data-i18n="web.s017">Aufbereitung</button>
+      <button id="nav-settings" data-i18n="web.s018">Einstellungen</button>
+      <button id="nav-logs" data-i18n="web.s019">Logs</button><button id="nav-results" data-i18n="web.s020">Ergebnisse</button>
+      <button id="nav-feedback" data-i18n="web.s021">Feedback</button>
+      <button id="logout" class="secondary"  data-i18n="web.s022">Abmelden</button>
+    <p id="admin-status" class="badge" role="status" data-i18n="web.s016">Administratorstatus wird geprüft…</p>
+    </nav>
+    <div class="page-heading"><h1 id="page-title" tabindex="-1" data-i18n="page.overview">Aufbereitung</h1>
+      <div id="preparation-view" role="group" aria-label="Darstellung" data-i18n-aria-label="view.label">
+        <button id="view-simple" aria-pressed="true" data-i18n="view.simple">Einfach</button>
+        <button id="view-advanced" aria-pressed="false" data-i18n="view.advanced">Fortgeschritten</button>
+      </div>
+    </div>
+    <p id="presentation-message" tabindex="-1" role="status"></p>
+    <p id="custom-options" class="note" hidden><span data-i18n="view.custom">Angepasste Optionen aktiv</span> · <button id="show-custom-options" class="secondary" data-i18n="view.show">Anzeigen</button></p>
+    <button id="ongoing-job" class="secondary" hidden data-i18n="nav.ongoing">Auftrag läuft – zur Aufbereitung</button>
+
+
     <div class="area-switch" role="group" aria-label="Arbeitsbereich" data-i18n-aria-label="label.x000">
       <button id="area-forensics" aria-pressed="true" data-i18n="web.s013">♢ Forensik</button>
       <button id="area-malware" aria-pressed="false" data-i18n="web.s014">☠ Statische Malware-Analyse</button>
       <span id="area-note" class="help" data-i18n="web.s015">Getrennte Module und Aufträge · gemeinsame Tools</span>
     </div>
-    <p id="admin-status" class="badge" role="status" data-i18n="web.s016">Administratorstatus wird geprüft…</p>
-    <nav aria-label="Hauptnavigation" data-i18n-aria-label="label.x001">
-      <button id="nav-overview" aria-current="page" data-i18n="web.s017">Aufbereitung</button>
-      <button id="nav-settings" data-i18n="web.s018">Einstellungen</button>
-      <button id="nav-logs" data-i18n="web.s019">Logs</button><button id="nav-results" data-i18n="web.s020">Ergebnisse</button>
-      <button id="open-feedback" data-i18n="web.s021">Feedback</button>
-      <button id="logout" class="secondary" style="margin-left:auto" data-i18n="web.s022">Abmelden</button>
-    </nav>
+    <aside id="onboarding" class="panel" hidden aria-labelledby="onboarding-title">
+      <div class="heading"><h2 id="onboarding-title" data-i18n="onboarding.title">Tools einrichten</h2><button id="onboarding-close" class="secondary" aria-label="Hinweis schließen" data-i18n-aria-label="onboarding.close">×</button></div>
+      <p data-i18n="onboarding.intro">Benötigte Tools richten sich nach deinen gespeicherten unterstützten Abläufen. Speichern und Sprachwechsel starten kein Programm und laden nichts herunter.</p>
+      <details><summary data-i18n="onboarding.details">Einrichtung prüfen</summary><ul id="onboarding-required"></ul><p id="onboarding-empty"></p>
+      <h3 data-i18n="onboarding.optional">Optionale Ergebnis-Viewer</h3><ul id="onboarding-optional"></ul><p id="onboarding-scope" class="help"></p>
+      </details><div class="actions"><button id="onboarding-tools" class="secondary" data-i18n="onboarding.tools">Toolverwaltung öffnen</button><button id="onboarding-processing" class="secondary" data-i18n="onboarding.processing">Allgemeine Tools zuweisen</button><button id="onboarding-malware" class="secondary" data-i18n="onboarding.malware">Malware-Analyse-Module öffnen</button><button id="onboarding-modes" class="secondary" data-i18n="onboarding.modes">Forensik-Modi öffnen</button></div>
+    </aside>
     <div id="overview">
       <section class="panel">
         <h2 data-i18n="web.s023">Evidence aufbereiten</h2>
-        <p id="run-intro" class="note" data-i18n="web.s024">ZIP/KAPE-Test: Run lädt deine ZIP hoch und führt den ausgewählten
+        <p id="run-intro" data-advanced class="note" data-i18n="web.s024">ZIP/KAPE-Test: Run lädt deine ZIP hoch und führt den ausgewählten
           KAPE-Befehl aus. Das Original-ZIP bleibt erhalten.</p>
-        <label for="run-source-kind" data-i18n="web.s025">Quelle</label>
+        <div data-advanced><label for="run-source-kind" data-i18n="web.s025">Quelle</label>
         <select id="run-source-kind">
           <option value="upload" data-i18n="web.s026">Upload</option>
           <option value="local" data-i18n="web.s027">Lokale Datei auf dem Server</option>
-        </select>
-        <div class="grid"><div><label for="run-case" data-i18n="web.s028">Fallnummer (optional)</label><input id="run-case" maxlength="120" type="text"></div><div><label for="run-device" data-i18n="web.s029">Gerätename (optional)</label><input id="run-device" maxlength="120" type="text"></div></div>
+        </select></div>
+        <div class="fields" data-advanced><div><label for="run-case" data-i18n="web.s028">Fallnummer (optional)</label><input id="run-case" maxlength="120" type="text"></div><div><label for="run-device" data-i18n="web.s029">Gerätename (optional)</label><input id="run-device" maxlength="120" type="text"></div></div>
         <div id="upload-source">
         <label for="run-file" data-i18n="web.s030">1. ZIP-Datei auswählen</label>
         <input id="run-file" type="file" accept=".zip,application/zip" aria-describedby="run-file-message">
         <p id="run-file-message" class="help" role="status" data-i18n="web.s031">Noch keine Datei ausgewählt.</p>
         </div>
-        <div id="local-source" hidden>
+        <div id="local-source" data-advanced hidden>
           <label for="local-zip-path" data-i18n="web.s032">1. Lokale ZIP-Datei auf dem Server</label>
           <div class="path-input"><input id="local-zip-path" maxlength="4096" spellcheck="false" placeholder="D:\Sicherungen\KAPE-Target.zip">
             <button id="browse-evidence" class="secondary" data-i18n="web.s033">Durchsuchen…</button></div>
@@ -233,32 +302,33 @@
           </div>
         </div>
         <p id="run-mode-message" class="help" role="status"></p>
+<button id="open-settings" class="secondary" data-i18n="web.s053">Modi einrichten</button>
         <div class="actions">
           <button id="run-start" disabled aria-describedby="run-start-note" data-i18n="web.s041">Run</button>
-          <button id="preview-run" class="secondary" disabled data-i18n="web.s042">Ablauf ansehen</button>
+          <button id="preview-run" data-advanced class="secondary" disabled data-i18n="web.s042">Ablauf ansehen</button>
           <button id="cancel-run" class="danger" hidden data-i18n="web.s043">Abbrechen</button>
         </div>
-        <p id="run-start-note" class="help" data-i18n="web.s044">Limits werden geladen…</p>
-        <details class="run-placeholder">
+        <p id="run-start-note" data-advanced class="help" data-i18n="web.s044">Limits werden geladen…</p>
+        <details data-advanced class="run-placeholder">
           <summary data-i18n="web.s045">Archivoptionen</summary>
           <label><input id="allow-high-compression" type="checkbox" checked style="display:inline;width:auto">
             <span data-i18n="web.s046">Hohe Kompression zulassen</span></label>
           <p class="help" data-i18n="web.s047">Für bekannte eigene Sicherungen mit stark komprimierten Dateien (über 1000:1).
             Das eingestellte Entpacklimit sowie alle Pfad-/Speicherplatzprüfungen bleiben aktiv.</p>
         </details>
-        <label class="checkbox-inline"><input type="checkbox" id="create-result-zip" checked> <span data-i18n="web.s048">Ergebnis-ZIP direkt erstellen</span></label>
-        <p class="help" data-i18n="web.s049">Ohne ZIP steht der Ergebnisordner lokal bereit. Ein Archiv kannst du später ausdrücklich erstellen lassen, ohne erneute Analyse.</p>
+        <label data-advanced class="checkbox-inline"><input type="checkbox" id="create-result-zip" checked> <span data-i18n="web.s048">Ergebnis-ZIP direkt erstellen</span></label>
+        <p data-advanced class="help" data-i18n="web.s049">Ohne ZIP steht der Ergebnisordner lokal bereit. Ein Archiv kannst du später ausdrücklich erstellen lassen, ohne erneute Analyse.</p>
         <label id="upload-label" for="upload-progress" hidden data-i18n="web.s050">ZIP hochladen</label>
         <progress id="upload-progress" value="0" max="100" hidden></progress>
-        <details class="run-placeholder" style="margin-top:16px">
+        <details data-advanced class="run-placeholder" style="margin-top:16px">
           <summary data-i18n="web.s051">Modusauswahl prüfen</summary>
           <ul id="run-availability"></ul>
           <div class="actions">
             <button id="reload-run" class="secondary" data-i18n="web.s052">Modi aktualisieren</button>
-            <button id="open-settings" class="secondary" data-i18n="web.s053">Modi einrichten</button>
+
           </div>
         </details>
-        <section id="run-plan" class="mode-category" hidden>
+        <section data-advanced id="run-plan" class="mode-category" hidden>
           <h3 data-i18n="web.s054">Geplanter Ablauf</h3>
           <p id="run-plan-summary"></p>
           <p id="run-plan-folders" class="help"></p>
@@ -267,19 +337,19 @@
             angelegt und kein Befehl ausgeführt.</p>
         </section>
       </section>
-      <section class="panel">
+      <section class="panel" id="run-status-panel" hidden>
         <div class="heading"><h2 data-i18n="web.s057">Fortschritt</h2><span id="run-status" class="badge" data-i18n="web.s058">Nicht gestartet</span></div>
         <label for="run-total-progress" id="run-total-label" data-i18n="web.s059">Gesamt: 0 Befehle ausgeführt</label>
         <progress id="run-total-progress" value="0" max="1" aria-describedby="run-progress-note"></progress>
         <label id="run-command-label" for="run-command-progress" data-i18n="web.s060">Aktueller Befehl: noch keiner gestartet</label>
         <progress id="run-command-progress" value="0" max="100"></progress>
-        <p id="run-progress-note" class="run-status" role="status" data-i18n="web.s061">Noch keine Aufbereitung gestartet.</p><div id="run-inventory"></div>
+        <p id="run-progress-note" class="run-status" role="status" data-i18n="web.s061">Noch keine Aufbereitung gestartet.</p><div data-advanced id="run-inventory"></div>
         <details id="run-error-panel" hidden>
           <summary data-i18n="web.s062">Fehlerdetails</summary>
           <pre id="run-error-detail"></pre>
           <button id="open-job-logs" class="secondary" data-i18n="web.s063">Diesen Lauf in Logs öffnen</button>
         </details>
-        <details id="run-terminal" class="run-placeholder"><summary data-i18n="web.s064">Kommandozeile anzeigen</summary>
+        <details data-advanced id="run-terminal" class="run-placeholder"><summary data-i18n="web.s064">Kommandozeile anzeigen</summary>
           <pre id="run-live-command" class="terminal-command" data-i18n="web.s065">Kein Befehl gestartet.</pre>
           <div class="terminal-bar"><span data-i18n="web.s066">Terminal · Live-Ausgabe</span><button id="follow-output" class="secondary" data-i18n="web.s067">Live folgen: an</button></div>
           <pre id="run-live-output" class="terminal-output" aria-label="Live-Ausgabe" tabindex="0" data-i18n-aria-label="label.x003" data-i18n="web.s068">Noch keine Ausgabe.</pre>
@@ -289,8 +359,8 @@
         <div class="actions"><button id="download-evidences" disabled data-i18n="web.s070">Download Evidences</button>
           <button id="run-archive" class="secondary" disabled data-i18n="web.s071">Ergebnis-ZIP erstellen</button>
           <button id="run-report" class="secondary" disabled data-i18n="web.s072">Abschlussbericht herunterladen</button>
-          <button id="run-explorer" class="secondary" hidden disabled data-i18n="web.s073">Show in Explorer</button></div>
-        <p id="run-explorer-note" class="help" role="status"></p>
+          <button id="run-explorer" data-advanced class="secondary" hidden disabled data-i18n="web.s073">Show in Explorer</button></div>
+        <p data-advanced id="run-explorer-note" class="help" role="status"></p>
         <div class="actions"><button id="new-run" class="secondary" hidden data-i18n="web.s074">Neuen Lauf vorbereiten</button></div>
         <p id="run-download-note" class="help" data-i18n="web.s075">Der Download wird nach erfolgreicher Verarbeitung verfügbar.</p>
       </section>
@@ -299,23 +369,24 @@
       <section class="panel">
         <div class="heading"><div><div class="eyebrow" data-i18n="web.s076">STATIC ANALYSIS · OFFLINE</div><h2 data-i18n="web.s077">Verdächtige Datei untersuchen</h2></div><span class="badge" data-i18n="web.s078">☠ Keine Sample-Ausführung</span></div>
         <p class="note" data-i18n="web.s079">Eine einzelne PDF-, Office- oder Windows-PE-Datei als Daten untersuchen. Interne Prüfungen lesen Rohdaten; sie starten keine Samples, Makros oder eingebetteten Inhalte. Kein Cloud-Upload.</p>
-        <p class="help" data-i18n="web.s080">0.25 ist eine erste statische Triage, keine Sandbox und keine Malware-Erkennung. Befunde und Grenzen stehen im Bericht. Maximal 256 MiB pro Datei.</p>
-        <label for="static-source" data-i18n="web.s081">1. Quelle</label><select id="static-source"><option value="upload" data-i18n="web.s026">Upload</option><option value="local" data-i18n="web.s027">Lokale Datei auf dem Server</option></select>
-        <div class="grid"><div><label for="static-case" data-i18n="web.s028">Fallnummer (optional)</label><input id="static-case" maxlength="120" type="text"></div><div><label for="static-device" data-i18n="web.s029">Gerätename (optional)</label><input id="static-device" maxlength="120" type="text"></div></div>
+        <p data-advanced class="help" data-i18n="web.s080">0.25 ist eine erste statische Triage, keine Sandbox und keine Malware-Erkennung. Befunde und Grenzen stehen im Bericht. Maximal 256 MiB pro Datei.</p>
+        <div data-advanced><label for="static-source" data-i18n="web.s081">1. Quelle</label><select id="static-source"><option value="upload" data-i18n="web.s026">Upload</option><option value="local" data-i18n="web.s027">Lokale Datei auf dem Server</option></select></div>
+        <div class="fields" data-advanced><div><label for="static-case" data-i18n="web.s028">Fallnummer (optional)</label><input id="static-case" maxlength="120" type="text"></div><div><label for="static-device" data-i18n="web.s029">Gerätename (optional)</label><input id="static-device" maxlength="120" type="text"></div></div>
         <div id="static-upload"><label for="static-file" data-i18n="web.s082">Einzeldatei auswählen</label><input id="static-file" type="file" accept=".pdf,.exe,.dll,.sys,.scr,.doc,.docx,.docm,.xls,.xlsx,.xlsm,.ppt,.pptx,.pptm"></div>
-        <div id="static-local" hidden><label for="static-path" data-i18n="web.s083">Absoluter Dateipfad auf dem Server</label><div class="path-input"><input id="static-path" maxlength="4096" spellcheck="false"><button id="static-browse" class="secondary" data-i18n="web.s033">Durchsuchen…</button></div><p class="help" data-i18n="web.s084">Das Original bleibt erhalten. Eine lesend geprüfte Arbeitskopie wird unter neutralem Dateinamen erstellt.</p></div>
+        <div id="static-local" data-advanced hidden><label for="static-path" data-i18n="web.s083">Absoluter Dateipfad auf dem Server</label><div class="path-input"><input id="static-path" maxlength="4096" spellcheck="false"><button id="static-browse" class="secondary" data-i18n="web.s033">Durchsuchen…</button></div><p class="help" data-i18n="web.s084">Das Original bleibt erhalten. Eine lesend geprüfte Arbeitskopie wird unter neutralem Dateinamen erstellt.</p></div>
         <div class="fields"><div><label for="static-format" data-i18n="web.s085">2. Dateiformat</label><select id="static-format"><option value="PDF" data-i18n="web.s086">PDF</option><option value="OFFICE" data-i18n="web.s087">Office-Dokument</option><option value="EXE" data-i18n="web.s088">Windows Executable / PE</option></select></div>
         <div><label for="static-mode" data-i18n="web.s089">3. Aufwand / Modul</label><select id="static-mode"></select></div></div>
         <p id="static-ready" class="help" role="status"></p>
-        <label class="checkbox-inline"><input id="static-zip" type="checkbox" checked> <span data-i18n="web.s048">Ergebnis-ZIP direkt erstellen</span></label>
-        <div class="actions"><button id="static-run" disabled data-i18n="web.s090">Statische Analyse starten</button><button id="static-reload" class="secondary" data-i18n="web.s091">Module aktualisieren</button><button id="static-configure" class="secondary" data-i18n="web.s092">Module einrichten</button></div>
-        <details><summary data-i18n="web.s054">Geplanter Ablauf</summary><pre id="static-plan" data-i18n="web.s093">Noch kein Modul gewählt.</pre></details>
+        <label data-advanced class="checkbox-inline"><input id="static-zip" type="checkbox" checked> <span data-i18n="web.s048">Ergebnis-ZIP direkt erstellen</span></label>
+        <div class="actions"><button id="static-run" disabled data-i18n="web.s090">Statische Analyse starten</button><button id="static-reload" data-advanced class="secondary" data-i18n="web.s091">Module aktualisieren</button><button id="static-configure" class="secondary" data-i18n="web.s092">Module einrichten</button></div>
+        <details data-advanced><summary data-i18n="web.s054">Geplanter Ablauf</summary><pre id="static-plan" data-i18n="web.s093">Noch kein Modul gewählt.</pre></details>
       </section>
-      <section class="panel"><h2 id="static-status" data-i18n="web.s094">Noch keine Analyse gestartet</h2><p id="static-detail" role="status"></p><div id="static-findings"></div>
+      <section class="panel" id="static-status-panel" hidden><h2 id="static-status" data-i18n="web.s094">Noch keine Analyse gestartet</h2><p id="static-detail" role="status"></p><div data-advanced id="static-findings"></div>
         <label id="static-progress-label" for="static-progress" data-i18n="web.s095">0 Schritte abgeschlossen</label><progress id="static-progress" max="1" value="0"></progress>
-        <details><summary data-i18n="web.s096">Aktuelle Prüfung und Terminal anzeigen</summary><pre id="static-command" class="terminal-command" data-i18n="web.s097">Kein Schritt gestartet.</pre>
+        <details data-advanced><summary data-i18n="web.s096">Aktuelle Prüfung und Terminal anzeigen</summary><pre id="static-command" class="terminal-command" data-i18n="web.s097">Kein Schritt gestartet.</pre>
         <div class="terminal-bar"><span data-i18n="web.s098">Statische Prüfungen · Live-Ausgabe</span><button id="static-follow" class="secondary" data-i18n="web.s067">Live folgen: an</button></div><pre id="static-terminal" class="terminal-output" tabindex="0" aria-label="Ausgabe der statischen Analyse" data-i18n-aria-label="label.x005" data-i18n="web.s068">Noch keine Ausgabe.</pre></details>
-        <div class="actions"><button id="static-cancel" class="danger" disabled data-i18n="web.s043">Abbrechen</button><button id="static-download" disabled data-i18n="web.s099">Ergebnisse herunterladen</button><button id="static-report" class="secondary" disabled data-i18n="web.s100">HTML-Abschlussbericht</button><button id="static-archive" class="secondary" disabled data-i18n="web.s071">Ergebnis-ZIP erstellen</button><button id="static-explorer" class="secondary" hidden data-i18n="web.s073">Show in Explorer</button></div>
+        <div class="actions"><button id="static-cancel" class="danger" disabled data-i18n="web.s043">Abbrechen</button><button id="static-download" disabled data-i18n="web.s099">Ergebnisse herunterladen</button><button id="static-report" class="secondary" disabled data-i18n="web.s100">HTML-Abschlussbericht</button><button id="static-archive" class="secondary" disabled data-i18n="web.s071">Ergebnis-ZIP erstellen</button><button id="static-explorer" data-advanced class="secondary" hidden data-i18n="web.s073">Show in Explorer</button></div>
+        <p id="static-archive-note" class="help" role="status"></p>
         <p class="help" data-i18n="web.s101">Das Ergebnisarchiv enthält Prüfberichte, keine Kopie der verdächtigen Eingangsdatei. Frühere Analysen stehen im Logs-Tab dieses Bereichs.</p>
       </section>
     </div>
@@ -639,9 +710,8 @@
         </div>
       </section>
     </div>
-  </main>
-  <dialog id="feedback-dialog" aria-labelledby="feedback-title">
-    <div class="heading"><h2 id="feedback-title" data-i18n="web.s261">Feedback, Bugs und Wünsche</h2><button id="close-feedback" class="secondary" data-i18n="web.s262">Schließen</button></div>
+  <section id="feedback" class="panel" hidden aria-labelledby="feedback-title">
+    <div class="heading"><h2 id="feedback-title" data-i18n="web.s261">Feedback, Bugs und Wünsche</h2></div>
     <p class="help" data-i18n="web.s263">Wird lokal auf dem Server gespeichert. Kein Versand und keine automatischen Loganhänge.
       Beim Export werden deine eingegebenen Texte unverändert übernommen.</p>
     <form id="feedback-form">
@@ -653,7 +723,9 @@
     </form>
     <div class="heading" style="margin-top:24px"><h3 data-i18n="web.s270">Letzte 100 lokale Einträge</h3><button id="export-feedback" class="secondary" data-i18n="web.s271">Feedback exportieren</button></div>
     <div id="feedback-list" style="max-height:260px;overflow:auto"></div>
-  </dialog>
+  </section>
+  </main>
+
   <dialog id="diagnostics-dialog" aria-labelledby="diagnostics-title">
     <div class="heading"><h2 id="diagnostics-title" data-i18n="web.s272">Diagnosepaket – Vorschau</h2><button id="close-diagnostics" class="secondary" data-i18n="web.s262">Schließen</button></div>
     <p id="diagnostics-message"></p><div id="diagnostics-files"></div>
@@ -694,10 +766,11 @@
   <script>
     const byId = id => document.getElementById(id);
     function effortLabel(value) {return value === 'schnell' ? t('effort.fast') : value === 'langsam' ? t('effort.slow') : value;}
+    let onboardingDismissed=true;
     async function loadOnboarding() {
       const requestToken = token, data = await api('/api/settings/onboarding');
       if (requestToken !== token || byId('workspace').hidden) return;
-      byId('onboarding').hidden = data.dismissed;
+      onboardingDismissed=data.dismissed; byId('onboarding').hidden=data.dismissed || currentPage!=='overview';
       byId('onboarding-required').replaceChildren(); byId('onboarding-optional').replaceChildren();
       for (const item of data.required) {
         const row = document.createElement('li');
@@ -735,12 +808,13 @@
     }
     function hideWorkspace() {
       if (typeof clearStaticSession === 'function') clearStaticSession();
-      for (const id of ['feedback-dialog','diagnostics-dialog']) byId(id).close();
+      for (const id of ['diagnostics-dialog']) byId(id).close();
       byId('feedback-list').replaceChildren(); byId('diagnostics-files').replaceChildren();
       byId('feedback-form').reset(); diagnosticsTicket = null;
       resetExplorer('run'); resetExplorer('log');
       closePicker();
       byId('workspace').hidden = true; byId('login').hidden = false;
+      document.body.classList.remove('authenticated'); closeWorkspaceMenu(); runTouched=false;
       byId('details').replaceChildren(); byId('tools-list').replaceChildren();
       setUiText(byId('token-file'), () => ''); setUiText(byId('current-token'), () => '');
       byId('current-token').hidden = true;
@@ -788,6 +862,7 @@
       const data = await api('/api/system');
       sessionStorage.setItem('ppm-token', token); byId('token').value = '';
       byId('login').hidden = true; byId('workspace').hidden = false;
+      document.body.classList.add('authenticated');
       byId('details').replaceChildren(); setUiText(byId('token-file'), () => data.token_file);
       for (const [label,value] of [[t("label.x012"),data.version],[t("label.x013"),data.mode],
         [t("label.x014"),data.administrator ? t("label.x015") : t("web.s289")],
@@ -802,14 +877,16 @@
       if (typeof updateWorkspacePresentation === 'function') updateWorkspacePresentation();
       byId('malware-overview').hidden = workspaceArea !== 'malware' || page !== 'overview';
       byId('overview').hidden = page !== 'overview'; byId('settings').hidden = page !== 'settings';
-      byId('logs').hidden = page !== 'logs'; byId('results').hidden = page !== 'results';
-      for (const name of ['overview','settings','logs','results']) {
+      byId('logs').hidden = page !== 'logs'; byId('results').hidden = page !== 'results'; byId('feedback').hidden = page !== 'feedback';
+      updatePreparationPresentation(); closeWorkspaceMenu(); byId('page-title').focus();
+      for (const name of ['overview','settings','logs','results','feedback']) {
         if (name === page) byId('nav-'+name).setAttribute('aria-current','page');
         else byId('nav-'+name).removeAttribute('aria-current');
       }
       if (page === 'settings') {preparationRequest++; await showSettings(currentSettingsSection);}
       else if (page === 'logs') {preparationRequest++; await loadJobLogs();}
       else if (page === 'results') {preparationRequest++; await loadResultJobs();}
+      else if (page === 'feedback') {preparationRequest++; await loadFeedback();}
       else if (workspaceArea === 'malware') {byId('overview').hidden = true; await loadStaticPreparation();}
       else await loadPreparation();
     }
@@ -842,11 +919,11 @@
       byId('preview-run').disabled = runBusy || !validFile || !mode || byId('run-format').value !== 'ZIP';
       byId('run-start').disabled = byId('preview-run').disabled || !processingAvailable;
       for (const id of ['run-case','run-device','run-file','run-format','run-effort','run-source-kind','local-zip-path','browse-evidence','allow-high-compression','create-result-zip']) byId(id).disabled = runBusy;
+      if (typeof updatePreparationPresentation==='function') updatePreparationPresentation();
     }
     async function loadPreparation() {
       const previous = byId('run-effort').value, request = ++preparationRequest;
-      preparationModes = []; preparationTools = [];
-      byId('run-effort').replaceChildren(new Option(t("web.s040"),''));
+      // Keep the selected draft while a catalog refresh is in flight, including page changes.
       byId('run-effort').disabled = true; setUiText(byId('run-mode-message'), () => t("web.s296"), true);
       byId('run-availability').replaceChildren(); updatePreparation();
       try {
@@ -1430,6 +1507,7 @@
       const mode = selectedPreparationMode(), file = byId('run-file').files[0];
       const local = byId('run-source-kind').value === 'local';
       if (!mode || (!local && !file) || runBusy || !processingAvailable) return;
+      runTouched=true;
       const allowCompression = byId('allow-high-compression').checked;
       eventGeneration++; eventController?.abort(); activeJobId = null;
       sessionStorage.removeItem('ppm-job-id'); setRunBusy(true);
@@ -1471,7 +1549,7 @@
     byId('new-run').addEventListener('click', () => {
       resetExplorer('run');
       eventGeneration++; eventController?.abort(); clearTimeout(eventRefreshTimer); eventRefreshTimer = null;
-      activeJobId = null; sessionStorage.removeItem('ppm-job-id'); setRunBusy(false);
+      activeJobId = null; runTouched=false; sessionStorage.removeItem('ppm-job-id'); setRunBusy(false);
       byId('run-error-panel').hidden = true; byId('new-run').hidden = true;
       byId('run-inventory').replaceChildren(); byId('log-inventory').replaceChildren(); resetCSV(null);
       setUiText(byId('run-status'), () => t("web.s058"), true); setUiText(byId('run-progress-note'), () => t("web.s428"), true);
@@ -1739,10 +1817,7 @@
       }
       if (!data.items.length) setUiText(byId('feedback-list'), () => t("web.s462"), true);
     }
-    byId('open-feedback').addEventListener('click',() => run(async () => {
-      setUiText(byId('feedback-message'), () => ''); byId('feedback-dialog').showModal(); await loadFeedback();
-    }));
-    byId('close-feedback').addEventListener('click',() => byId('feedback-dialog').close());
+    byId('nav-feedback').addEventListener('click',()=>run(()=>navigate('feedback')));
     byId('feedback-form').addEventListener('submit',event => {
       event.preventDefault(); run(async () => {
         try {
@@ -1967,10 +2042,12 @@
       token = ''; sessionStorage.removeItem('ppm-token'); hideWorkspace(); message('Abgemeldet.');
     });
     byId('onboarding-close').addEventListener('click',() => run(async () => {
-      await api('/api/settings/interface','PUT',{onboarding_dismissed:true}); byId('onboarding').hidden=true;
+      await api('/api/settings/interface','PUT',{onboarding_dismissed:true}); onboardingDismissed=true; byId('onboarding').hidden=true;
     }));
-    for (const [id,section] of [['onboarding-tools','tools'],['onboarding-modes','modes']]) byId(id).addEventListener('click',() => run(async () => {
+    for (const [id,section] of [['onboarding-tools','tools'],['onboarding-modes','modes'],['onboarding-processing','processing'],['onboarding-malware','malware']]) byId(id).addEventListener('click',() => run(async () => {
       await navigate('settings'); await showSettings(section);
+      const heading=byId(section==='malware'?'malware-settings':section==='processing'?'processing-settings':section==='modes'?'mode-settings':'tool-settings').querySelector('h2');
+      heading?.setAttribute('tabindex','-1'); heading?.focus();
     }));
     byId('interface-locale').addEventListener('change',() => run(async () => {
       const previous=I18n.locale, choice=byId('interface-locale').value;
@@ -1993,12 +2070,13 @@
           else if(currentSettingsSection==='transfer' && !byId('config-preview').hidden) {invalidateImport();setUiText(byId('config-message'),()=>t('interface.preview_again'),true);}
         }
         if(byId('path-picker').open && pickerFolder) await browsePath(pickerFolder,byId('picker-search').value);
-        if(byId('feedback-dialog').open) await loadFeedback();
+        if(currentPage==='feedback') await loadFeedback();
       } catch(error) {byId('interface-locale').value=I18n.locale===choice ? choice : previous; throw error;}
     }));
     I18n.ready.then(() => {if (token) run(async () => {await connect(); await navigate('overview');});}).catch(error => message(error.message,true));
   </script>
   <script src="/evidence-details.js"></script>
   <script src="/malware.js"></script>
+  <script src="/presentation.js"></script>
 </body>
 </html>

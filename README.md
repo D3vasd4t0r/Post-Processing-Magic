@@ -2,18 +2,24 @@
 
 KI-gestütztes Entwicklungsprojekt für die lokale Nachbearbeitung von DFIR-Evidencen unter Windows.
 
-**Dieser Entwicklungszweig: 0.31.0, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
+**Dieser Entwicklungszweig: 0.32.0, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
 
-[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.31.0](docs/releases/0.31.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
+[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.32.0](docs/releases/0.32.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
 
-## Was ist neu in 0.31.0?
+## Was ist neu in 0.32.0?
 
-- **PE-Importe:** deklarierte DLLs, Funktionsnamen und Ordinalimporte für PE32/PE32+, mit begrenzten Lese-/Eintragsbudgets und sichtbaren Fehler-/Teilumfangsgründen. Keine DLL wird geladen, keine Abhängigkeit aufgelöst.
-- **PE-Ressourcen und Overlay:** begrenzte Ressourcenbaum-Metadaten und Dateibereiche hinter dem Image. Strukturelle Zertifikatbereiche werden getrennt; keine Aussage über Signaturgültigkeit oder Vertrauen.
-- **Indikatoren mit Quellen:** URLs, Domains, IPs und Windows-/UNC-Pfade aus bereits erfassten begrenzten Rohtexten, dedupliziert mit Quellschritt und Byteoffset, soweit präzise bestimmbar. Textansicht, Kopieren und geschützter JSON-Export, keine Netzwerkauflösung oder anklickbaren Ziele.
-- **Direkte KAPE-Dateinachweise:** ausgewählte, eindeutig auflösbare Moduldateien sowie bekannte direkte Helper-/RECmd-Regeldateien mit SHA-256 im Auftragssnapshot. Änderungen erfasster Dateien stoppen vor dem Toolstart. Ungeklärte Abhängigkeiten bleiben sichtbar und sind kein neuer Pflicht-Preflight.
+- **Linke Hauptnavigation:** Aufbereitung als Startseite, Einstellungen, Logs, Ergebnisse und Feedback als eigene Seite. Beschriftetes Menü für schmale Fenster, aktive Seitenkennung und Tastaturbedienung.
+- **Einfach / Fortgeschritten:** getrennt je Arbeitsbereich browserlokal merken; neue Browser beginnen Einfach. Upload, Format, Aufwand und Run im Mittelpunkt. Status, Fehler, Abbruch und verfügbare Berichte/ZIPs bleiben erreichbar.
+- **Eingaben bleiben erhalten:** Umschalten verändert weder ausgewählte Dateien/Profile noch Fallnummer, Gerät, Archivoptionen oder laufende Aufträge. Angepasste versteckte Optionen zeigen einen Hinweis. Eine lokale Quelle verhindert den Wechsel nach Einfach, bis bewusst Upload gewählt wird. ZIP-aus bleibt aus; nachträgliches Archivieren erfordert einen eigenen Klick.
+- **Gezielte Einrichtung:** zusätzliche Direktwege zu Allgemein und Malware-Modulen. Die bekannte Hilfe bleibt schließbar; ihre Detailprüfung lässt sich einklappen. Malware-Inlinebefunde erscheinen in Fortgeschritten, der vollständige Bericht bleibt auch in Einfach verfügbar.
 
 ## Funktionsumfang
+
+### Bedienoberfläche
+
+- Eine beständige linke Navigation mit fünf eigenen Seiten; Feedbackentwürfe und Aufbereitungseingaben bleiben beim Seitenwechsel erhalten. Uploads und Aufträge laufen weiter. Ein Hinweis auf anderen Seiten führt zurück zur laufenden Aufbereitung.
+- Blaue Forensik mit Schild und rote statische Analyse mit Totenkopf; gemeinsame Einstellungen und Feedback im neutralen blauen Rahmen. DE/EN und mobile Navigation mit Escape/Fokusrückgabe.
+- Einfach/Fortgeschritten sind reine Darstellungen, keine Analyseprofile. Quellen, Optionen, Job-Snapshots und Ausführungsgrenzen ändern sich dadurch nicht. Browserpräferenzen gehören nicht in den portablen Konfigurationsexport.
 
 ### Gemeinsame Einstellungen und Konfiguration
 
@@ -41,13 +47,13 @@ KI-gestütztes Entwicklungsprojekt für die lokale Nachbearbeitung von DFIR-Evid
 ### Serverbetrieb und Wartung
 
 - **Diagnosepaket mit Vorschau:** im Serverfenster und unter Einstellungen → Verarbeitung. App-/Systemversion, Server-/Workerstatus, Auftragszähler und bereinigte technische Ereignisse. Alle enthaltenen Texte vor dem ZIP-Export prüfen. Keine Tokens, Evidenzen, Ergebnisse, Toolbefehle/-ausgaben oder Feedbacktexte. Unbekannte Logdetails werden ausgelassen; Export entspricht exakt der Vorschau. Kein automatischer Versand.
-- **Lokales Feedback:** Button oben in der Web-Leiste für Bugs, Wünsche und allgemeines Feedback. Lokal speichern, letzte 100 Einträge ansehen, bis zu 1.000 Einträge als JSON exportieren. Eingegebene Texte bleiben unverändert; keine automatischen Anhänge oder Übermittlung.
+- **Lokales Feedback:** eigene Seite in der Hauptnavigation für Bugs, Wünsche und allgemeines Feedback. Lokal speichern, letzte 100 Einträge ansehen, bis zu 1.000 Einträge als JSON exportieren. Eingegebene Texte bleiben unverändert; keine automatischen Anhänge oder Übermittlung.
 - **Servereinstellungen im Desktopfenster:** Port und lokalen/LAN-Zugriff speichern. Änderungen nach bewusstem Server-Stopp und erneutem Start. LAN verwendet Anmeldung und automatisch erzeugtes selbstsigniertes HTTPS; keine automatische Firewalländerung.
 - **Technische Logrotation:** Größe pro Datei 0,1–100 MB und 1–20 ältere Dateien einstellen. Wirksam nach Serverneustart; ausschließlich technische Serverlogs. Auftragslogs, Audit und Evidencen bleiben getrennt.
 
 ### Ergebnisvorschau und Eingangsübersicht
 
-- CSV- und XLSX-Dateien erfolgreicher Aufträge im eigenen Ergebnis-Reiter begrenzt filtern und sortieren; XLSX mit Blattwahl. Alle Werte werden als Text angezeigt; kein Excel-Start, keine Formelauswertung. Suche gilt nur fuer den begrenzten Ausschnitt.
+- CSV- und XLSX-Dateien erfolgreicher Aufträge in getrennten Ergebnis-Unterreitern begrenzt filtern und per Spaltenüberschrift sortieren; XLSX mit Blattwahl. Alle Werte werden als Text angezeigt; kein Excel-Start, keine Formelauswertung. Suche gilt nur fuer den begrenzten Ausschnitt.
 - Unveraenderliche Metadatenuebersicht des frisch entpackten Forensik-Eingangs, vor Toolbefehlen. Dateinamens-/Pfadheuristik, keine Aussage zur Vollstaendigkeit der Sicherung oder zum Ursprungssystem. Altauftraege zeigen Nicht erfasst.
 - Optionale Fallnummer und Geraetename je Auftrag, unveraenderlich gespeichert und in Suche/Details/Berichten angezeigt. Forensik-Blockzeitlimit pro Befehl, inklusive Konfigurationstransfer und Altbestandsschutz.
 

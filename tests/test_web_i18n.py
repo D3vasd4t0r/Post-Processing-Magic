@@ -88,6 +88,10 @@ def test_static_source_inventory_has_no_unmarked_visible_german():
 
 
 def test_executable_locale_persistence_main_paths_and_raw_integrity(tmp_path):
+    run_web_harness(tmp_path, NODE_HARNESS)
+
+
+def run_web_harness(tmp_path, harness):
     node = shutil.which('node')
     if not node:
         pytest.skip('Node is required for the executable browser-logic harness')
@@ -97,11 +101,12 @@ def test_executable_locale_persistence_main_paths_and_raw_integrity(tmp_path):
     payload = {'nodes': inventory.nodes, 'catalogs': catalogs(),
                'i18n': (WEB / 'i18n.js').read_text(encoding='utf-8'),
                'main': html.split('<script>')[1].split('</script>')[0],
-               'malware': (WEB / 'malware.js').read_text(encoding='utf-8')}
+               'malware': (WEB / 'malware.js').read_text(encoding='utf-8'),
+               'presentation': (WEB / 'presentation.js').read_text(encoding='utf-8')}
     data = tmp_path / 'source.json'
     data.write_text(json.dumps(payload), encoding='utf-8')
     script = tmp_path / 'check.cjs'
-    script.write_text(NODE_HARNESS, encoding='utf-8')
+    script.write_text(harness, encoding='utf-8')
     result = subprocess.run([node, str(script), str(data)], capture_output=True, text=True,
                             encoding='utf-8', timeout=30, check=False)
     assert result.returncode == 0, result.stdout + result.stderr
@@ -112,7 +117,7 @@ NODE_HARNESS = r"""
 const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
 const input=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
 class Element {
-  constructor(tag='div',attrs={},text='') {this.tagName=tag;this.attrs={...attrs};this.textContent=text;this.value=attrs.value||'';this.id=attrs.id||'';this.hidden='hidden' in attrs;this.disabled='disabled' in attrs;this.children=[];this.listeners={};this.dataset={};this.style={};this.files=[];this.isConnected=true;this.classList={toggle:()=>false,add:()=>{},remove:()=>{}};}
+  constructor(tag='div',attrs={},text='') {this.tagName=tag;this.attrs={...attrs};this.textContent=text;this.value=attrs.value||'';this.id=attrs.id||'';this.hidden='hidden' in attrs;this.disabled='disabled' in attrs;this.checked='checked' in attrs;this.children=[];this.listeners={};this.dataset={};this.style={};this.files=[];this.isConnected=true;const classes=new Set();this.classList={toggle:(key,on)=>{const active=on===undefined?!classes.has(key):on;if(active)classes.add(key);else classes.delete(key);return active;},add:key=>classes.add(key),remove:key=>classes.delete(key),contains:key=>classes.has(key)};}
   get options(){return this.children;} get selectedOptions(){return this.options.filter(n=>n.value===this.value);}
   setAttribute(k,v){this.attrs[k]=String(v);} getAttribute(k){return this.attrs[k]??null;} removeAttribute(k){delete this.attrs[k];}
   append(...items){this.children.push(...items);} replaceChildren(...items){this.children=[...items];this.textContent='';}
@@ -125,7 +130,7 @@ const get=id=>{if(!ids.has(id))ids.set(id,new Element());return ids.get(id);};
 for(const [select,values] of [['mode-effort',['schnell','Medium','langsam']],['static-module-effort',['schnell','Medium','langsam']]])get(select).children=values.map(v=>new Element('option',{value:v},v));
 get('run-source-kind').value='upload';get('static-source').value='upload';get('static-format').value='PDF';
 const extra=new Map();
-const doc={documentElement:{lang:'de'},body:new Element('body'),getElementById:get,
+const doc={documentElement:{lang:'de'},body:new Element('body'),getElementById:get,addEventListener:()=>{},
  querySelectorAll:q=>q.includes('[data-i18n]')?elements.filter(n=>Object.keys(n.attrs).some(k=>k.startsWith('data-i18n'))):q==='[data-cleanup]'?elements.filter(n=>'data-cleanup' in n.attrs):[],
  querySelector:q=>{if(!extra.has(q))extra.set(q,new Element());return extra.get(q);},createElement:t=>new Element(t),createTextNode:text=>new Element('text',{},text)};
 const local=new Map([['ppm-locale','en']]),session=new Map();
@@ -147,7 +152,7 @@ async function fetch(url,opts={}) {requests.push([url,opts.method||'GET']);let b
  return {ok:true,status:200,json:async()=>JSON.parse(JSON.stringify(body))};
 }
 const context={document:doc,fetch,localStorage:store(local),sessionStorage:store(session),location:{hash:'',pathname:'/'},history:{replaceState:()=>{}},console,Intl,URL,URLSearchParams,Blob,TextDecoder,AbortController,crypto:require('crypto').webcrypto,setTimeout:()=>0,clearTimeout:()=>{},Option:function(text,value){return new Element('option',{value},text);},confirm:()=>false};
-vm.createContext(context);vm.runInContext(input.i18n+'\n'+input.main+'\n'+input.malware,context);
+vm.createContext(context);vm.runInContext(input.i18n+'\n'+input.main+'\n'+input.malware+'\n'+input.presentation,context);
 async function evaluate(code){return vm.runInContext('(async()=>{'+code+'})()',context);}
 (async()=>{
  await evaluate('await I18n.ready;');assert.equal(doc.documentElement.lang,'en');assert.equal(get('nav-settings').textContent,'Settings');

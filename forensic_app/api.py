@@ -171,6 +171,11 @@ def create_app(storage: Storage, token: str, *, lan: bool = False, processing: b
     def i18n_script():
         return FileResponse(Path(__file__).parent/'web'/'i18n.js',media_type='text/javascript')
 
+    @app.get('/presentation.js', include_in_schema=False)
+    def presentation_script():
+        return FileResponse(Path(__file__).parent / 'web' / 'presentation.js',
+                            media_type='text/javascript')
+
     @app.get('/locales/web/{locale}.json',include_in_schema=False)
     def web_catalog(locale: Literal['de','en']):
         return FileResponse(Path(__file__).parent/'locales'/('web.'+locale+'.json'),media_type='application/json')
