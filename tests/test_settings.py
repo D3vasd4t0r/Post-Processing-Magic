@@ -57,3 +57,17 @@ def test_settings_require_auth_and_reject_invalid_paths(tmp_path):
         assert client.post("/api/settings/tools", json={**value, "name": "  "}).status_code == 422
         assert client.post("/api/settings/tools", json={**value, "command": "anything"}).status_code == 422
         assert client.get("/api/settings/tools").json()["tools"] == []
+
+
+def test_legacy_only_tool_links_are_not_loaded_or_used_to_block_tools(tmp_path):
+    storage = Storage(tmp_path / 'legacy')
+    storage.initialize()
+    storage.save_tool('legacy-tool', 'Kept generic tool', str(tmp_path / 'program.exe'), create=True)
+    with sqlite3.connect(storage.database) as connection:
+        connection.execute('CREATE TABLE malware_modes(id TEXT PRIMARY KEY, name TEXT, body_json TEXT)')
+        connection.execute("INSERT INTO malware_modes VALUES ('passive', 'Legacy', 'malformed inactive payload')")
+    assert storage.list_tools()[0]['id'] == 'legacy-tool'
+    assert storage.tool_usage('legacy-tool') == []
+    storage.delete_tool('legacy-tool')
+    with sqlite3.connect(storage.database) as connection:
+        assert connection.execute('SELECT body_json FROM malware_modes').fetchone()[0] == 'malformed inactive payload'

@@ -31,9 +31,6 @@ def tool_guidance(storage):
                 required.append({'mode_name':mode['name'],'step_name':step['name'],
                                  'tool_name':tool['name'] if tool else step.get('tool_hint',''),
                                  'status':status})
-    names={tool['name'].casefold() for tool in tools.values()}
     return {'dismissed':InterfacePreferences(storage).get()['onboarding_dismissed'],
             'required':required[:100],'partial':len(required)>100,'skipped_unsupported':skipped,
-            'optional':[{'name':name,'configured':name.casefold() in names}
-                        for name in ['Timeline Explorer','EZViewer']],
-            'scope':'supported_forensics_and_optional_result_viewers'}
+            'scope':'supported_forensics'}

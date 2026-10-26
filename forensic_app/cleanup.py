@@ -56,11 +56,13 @@ class Cleanup:
     def idle(self, c):
         from forensic_app.server_control import accepting
         accepting(c)
+        if c.execute("SELECT 1 FROM source_streams WHERE expires>? LIMIT 1", (time.time(),)).fetchone():
+            raise HTTPException(409, 'An original source is being downloaded. Retry after it finishes.')
         if c.execute('SELECT active FROM cleanup_state WHERE id=1').fetchone()[0]:
             raise HTTPException(409,ErrorText('error.90c97e3b2151'))
-        if c.execute("SELECT count(*) FROM archive_requests WHERE status IN ('queued','running')").fetchone()[0]:
+        if c.execute("SELECT count(*) FROM archive_requests WHERE status IN ('queued','running') AND job_id IN (SELECT id FROM jobs WHERE COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics')").fetchone()[0]:
             raise HTTPException(409,ErrorText('error.5b20cd9b1495'))
-        if c.execute('SELECT count(*) FROM jobs WHERE status NOT IN (?,?,?,?)',TERMINAL).fetchone()[0]:
+        if c.execute("SELECT count(*) FROM jobs WHERE status NOT IN (?,?,?,?) AND COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics'",TERMINAL).fetchone()[0]:
             raise HTTPException(409,ErrorText('error.da5a487eb1b1'))
 
     def checked(self, path, root=None):
@@ -88,6 +90,8 @@ class Cleanup:
             plan = json.loads(body)
             if plan.get('source_kind') == 'local':
                 protected.append(Path(plan['local_input']['path']).resolve())
+            if plan.get('workspace', 'forensics') != 'forensics':
+                continue
             if job_id and ident != job_id:
                 continue
             relative = PureWindowsPath(ModeDraft.job_relative_folder(plan['mode'].get('output_folder','PostMortem')))

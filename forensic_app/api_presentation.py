@@ -10,7 +10,6 @@ from pathlib import Path
 
 from forensic_app.app_errors import ErrorText
 from forensic_app.app_errors import catalog as error_catalog
-from forensic_app.report_i18n import ReportText
 
 _FIXED = frozenset({
     '/api/jobs', '/api/jobs/catalog', '/api/settings/tools',
@@ -18,7 +17,7 @@ _FIXED = frozenset({
     '/api/settings/storage', '/api/settings/storage/scan',
     '/api/settings/cleanup/preview', '/api/settings/configuration/preview',
 })
-_JOB = re.compile(r'/api/jobs/[^/]+(?:/(?:explorer|viewer|preview|csv|summary))?\Z')
+_JOB = re.compile(r'/api/jobs/[^/]+(?:/(?:explorer|source))?\Z')
 _TOOL = re.compile(r'/api/settings/tools/[^/]+\Z')
 
 
@@ -46,7 +45,6 @@ class Presentation:
         self.locale=locale
         self.de=catalog('de')
         self.messages=catalog(locale)
-        self.report=ReportText(locale)
 
     def exact(self,value,prefix):
         if not isinstance(value,str):
@@ -94,16 +92,6 @@ class Presentation:
                     detail['message']=message
                     if 'error' in job:
                         job['error']=message
-        inventory=job.get('input_inventory')
-        if isinstance(inventory,dict):
-            if 'scope_note' in inventory:
-                inventory['scope_note']=self.report.known_text(inventory['scope_note'],prefix='inventory.scope')
-            if isinstance(inventory.get('groups'),dict):
-                for group in inventory['groups'].values():
-                    if isinstance(group,dict) and 'label' in group:
-                        group['label']=self.report.known_text(group['label'],prefix='inventory.group.')
-            if isinstance(inventory.get('partial_reasons'),list):
-                inventory['partial_reasons']=[self.report('inventory.reason.'+v) if isinstance(v,str) and 'inventory.reason.'+v in self.report.de else v for v in inventory['partial_reasons']]
 
 
 def present_response(path,body,locale):
@@ -132,25 +120,10 @@ def present_response(path,body,locale):
     elif route=='/api/jobs':
         for job in result.get('jobs',[]):
             p.job(job)
-    elif route.endswith('/summary') and route.startswith('/api/jobs/'):
-        for summary in result.get('finding_summaries',[]):
-            if isinstance(summary,dict) and isinstance(summary.get('inspector'),dict):
-                inspector=summary['inspector']
-                if all(key in inspector for key in ('name','scope','status','limitations')):
-                    # Status remains a stable code for the web's own localized status UI.
-                    localized=p.report.inspector(inspector)
-                    for key in ('name','scope','limitations'):
-                        inspector[key]=localized[key]
-    elif route.endswith(('/explorer','/viewer')) and route.startswith('/api/jobs/'):
-        prefix='explorer.' if route.endswith('/explorer') else 'viewer.'
+    elif route.endswith('/explorer') and route.startswith('/api/jobs/'):
         for field in ('reason','message'):
             if field in result:
-                result[field]=p.application_error(p.exact(result[field],prefix))
-    elif route.endswith(('/csv','/preview')) and route.startswith('/api/jobs/'):
-        if 'note' in result:
-            result['note']=p.exact(result['note'],'preview.')
-        if 'partial_reason' in result:
-            result['partial_reason']=p.exact(result['partial_reason'],'preview.')
+                result[field]=p.application_error(p.exact(result[field],'explorer.'))
     elif route.startswith('/api/jobs/'):
         p.job(result)
     elif route.startswith('/api/settings/tools'):

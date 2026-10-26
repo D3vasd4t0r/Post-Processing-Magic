@@ -32,12 +32,12 @@ def test_onboarding_auth_assignment_program_and_persistent_dismissal(tmp_path):
             assert client.get(url,headers={'Authorization':''}).status_code==401
         hint=client.get('/api/settings/onboarding').json()
         assert not hint['dismissed'] and hint['required'][0]['status']=='missing_assignment'
-        assert [item['name'] for item in hint['optional']]==['Timeline Explorer','EZViewer']
+        assert 'optional' not in hint and hint['scope']=='supported_forensics'
         assert client.put('/api/settings/interface',json={'locale':'en'}).status_code==200
         assert client.put('/api/settings/interface',json={'locale':'../de'}).status_code==422
         assert client.put('/api/settings/interface',json={'onboarding_dismissed':True}).status_code==200
         assert client.get('/api/settings/onboarding').json()['dismissed']
         after=client.get('/api/settings/configuration/export').json()
-        for key in ['tools','modes','malware_modes','limits']:assert after[key]==original[key]
+        for key in ['tools','modes','limits']:assert after[key]==original[key]
         with sqlite3.connect(storage.database) as c:assert c.execute('SELECT count(*) FROM jobs').fetchone()[0]==0
     assert InterfacePreferences(storage).get()=={'locale':'en','onboarding_dismissed':True}

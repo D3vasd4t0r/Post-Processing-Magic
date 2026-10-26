@@ -63,7 +63,8 @@ def test_workspace_snapshot_original_locations_and_report_hashes(setup,tmp_path)
         assert 'Empty folder' in report['directories']
         assert 'Targets/C' in report['work_directories'] and 'PostMortem/Empty folder' in report['work_directories']
         assert report['command_runs'][0]['exit_code'] == 0
-        assert report['command_runs'][0]['ended_at_utc'] >= report['command_runs'][0]['started_at_utc']
+        assert 'command' not in report['command_runs'][0]
+        assert 'command' not in report['configuration']
         with ZipFile(io.BytesIO(content)) as archive:
             assert '<h2>Hashwerte</h2>' in archive.read('Abschlussbericht.html').decode('utf-8')
             embedded = json.loads(archive.read('Aufbereitungsprotokoll.json'))
@@ -144,9 +145,10 @@ def test_report_escapes_names_and_failed_commands_have_report(setup):
     assert state['status'] == 'failed' and state['report_available']
     body = client.get('/api/jobs/'+ident+'/report').text
     assert '<script>' not in body and '<table>' in body and '<pre>' not in body
-    assert '<h2>Ausgeführte Befehle</h2>' in body and '<td>7</td>' in body
+    assert '<h2>Verarbeitungsschritte: Zeiten und Toolnachweise</h2>' in body and '<td>7</td>' in body
     report = client.get('/api/jobs/'+ident+'/report?format=json').json()
-    assert report['command_runs'][0]['exit_code'] == 7 and report['error']
+    assert report['command_runs'][0]['exit_code'] == 7 and state['error']
+    assert 'error' not in report
     assert client.get('/api/jobs/'+ident+'/report',headers={'Authorization':''}).status_code == 401
 
 

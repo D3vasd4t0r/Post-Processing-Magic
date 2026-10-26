@@ -1,37 +1,30 @@
-# Großer gemeinsamer Test 0.24.0
+# Großer Nutzertest 0.40.0
 
-Vier ausdrücklich freigegebene Wartungspunkte: Diagnosepaket, Feedback,
-Servereinstellungen Port/LAN und technische Logrotation. Danach Scrum-Gespräch.
-Version 0.20 ist abgenommen. 0.24-Nutzerabnahme steht aus.
+## Änderungen / Features
 
-Neue getrennte Instanz geplant: http://127.0.0.1:8772/ mit .local-data/ui-v024-release.
-Startverknüpfung „Testversion 0.24 starten.lnk“ im Projektordner. Nur Tool-/Modus-
-Konfiguration übernehmen, keine Aufträge/Evidenzen/Ergebnisse kopieren oder analysieren.
-Aktueller tatsächlicher Token ausschließlich im Chat und Serverfenster.
+Vereinfachte blaue ZIP-Aufbereitung, vier Einstellungskategorien, auftragsbezogene Logs und Ergebnisse, Originaldownload bei Upload beziehungsweise lokale Referenz, Metadatenberichte und Forensik-Konfiguration Schema 4. Interne Malwarefunktionen entfernt, historische Daten passiv erhalten. Keine CSV-/XLSX-Vorschauen oder Evidenzauswertungen; der reduzierte Umfang ist ausdrücklich bestätigt.
 
-1. Aktives Serverfenster 0.24, Administrator/Worker aktiv. Browser öffnen.
-2. Feedback oben: Bug/Wunsch/Testtext lokal speichern; schließen/öffnen, Eintrag
-   bleibt erhalten. Feedback.json exportieren und eigenen Text wiederfinden.
-3. Einstellungen → Verarbeitung → Diagnosepaket vorbereiten: vier Dateien und
-   Inhalte ansehen, ZIP herunterladen. Keine Tokens, Pfade, Evidencen, Toolausgaben
-   oder Feedbacktexte im Paket. Vorschau exakt, zehn Minuten gültig, einmaliger Export.
-4. Im Serverfenster Diagnosepaket… ebenfalls ansehen und lokal speichern.
-   Nach Server stoppen auch offline Vorschau prüfen, danach Server starten.
-5. Servereinstellungen: Port von 8772 auf einen freien Port, z.B. 8773, speichern.
-   Laufender Server bleibt erreichbar. Stop/Start übernimmt neue Adresse; Browser öffnen.
-6. In Servereinstellungen Loggröße 0,1 MB und zwei ältere Dateien speichern,
-   bewusst neu starten. Web-Diagnose/Systemstatus active_server zeigt 100000 und 2.
-   Tatsächlichen Dateiumbruch hat der Agent synthetisch geprüft; keine langen
-   KAPE-Aufträge nur zum Füllen der technischen Logs erforderlich.
-7. Optional LAN: im Serverfenster LAN speichern und bewusst neu starten. Adresse
-   wechselt auf HTTPS, automatisch selbstsigniertes Zertifikat. Browser-Vertrauen
-   muss der Nutzer selbst bestätigen; keine automatische Firewalländerung.
-   Anschließend wieder Lokal wählen und Stop/Start, wenn Remotezugriff nicht nötig.
-8. Port wieder 8772, Lokal, Loggröße 2 MB / drei Dateien einstellen, Stop/Start.
-   Fenster geordnet beenden und Verknüpfung erneut starten: gespeicherte Werte
-   und lokales Feedback bleiben erhalten. X-/Tray-/Force-Steuerung aus 0.20 unverändert.
+## Start / Adresse / Access Token
 
-Feedback mit Nummern hier im Chat, danach gemeinsames Scrum-Gespräch.
-Neuer Token bei jedem Start: über Browserbutton anmelden oder aus Serverfenster kopieren.
-Keine echte Evidence für diesen Wartungstest erforderlich. Bestehende Nutzerinstanzen
-bleiben unverändert. Keine automatische Übermittlung von Feedback/Diagnosepaketen.
+Lokaler Teststart: vorbereitete Verknüpfung „Testversion 0.40.0 starten.lnk“ im Projektordner. Für den heruntergeladenen Release: Windows-ZIP vollständig entpacken und PostProcessingMagic.exe doppelklicken.
+
+EXE: dist/0.40.0-final/PostProcessingMagic.exe. Neue getrennte Dateninstanz .local-data/ui-v040-release mit Kopie von vier Tooldefinitionen, zwei Forensikmodi und Limits. Keine Jobs, Evidenzen, Ergebnisse oder alten Tokens kopiert. Alte Nutzerinstanzen unverändert.
+
+Windows-Build, 317 Tests/2 Berechtigungsskips, Ruff/JavaScript und sieben EXE-Prüfgruppen bestanden. Verknüpfung „Testversion 0.40.0 starten.lnk“ im Projektordner doppelklicken, UAC selbst bestätigen, danach im Serverfenster Browser öffnen. Vorgesehene Adresse nach Start: http://127.0.0.1:8783/. Port vor der Vorbereitung als frei geprüft.
+
+Die reguläre Nutzerinstanz ist noch nicht gestartet. Daher gibt es noch keinen tatsächlichen aktuellen Nutzertoken oder laufende Testadresse. Bitte nach dem UAC-Start im PM-Chat „0.40 gestartet“ melden. Dann den Token aus genau dieser laufenden Instanz lesen und direkt im PM-Chat nennen. Im Serverfenster bereits sichtbar/kopierbar. Keine Entwickler-Testtokens verwenden.
+
+## Klickschritte
+
+1. Version und Administratorrechte im Serverfenster prüfen. Browser öffnen. Alle fünf Navigationsseiten und vier Einstellungskategorien öffnen. Feedbacktitel eintippen, weg- und zurückwechseln: Entwurf bleibt.
+2. Aufbereitung: Upload/lokale ZIP wechseln. Dateifeld passt zur Quelle; Fall/Gerät und Aufwand bleiben erreichbar. Es gibt keinen Einfach/Fortgeschritten- oder Malwareumschalter.
+3. Einstellungen → Tools/Modi: bestehende Einträge prüfen, Modus öffnen, Import/Verarbeitung/Export und Reihenfolge prüfen. Speichern allein startet keine Verarbeitung. Nur unterstützte vollständig konfigurierte Modi erscheinen für Run.
+4. Konfiguration exportieren und Vorschau zum Zusammenführen öffnen. Schema 4 nur Forensik/Tools/Limits. Eine alte Konfiguration mit entfernten Bereichen muss zusätzlich ausdrücklich bestätigt werden; nichts automatisch ausführen. Für diesen Test keine unbekannten Dateien importieren.
+5. Eigenen bereits bekannten freigegebenen ZIP/KAPE-Ablauf mit Fallnummer/Gerät über Run starten. Währenddessen zu Logs und zurück: derselbe Auftrag, echte Fortschritte, Fehler/Abbruch erreichbar. Keine echte Evidence automatisch vom Agenten verarbeiten lassen.
+6. Logs: Auftrag anhand Fall/Gerät/Datum/ID wählen; Arbeitsordner und zugehörige Ausgabe prüfen. Hochscrollen pausiert das Folgen, Folgen-Button zeigt wieder aktuelle Ausgabe. Ein Wechsel darf keinen alten Log unter neuem Auftrag zeigen.
+7. Ergebnisse: richtigen Auftrag öffnen. ZIP und HTML-Bericht herunterladen. Bericht mit Eingangs-/Ausgangshashes, Ordner-/Dateizahlen und Metadateninventar; keine Kommandozeile/Terminalbefunde. Bei Upload steht Originaldownload bereit. Bei lokaler Quelle nur geprüfter Referenzpfad, kein Eingangskopieren oder Download. Gleiche Fallnummern bleiben nach Datum/ID getrennt.
+8. Sprache DE/EN und schmale Darstellung prüfen. Menü per Tastatur/Escape öffnen/schließen, keine abgeschnittenen Hauptaktionen. Danach regulär stoppen und neu starten; alte Nutzerinstanzen nicht beenden.
+
+## Feedback
+
+Ergebnisse mit Schrittnummer direkt hier beziehungsweise im Projektmanager-Chat melden, zum Beispiel „1–4 klappt, 6 zeigt falschen Log“. Darstellungsfehler gern als Screenshot. App-Feedback bleibt lokal und wird nicht automatisch übertragen. Danach gemeinsames Scrum, erst anschließend vereinbartes Code-/Sicherheitsreview und Code-Wiki.

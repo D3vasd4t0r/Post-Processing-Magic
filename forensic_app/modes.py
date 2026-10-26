@@ -177,12 +177,7 @@ class ModeStore:
             """)
             # A removed or edited template is never restored or overwritten on restart.
             connection.execute("BEGIN IMMEDIATE")
-            # Materialize newly introduced defaults without changing workflow behavior.
-            for ident, body in connection.execute("SELECT id,body_json FROM mode_drafts").fetchall():
-                normalized = ModeDraft.model_validate_json(body).model_dump_json()
-                if json.loads(normalized) != json.loads(body):
-                    connection.execute("UPDATE mode_drafts SET body_json=? WHERE id=?", (normalized, ident))
-                    self._audit(connection, "schema-upgrade", ident, body, normalized)
+            # Existing saved bodies remain unchanged; read-time defaults do not migrate user data.
             if not connection.execute(
                 "SELECT 1 FROM applied_templates WHERE key = 'kape-medium-v1'"
             ).fetchone():

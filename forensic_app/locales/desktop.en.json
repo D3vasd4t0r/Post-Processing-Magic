@@ -1,8 +1,6 @@
 {
   "banner.forensics": "DIGITAL FORENSICS",
-  "banner.control": "Shared server control",
-  "banner.malware": "STATIC MALWARE ANALYSIS",
-  "banner.areas": "Two areas. One server.",
+  "banner.control": "Server control",
   "banner.admin": "Administrator privileges active",
   "banner.synthetic": "Synthetic test without administrator privileges",
   "status.starting": "● Server starting…",

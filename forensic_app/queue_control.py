@@ -33,10 +33,10 @@ class QueueControl:
         with closing(sqlite3.connect(self.storage.database)) as connection:
             connection.execute('BEGIN')
             paused = bool(connection.execute('SELECT paused FROM queue_control WHERE id=1').fetchone()[0])
-            archives = connection.execute("SELECT count(*) FROM archive_requests WHERE status='queued'").fetchone()[0]
-            archiving = [row[0] for row in connection.execute("SELECT job_id FROM archive_requests WHERE status='running'")]
-            waiting = connection.execute("SELECT count(*) FROM jobs WHERE status='queued'").fetchone()[0]
-            running = [row[0] for row in connection.execute("SELECT id FROM jobs WHERE status='running'")]
+            archives = connection.execute("SELECT count(*) FROM archive_requests WHERE status='queued' AND job_id IN (SELECT id FROM jobs WHERE COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics')").fetchone()[0]
+            archiving = [row[0] for row in connection.execute("SELECT job_id FROM archive_requests WHERE status='running' AND job_id IN (SELECT id FROM jobs WHERE COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics')")]
+            waiting = connection.execute("SELECT count(*) FROM jobs WHERE status='queued' AND COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics'").fetchone()[0]
+            running = [row[0] for row in connection.execute("SELECT id FROM jobs WHERE status='running' AND COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics'")]
             stopping = draining(connection)
         return {'paused':paused,'waiting':waiting,'running':running,'archive_waiting':archives,'archiving':archiving,'stopping':stopping}
 
@@ -58,7 +58,7 @@ class QueueControl:
                 return None
             if connection.execute('SELECT paused FROM queue_control WHERE id=1').fetchone()[0]:
                 return None
-            row = connection.execute("SELECT id,config_json FROM jobs WHERE status='queued' ORDER BY created_at,id LIMIT 1").fetchone()
+            row = connection.execute("SELECT id,config_json FROM jobs WHERE status='queued' AND COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics' ORDER BY created_at,id LIMIT 1").fetchone()
             if row:
                 connection.execute("UPDATE jobs SET status='running',phase='Wird vorbereitet' WHERE id=?",(row[0],))
                 connection.execute("INSERT INTO job_events(job_id,kind,payload) VALUES (?,'status',?)",

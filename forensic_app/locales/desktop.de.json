@@ -1,8 +1,6 @@
 {
   "banner.forensics": "DIGITALE FORENSIK",
-  "banner.control": "Gemeinsame Serversteuerung",
-  "banner.malware": "STATISCHE MALWARE-ANALYSE",
-  "banner.areas": "Zwei Bereiche. Ein Server.",
+  "banner.control": "Serversteuerung",
   "banner.admin": "Administratorrechte aktiv",
   "banner.synthetic": "Synthetischer Test ohne Administratorrechte",
   "status.starting": "● Server startet…",

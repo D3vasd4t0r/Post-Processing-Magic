@@ -129,3 +129,21 @@ def test_ordered_commands_keep_tool_references_parameters_and_protect_used_tools
     with TestClient(create_app(storage, "mode-token"), base_url="http://127.0.0.1",
                     headers=AUTH) as client:
         assert all(mode["id"] != mode_id for mode in client.get(ENDPOINT).json()["modes"])
+
+
+def test_initialization_does_not_rewrite_existing_mode_bodies(tmp_path):
+    from forensic_app.modes import ModeStore
+    storage = Storage(tmp_path / 'unchanged')
+    storage.initialize()
+    store = ModeStore(storage)
+    store.initialize()
+    with sqlite3.connect(storage.database) as connection:
+        ident, body = connection.execute('SELECT id, body_json FROM mode_drafts').fetchone()
+        payload = __import__('json').loads(body)
+        payload['steps'][0].pop('timeout_seconds')
+        body = __import__('json').dumps(payload)
+        connection.execute('UPDATE mode_drafts SET body_json=? WHERE id=?', (body, ident))
+    store.initialize()
+    assert store.list_modes()[0]['steps'][0]['timeout_seconds'] > 0
+    with sqlite3.connect(storage.database) as connection:
+        assert connection.execute('SELECT body_json FROM mode_drafts WHERE id=?', (ident,)).fetchone()[0] == body

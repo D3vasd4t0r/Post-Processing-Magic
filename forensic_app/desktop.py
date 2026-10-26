@@ -24,7 +24,7 @@ BG, PANEL, EDGE, TEXT, MUTED, BLUE = '#07111f','#10233b','#294d70','#e7f0fc','#a
 
 
 def draw_server_banner(canvas,administrator,translate=None):
-    """Decorative approved two-area header; live status stays below the banner."""
+    """Blue forensic header; live status stays below the banner."""
     t = translate or DesktopTranslations().t
     canvas.delete('all')
     width=max(1,canvas.winfo_width()); scale=width/1008
@@ -36,23 +36,14 @@ def draw_server_banner(canvas,administrator,translate=None):
         canvas.create_text(x*scale,y*scale,text=value,**options)
     canvas.configure(height=max(130,round(158*scale)))
     canvas.create_rectangle(0,0,width,180*scale,fill='#102b48',outline='')
-    canvas.create_polygon(points([539,0,1008,0,1008,180,522,180,543,129,522,104,546,76,525,51]),fill='#451d2d',outline='')
-    canvas.create_line(points([539,0,525,51,546,76,522,104,543,129,522,158]),fill='#e3e8f0',width=max(2,3*scale))
     canvas.create_polygon(points([50,28,85,41,82,81,70,100,50,115,30,100,18,81,15,41]),fill='#193f63',outline=BLUE,width=max(2,3*scale))
     canvas.create_line(points([50,49,50,91]),fill=BLUE,width=2*scale)
     canvas.create_line(points([33,70,67,70]),fill=BLUE,width=2*scale)
     text(109,27,t('banner.forensics'),13,BLUE)
     text(109,61,'Post-Processing-Magic',27,bold=True)
     text(109,101,t('banner.control'),14,MUTED)
-    text(584,27,t('banner.malware'),13,'#ff9cac')
-    text(584,64,t('banner.areas'),18)
-    text(584,104,t('banner.version',version=__version__),13,'#e0b7c1')
-    text(584,124,t('banner.admin') if administrator else t('banner.synthetic'),12,'#e0b7c1',wrap=290)
-    canvas.create_oval(points([891,31,966,100]),outline='#ff9cac',width=3*scale)
-    canvas.create_rectangle(points([905,82,951,111]),fill='#451d2d',outline='#ff9cac',width=3*scale)
-    for x in [916,940]:canvas.create_oval(points([x-7,59,x+7,73]),fill='#ff9cac',outline='')
-    canvas.create_polygon(points([928,78,922,89,934,89]),fill='#ff9cac',outline='')
-    for x in [917,928,939]:canvas.create_line(points([x,99,x,111]),fill='#ff9cac',width=2*scale)
+    text(584,61,t('banner.version',version=__version__),18,BLUE)
+    text(584,101,t('banner.admin') if administrator else t('banner.synthetic'),13,MUTED,wrap=360)
 
 
 class ServerWindow:

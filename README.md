@@ -1,96 +1,52 @@
 # Post-Processing-Magic
 
-KI-gestütztes Entwicklungsprojekt für die lokale Nachbearbeitung von DFIR-Evidencen unter Windows.
+Lokale, konfigurierbare Nachbearbeitung von ZIP-Evidencen unter Windows.
 
-**Dieser Entwicklungszweig: 0.32.0, experimentelle statische Malware-Analyse.** Die Versionen 0.24.0 und 0.25.0 bleiben separat verfügbar. Das Serverfenster aus 0.20 ist bereits erfolgreich abgenommen.
+**Version 0.40.0:** vereinfachte Forensik-Aufbereitung. Frühere Releases bleiben separat verfügbar.
 
-[Windows-Downloads und Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.32.0](docs/releases/0.32.0.md) · [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md)
+[Windows-Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.40](docs/releases/0.40.0.md) · [Architektur](docs/ARCHITECTURE.md) · [Konfiguration](docs/CONFIGURATION.md)
 
-## Was ist neu in 0.32.0?
+## Neu in 0.40
 
-- **Linke Hauptnavigation:** Aufbereitung als Startseite, Einstellungen, Logs, Ergebnisse und Feedback als eigene Seite. Beschriftetes Menü für schmale Fenster, aktive Seitenkennung und Tastaturbedienung.
-- **Einfach / Fortgeschritten:** getrennt je Arbeitsbereich browserlokal merken; neue Browser beginnen Einfach. Upload, Format, Aufwand und Run im Mittelpunkt. Status, Fehler, Abbruch und verfügbare Berichte/ZIPs bleiben erreichbar.
-- **Eingaben bleiben erhalten:** Umschalten verändert weder ausgewählte Dateien/Profile noch Fallnummer, Gerät, Archivoptionen oder laufende Aufträge. Angepasste versteckte Optionen zeigen einen Hinweis. Eine lokale Quelle verhindert den Wechsel nach Einfach, bis bewusst Upload gewählt wird. ZIP-aus bleibt aus; nachträgliches Archivieren erfordert einen eigenen Klick.
-- **Gezielte Einrichtung:** zusätzliche Direktwege zu Allgemein und Malware-Modulen. Die bekannte Hilfe bleibt schließbar; ihre Detailprüfung lässt sich einklappen. Malware-Inlinebefunde erscheinen in Fortgeschritten, der vollständige Bericht bleibt auch in Einfach verfügbar.
+- Eine blaue Aufbereitungsoberfläche mit fünf Seiten: Aufbereitung, Einstellungen, Logs, Ergebnisse und Feedback. Quelle, ZIP-Format, Aufwand, Fallnummer und Gerätename direkt im Formular; kein Einfach/Fortgeschritten-Umschalter.
+- Vier Einstellungskategorien: Tools, Modi, Allgemein und Konfiguration. Der bestehende Baukasten mit Toolreferenzen, Parametern und freien PowerShell-Blöcken bleibt erhalten.
+- Logs über einen Auftragsdropdown, Status, Arbeitsordner und scrollbares Terminal. Auf der Hauptseite bleiben Fortschritt, Fehler und Abbruch erreichbar.
+- Ergebnisse nach Auftrag mit Fall/Gerät, Datum und kurzer ID. Ergebnis-ZIP, HTML-/JSON-Bericht und hochgeladenes Original bleiben eindeutig zugeordnet. Lokale ZIPs erscheinen ausschließlich als geprüfte Referenz oder als nicht verfügbar.
+- Berichte enthalten Verarbeitungsmetadaten, Eingangs-/Ausgangs-SHA-1/SHA-256 sowie begrenzte Datei-/Pfadlisten und Ordner-/Dateianzahlen. Keine Toolausgaben, Kommandozeilen oder internen Inhaltsbefunde in Berichten.
+- Portabler Forensik-Konfigurationsexport als Schema 4. Frühere Konfigurationen werden mit Vorschau eingelesen; entfallene Bereiche erfordern eine zusätzliche ausdrückliche Bestätigung. Speichern und Import starten keine Befehle.
+- Die interne Malware-Analyse wurde entfernt; historische Daten bleiben passiv erhalten. Keine automatische Wiederaufnahme alter Analysejobs.
+
+CSV-/XLSX-Inhaltsvorschauen, externe Ergebnis-Viewer und interne Evidenzauswertungen wurden auf ausdrücklichen Nutzerwunsch entfernt. Nutzererzeugte Toolausgaben bleiben im Ergebnisarchiv erhalten, auch bei gleichnamigen Dateien in verschiedenen Ordnern.
 
 ## Funktionsumfang
 
-### Bedienoberfläche
+**Windows-Dienst:** Eine EXE öffnet das Serverfenster und startet Server und separaten seriellen Worker. Browser über Button öffnen, Adresse und Access Token kopieren, Server geordnet stoppen oder den eigenen Prozessbaum nach Bestätigung beenden. X minimiert in den Infobereich. UAC-Administratorstart ist auf Nutzerwunsch Standard.
 
-- Eine beständige linke Navigation mit fünf eigenen Seiten; Feedbackentwürfe und Aufbereitungseingaben bleiben beim Seitenwechsel erhalten. Uploads und Aufträge laufen weiter. Ein Hinweis auf anderen Seiten führt zurück zur laufenden Aufbereitung.
-- Blaue Forensik mit Schild und rote statische Analyse mit Totenkopf; gemeinsame Einstellungen und Feedback im neutralen blauen Rahmen. DE/EN und mobile Navigation mit Escape/Fokusrückgabe.
-- Einfach/Fortgeschritten sind reine Darstellungen, keine Analyseprofile. Quellen, Optionen, Job-Snapshots und Ausführungsgrenzen ändern sich dadurch nicht. Browserpräferenzen gehören nicht in den portablen Konfigurationsexport.
+**ZIP-Aufbereitung:** Upload oder lokale ZIP-Referenz, Aufwand schnell/Medium/langsam, optionale Fallnummer/Gerät, eigener Arbeitsordner und unveränderlicher Konfigurationssnapshot pro Auftrag. ZIP mit Ordner C und Entpackziel Targets ergibt Targets/C. Keine Umbenennung interner Archivpfade. Originaldateien bleiben unverändert.
 
-### Gemeinsame Einstellungen und Konfiguration
+**Baukasten:** Tools mit absolutem Serverpfad und Picker verwalten. Modi in Import, Verarbeitung und Export gliedern; Befehlsblöcke einfügen, verschieben und entfernen. Aktueller Runner: höchstens ein Offline-KAPE-Befehl plus freie PowerShell-Blöcke oder reine PowerShell-Abläufe. Weitere generische Toolrunner sind nicht enthalten. Die bearbeitbare KAPE-Vorlage Medium/ohne Timeline benötigt eine bewusste Toolzuordnung.
 
-- Sprachwahl Deutsch/Englisch, lokal gebündelte Kataloge ohne Übersetzungsdienst. Web und Serverfenster teilen die serverlokale Präferenz; sie gehört nicht zum portablen Workflowexport. Vor Anmeldung kann der Browser seine lokale Wahl nutzen. Betriebssystemdialoge und fremde technische Fehler bleiben in ihrer ursprünglichen Sprache.
-- Schließbare Einrichtungshilfe für unterstützte gespeicherte Forensikschritte. Optionale Timeline-Explorer-/EZViewer-Einträge sperren keine Verarbeitung und gelten durch bloßes Speichern noch nicht als geprüft.
+**Status und Ergebnisse:** Persistente SQLite-Queue, SSE mit echten Ereignissen, Abbruch, geschützte Downloads und auftragsbezogene Ergebnis-/Arbeitsordner. Neue Browserläufe erstellen ein Ergebnis-ZIP; bei vorhandenen älteren Aufträgen ohne ZIP bleibt eine ausdrückliche nachträgliche Archivierung möglich. Der Ansichtswechsel startet keine neue Verarbeitung.
 
-- Einstellungen gelten unabhängig vom aktiven Arbeitsbereich: **Tools**, **Allgemein** und **Konfiguration** gemeinsam; **Forensik-Modi** und **Malware-Module** in eigenen, jederzeit erreichbaren Kategorien.
-- Nur auf der Hauptseite zwischen blauem Forensik- und rotem Malware-Bereich wechseln. Die Einstellungen zeigen immer dieselbe gemeinsame Ansicht und merken die zuletzt gewählte Kategorie.
-- Ein Export enthält immer Tools, gemeinsame Verarbeitungslimits, Forensik-Modi und Malware-Module als Schema 3, auch bei leeren Bereichen. Import mit Vorschau, Bereichszählern und atomarem Anwenden; ältere Dateien bleiben lesbar.
+**Betrieb:** DE/EN, Arbeitsziel für neue Aufträge, Speicherübersicht, Warteschlangenpause, gezielte Bereinigung mit Vorschau/Bestätigung, Diagnosepaket mit Vorschau, technische Logrotation, lokale Feedbackablage/-export. Referenzierte Originale bleiben bei der Bereinigung erhalten.
 
-### Statische Malware-Analyse
+**Limits:** Standardmäßig 50 GiB Upload und 2 TB dezimal entpackt; unter Allgemein einstellbar und pro Auftrag eingefroren. Hohe Kompression ist für neue Aufträge erlaubt, ohne Checkbox. Pfad-, Mengen-, Größen-, Speicher- und Verschachtelungsgrenzen gelten weiterhin. Keine Unterstützung verschlüsselter oder beliebig großer ZIPs.
 
-- Zusätzliche PE32/PE32+-Importtabellen, Ressourcenmetadaten und Overlay-/Zertifikatbereichsstruktur. Harte Lese-, Knoten- und Eintragsgrenzen, keine Ressourcenextraktion und keine Signaturvalidierung.
-- Gespeicherte Indikatorenquellen aus vorhandenen Rohtexten: begrenzte Deduplizierung, Text/Kopieren/JSON-Export ohne Netzwerkaktionen. Heuristische Erkennung, keine Diagnose. Anzeige höchstens200Indikatoren/500Importfunktionen/200Ressourcen; begrenzte Rohdetails im JSON-Bericht. Neue PE-Detailsnapshots höchstens8Schritte/2MiB; Einzelberichte behalten ihre Rohdetails. Altaufträge werden nicht nachgescannt.
-
-- Bereichswechsel: blaue Forensik mit Schild und rote statische Analyse mit Totenkopf. Eigene Formulare, Module und Auftragshistorien, gemeinsame Toolverwaltung und serieller Worker.
-- Einzeldateien PDF, Office (Legacy OLE und OOXML) sowie Windows PE. Upload oder lokale Dateireferenz mit Picker, maximal 256 MiB. Signaturprüfung und neutrale Arbeitskopie, Original unverändert.
-- Bearbeitbarer Malware-Baukasten mit geordneten internen Prüfungen: Metadaten/SHA-1/SHA-256, begrenzte Entropie-/Strings-Suche, PDF-Schlüsselwörter, Office-Verzeichnis ohne Entpacken und PE-Header/Sektionstabelle. Leerer Start; passende Vorschläge erscheinen erst beim Anlegen eines Moduls.
-- Persistente Queue, echte abgeschlossene Schritte, SSE-Terminal, Abbruch, HTML-/JSON-Berichte und optionales Ergebnis-ZIP ohne Sample. Lokale Ergebnisanzeige und spätere Archivierung.
-- Fallnummer und Gerätename je Auftrag; Befundübersicht mit tatsächlichem Prüfumfang und erreichten Byte-, Treffer- und Tokenlimits. Rohbefunde bleiben zur Nachprüfung verfügbar.
-- Ein gemeinsames Schema 3 für beide Modulbereiche; alte Forensik-Dateien bleiben importierbar. Externe Toolreferenzen samt Parametern können als Entwurf gespeichert werden und sperren Run. PDFID-/oleid-Adapter folgen nach Abstimmung.
-
-**Grenze:** begrenzte statische Triage, keine Malware-Erkennung oder Isolation. Keine Ausführung von Eingangsdateien, Makros, Skripten oder eingebetteten Inhalten. Kein automatischer Internetzugriff. Der bestehende Administratorstart ist keine Sandbox; externe Tools und freie PowerShell werden im Malware-Runner dieser Version nicht gestartet. [Architektur und Grenzen 0.25](docs/MALWARE_025.md).
-
-### Serverbetrieb und Wartung
-
-- **Diagnosepaket mit Vorschau:** im Serverfenster und unter Einstellungen → Verarbeitung. App-/Systemversion, Server-/Workerstatus, Auftragszähler und bereinigte technische Ereignisse. Alle enthaltenen Texte vor dem ZIP-Export prüfen. Keine Tokens, Evidenzen, Ergebnisse, Toolbefehle/-ausgaben oder Feedbacktexte. Unbekannte Logdetails werden ausgelassen; Export entspricht exakt der Vorschau. Kein automatischer Versand.
-- **Lokales Feedback:** eigene Seite in der Hauptnavigation für Bugs, Wünsche und allgemeines Feedback. Lokal speichern, letzte 100 Einträge ansehen, bis zu 1.000 Einträge als JSON exportieren. Eingegebene Texte bleiben unverändert; keine automatischen Anhänge oder Übermittlung.
-- **Servereinstellungen im Desktopfenster:** Port und lokalen/LAN-Zugriff speichern. Änderungen nach bewusstem Server-Stopp und erneutem Start. LAN verwendet Anmeldung und automatisch erzeugtes selbstsigniertes HTTPS; keine automatische Firewalländerung.
-- **Technische Logrotation:** Größe pro Datei 0,1–100 MB und 1–20 ältere Dateien einstellen. Wirksam nach Serverneustart; ausschließlich technische Serverlogs. Auftragslogs, Audit und Evidencen bleiben getrennt.
-
-### Ergebnisvorschau und Eingangsübersicht
-
-- CSV- und XLSX-Dateien erfolgreicher Aufträge in getrennten Ergebnis-Unterreitern begrenzt filtern und per Spaltenüberschrift sortieren; XLSX mit Blattwahl. Alle Werte werden als Text angezeigt; kein Excel-Start, keine Formelauswertung. Suche gilt nur fuer den begrenzten Ausschnitt.
-- Unveraenderliche Metadatenuebersicht des frisch entpackten Forensik-Eingangs, vor Toolbefehlen. Dateinamens-/Pfadheuristik, keine Aussage zur Vollstaendigkeit der Sicherung oder zum Ursprungssystem. Altauftraege zeigen Nicht erfasst.
-- Optionale Fallnummer und Geraetename je Auftrag, unveraenderlich gespeichert und in Suche/Details/Berichten angezeigt. Forensik-Blockzeitlimit pro Befehl, inklusive Konfigurationstransfer und Altbestandsschutz.
+**Grenzen:** Ausschließlich ZIP-Eingänge mit KAPE-Targets. Keine E01-/VMDK-Verarbeitung, internen Malwareparser oder Ausführung von Eingangsdateien. Toolprogramme sind separat bereitzustellen/lizenzieren. Tools und freie PowerShell laufen mit den gewählten Administratorrechten und sind keine Sandbox. Fachliche Vollständigkeit ihrer Ergebnisse muss der Nutzer prüfen.
 
 ## Windows starten
 
-1. Windows-ZIP aus einem Release vollständig entpacken.
-2. `PostProcessingMagic.exe` doppelklicken und Windows-UAC bestätigen.
-3. Der Server startet automatisch im blauen Forensik-Fenster. **Browser öffnen** startet die angemeldete Weboberfläche.
+1. Das Windows-ZIP des gewünschten Releases vollständig entpacken.
+2. PostProcessingMagic.exe doppelklicken und Windows-UAC bestätigen.
+3. Im Serverfenster Browser öffnen anklicken. Der aktuelle Access Token wird automatisch verwendet und lässt sich im Fenster kopieren.
 
-Auf dem Zielrechner kein Python, Node, Docker, Redis oder Internet nötig. Externe Forensiktools müssen separat vorhanden und passend lizenziert sein. Standardadresse: `http://127.0.0.1:8765/`, sofern kein anderer Port gespeichert oder ausdrücklich beim Start angegeben wurde.
+Kein Python, Node, Docker, Redis oder Internet auf dem Zielrechner erforderlich. Standardadresse http://127.0.0.1:8765/, sofern kein anderer Port gespeichert ist. Daten standardmäßig unter LOCALAPPDATA/PostProcessingMagic oder im explizit gewählten Datenordner, niemals im EXE-Entpackverzeichnis.
 
-Das Fenster zeigt Server-/Workerstatus und Live-Serverlogs; Adresse und Access Token lassen sich kopieren. **X** minimiert in den Windows-Infobereich, Klick auf das Schild stellt es wieder her. **Server stoppen** sperrt neue Aufträge und wartet die laufende Arbeit ab. **Force Shutdown** fragt nach Bestätigung und beendet den eigenen Server-/Worker-/Toolbaum. Unterbrochene Aufträge werden gekennzeichnet und nicht automatisch wiederholt. **Beenden…** stoppt geordnet und schließt das Fenster.
+LAN-Zugriff ist für vertrauenswürdige Netze vorgesehen und verwendet Authentifizierung sowie automatisch erzeugtes selbstsigniertes HTTPS. Keine automatische Firewall- oder Trust-Store-Änderung. Nach jedem Start gilt ein neuer Token.
 
-Nach jedem Serverstart neuer Access Token; **Browser öffnen** verwendet automatisch den aktuellen Schlüssel. Daten standardmäßig unter `%LOCALAPPDATA%/PostProcessingMagic`, außerhalb des EXE-Entpackverzeichnisses.
+## Entwicklung
 
-## Evidence-Aufbereitung
-
-Direkte KAPE-Nachweise sind bewusst unvollständig: nur ausgewählte eindeutig gefundene `.mkape`-Dateien, einfache literale `Executable`-Referenzen unter `Modules/bin` und bekannte RECmd-`--bn`-Regeldateien. Variablen, zusammengesetzte Module, weitere Kommandoabhängigkeiten und DLLs werden nicht vollständig aufgelöst. Fehlende/unklare Einträge werden dokumentiert. Erfasste Dateien werden vor dem Start erneut geprüft; nach Rückgabe werden Dateihandles freigegeben, daher keine dauerhafte Isolation während KAPE. Alte Jobs ohne Manifest behalten ihr Verhalten.
-
-Der Forensik-Bereich konzentriert sich weiterhin auf **ZIP-Dateien mit KAPE-Targets**. E01/VMDK erscheinen höchstens deaktiviert als geplant. Eigene ZIP wählen oder eine lokale ZIP auf dem Server referenzieren, Aufwand auswählen und **Run** klicken. Nur vollständig konfigurierte Modi sind auswählbar.
-
-- Toolnamen und absolute Serverpfade im Browser verwalten, mit Datei-/Ordner-Picker und Pfadprüfung. Eingebundene Tools lassen sich nicht versehentlich löschen.
-- Modi in **Import, Verarbeitung und Export** konfigurieren: relatives Entpackziel, geordnete Befehlsblöcke, Ergebnisordner. Schritte einfügen, verschieben und entfernen. Kein PS1-Editieren erforderlich.
-- Runner derzeit: höchstens ein KAPE-Modulbefehl plus freie PowerShell-Blöcke oder reine PowerShell-Workflows. Weitere generische Toolrunner später. Eine bearbeitbare KAPE-Vorlage Medium/ohne Timeline ist vorhanden, ohne automatische Toolzuordnung.
-- Jeder Auftrag hat einen eigenen Arbeitsordner und unveränderlichen Konfigurationssnapshot einschließlich Toolhash/-version. Originaldateien werden nicht verändert. ZIP-Prüfungen vor Extraktion, Größen-/Speicherlimits und lokaler Leseschutz.
-- Optionale Fallnummer und Gerätename in Historie, Suche und Berichten. Zeitlimit je Befehlsblock von 1 Sekunde bis 7 Tagen, standardmäßig 24 Stunden; pro Auftrag unveränderlich gespeichert.
-- Persistente SQLite-Queue und separater serieller Worker. Live-Ausgabe, Befehlsfortschritt ohne erfundene Prozentwerte, Abbruch und geschützte Downloads.
-- Ergebnis-ZIP optional direkt oder später erstellen. Lokal **Show in Explorer** als Alternative. HTML-/JSON-Abschlussbericht mit Eingangs-/Ausgabe-SHA-1/SHA-256, Befehlen, Zeiten, Fehlern und Unterordnern.
-- Auftragssuche, Queue-Pause, Speicherübersicht, Arbeitslaufwerk für neue Aufträge und gezielte Bereinigung mit Vorschau. Referenzierte Originale bleiben erhalten.
-- Upload standardmäßig 50 GiB, Entpacklimit 2 TB dezimal; im Browser einstellbar und pro Auftrag eingefroren.
-- Tools/Modi/Befehle/Verarbeitungslimits gemeinsam als versionierte JSON-Konfiguration mit Importvorschau und Konfliktbehandlung übertragen. Keine Tokens, Evidencen oder Toolprogramme im Export. Serverlokale Port-/LAN-/Logeinstellungen und Arbeitslaufwerk sind separat.
-
-Fachliche Vollständigkeit der Toolergebnisse muss der Nutzer prüfen. PowerShell/Tools laufen auf ausdrücklichen Nutzerwunsch mit Administratorrechten; dies ist keine Sandbox. Remotezugriff ist für vertrauenswürdige lokale Netze vorgesehen, nicht für öffentliches Internet-Hosting. Bei selbstsigniertem HTTPS muss auf dem verwendeten Gerät dem Zertifikat vertraut werden; die App ändert keinen Trust Store.
-
-## Entwicklung und Build
-
-Python 3.12+ unter Windows, PowerShell im Projektordner:
+Python 3.12+ unter Windows:
 
 ```powershell
 py -3.12 -m venv .venv
@@ -98,27 +54,10 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pytest
 .\.venv\Scripts\python.exe -m ruff check .
 .\build.ps1 -OutputDirectory dist/release
-.\.venv\Scripts\python.exe tools/package_release.py --exe dist/release/PostProcessingMagic.exe --output release-files
 ```
 
-Das Buildskript prüft pytest/Ruff und bündelt Python, Tcl/Tk und Weboberfläche per PyInstaller. EXE-Prüfungen verwenden ausschließlich selbst erzeugte Testprogramme/-archive:
+Ein erfolgreicher Python-Test ersetzt keine EXE-Abnahme. Die Releaseprüfung startet die gebaute Windows-EXE mit ausschließlich eigenen synthetischen ZIPs und Programmen; echte Evidenzen werden nur durch einen bewussten Nutzerlauf verarbeitet.
 
-```powershell
-.\.venv\Scripts\python.exe tests/smoke_startup.py --exe dist/release/PostProcessingMagic.exe
-.\.venv\Scripts\python.exe tests/smoke_batch.py --exe dist/release/PostProcessingMagic.exe
-.\.venv\Scripts\python.exe tests/smoke_control.py --exe dist/release/PostProcessingMagic.exe
-```
+## Prüfung dieses Releases
 
-`--headless` bzw. der kompatible Schalter `--no-browser` starten ohne Desktopfenster. `--data-dir`, `--port`, `--local` und `--lan` sind explizite Startoptionen. Explizite Port-/Netzwerkoptionen gehen beim Programmstart gespeicherten Werten vor. Die Desktop-Start/Stop-Steuerung übernimmt anschließend bewusst neu gespeicherte Einstellungen.
-
-## Releases
-
-Pro Version README und `docs/releases/<Version>.md` aktualisieren sowie Versionsnummer in `pyproject.toml` und `forensic_app/__init__.py` angleichen. Der Windows-Workflow baut und prüft bei einem entsprechenden Push auf `main` oder `codex/malware-025` den Stand und erstellt einen versionierten GitHub-Vorabrelease mit Windows-ZIP, SHA-256-Prüfsumme und Build-Paketinventar. Vorhandene Releases werden nicht überschrieben. Google Drive bleibt ein zusätzlicher Downloadkanal in Versionsordnern. Testanleitungen und aktueller Instanztoken werden direkt im Chat bereitgestellt, niemals ins Repository geschrieben.
-
-Siehe [AGENTS.md](AGENTS.md) für Entwicklungsgrenzen und [VALIDATION.md](docs/VALIDATION.md) für die tatsächlichen Prüfungen. [MIT-Lizenz](LICENSE).
-
-Buildhinweis: build.ps1 übernimmt bei Python-Distributionen mit zusätzlicher SSL-Policydatei diese Datei ins EXE-Paket, damit auch das Desktopfenster SSL korrekt initialisieren kann.
-
-Desktop-Hotfix: Der Beenden-Button behält seine volle Höhe; beim Verkleinern schrumpft der Logbereich und der Fußzeilentext bricht um.
-
-
+Lokal 317 Tests bestanden, zwei Symlink-Berechtigungstests übersprungen; Ruff und JavaScript-Syntax erfolgreich. Sieben Prüfgruppen mit der gebauten Windows-EXE erfolgreich: Start, Workflow/Archive/Bereinigung, Stop/Abbruch, Wartung/HTTPS, KAPE-Dateinachweise, Konfiguration sowie Quellen/Metadatenberichte. Eigene synthetische Browserläufe, DE/EN und 390-px-Darstellung geprüft. Das ersetzt keine fachliche Nutzerabnahme echter KAPE-Ergebnisse oder einen Test mit tatsächlich 2 TB Daten.

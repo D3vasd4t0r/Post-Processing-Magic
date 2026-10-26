@@ -92,8 +92,8 @@ def test_upload_queue_snapshot_success_and_download(setup):
     assert client.get("/api/results/unknown").status_code == 410
     with ZipFile(io.BytesIO(downloaded.content)) as result:
         assert result.read("PostMortem/result.txt") == b"Synthetic analysis output"
-        assert "Example tool output" in result.read("KAPE-Kommandozeile.log").decode()
-        assert json.loads(result.read("Aufbereitungsprotokoll.json"))["configuration"] == plan
+        assert "KAPE-Kommandozeile.log" not in result.namelist()
+        assert "command" not in json.loads(result.read("Aufbereitungsprotokoll.json"))["configuration"]
     assert original == (storage.root/"evidence"/ident/"Evidence.zip").read_bytes()
     assert store.get(ident)["result_sha256"] == hashlib.sha256(downloaded.content).hexdigest()
     events = store.events(ident, 0)
@@ -363,69 +363,27 @@ def test_inventory_snapshot_before_commands_and_csv_api(setup,tmp_path,drive,sou
     inventory=state['input_inventory']
     assert inventory['source']=='extracted_zip_tree' and inventory['complete']
     assert inventory['files']==5 and inventory['bytes']==16
-    assert all(inventory['groups'][key]['files']==1 for key in ['evtx','mft','prefetch','registry','other'])
+    assert len(inventory['files_metadata'])==5
+    assert 'groups' not in inventory
     report=client.get('/api/jobs/'+ident+'/report?format=json').json()
     assert report['input_inventory']==inventory
     assert 'test&amp;.evtx' in client.get('/api/jobs/'+ident+'/report').text
-    endpoint='/api/jobs/'+ident+'/csv'
-    assert client.get(endpoint).json()['files']==['own.csv']
-    preview=client.get(endpoint,params={'path':'own.csv'}).json()
-    assert preview['columns']==['name','value']
-    assert preview['rows'][0]['values']==['<script>','=1+1']
-    found=client.get(endpoint,params={'path':'own.csv','search':'own'}).json()
-    assert len(found['rows'])==1 and found['rows'][0]['values'][1]=='42'
-    assert client.get(endpoint,headers={'Authorization':''}).status_code==401
-    for path in ['../own.csv','C:/own.csv','own.csv:stream','/own.csv','a/./own.csv']:
-        assert client.get(endpoint,params={'path':path}).status_code==422
-    assert client.get(endpoint,params={'path':'missing.csv'}).status_code==404
-    assert client.get(endpoint,params={'path':'own.csv','search':'x'*129}).status_code==422
-    with sqlite3.connect(storage.database) as c:c.execute('UPDATE cleanup_state SET active=1 WHERE id=1')
-    assert client.get(endpoint).status_code==409
-    with sqlite3.connect(storage.database) as c:
-        c.execute('UPDATE cleanup_state SET active=0 WHERE id=1')
-        c.execute('UPDATE jobs SET input_inventory_json=NULL WHERE id=?',(ident,))
-    assert store.get(ident)['input_inventory'] is None
+    for route in ['csv', 'preview', 'summary', 'indicators']:
+        assert client.get('/api/jobs/'+ident+'/'+route).status_code==404
     assert inventory['files']==5
-    store.update(ident,status='running')
-    assert client.get(endpoint).status_code==409
 
 
-def test_compression_preselection_does_not_rewrite_existing_job_snapshots(setup):
+def test_new_jobs_always_allow_high_compression_and_preserve_old_snapshots(setup):
     client,storage,mode,_=setup
     old=upload(client,mode).json()['id']
-    before=plan_for(storage,old)
-    new=client.post('/api/jobs',params={'mode_id':mode,'filename':'own.zip','allow_high_compression':True},content=archive_bytes(),headers={'Content-Type':'application/zip'}).json()['id']
+    legacy=plan_for(storage,old)
+    legacy['allow_high_compression']=False
+    with sqlite3.connect(storage.database) as connection:
+        connection.execute('UPDATE jobs SET config_json=? WHERE id=?',(json.dumps(legacy),old))
+    new=client.post('/api/jobs',params={'mode_id':mode,'filename':'own.zip','allow_high_compression':False},content=archive_bytes(),headers={'Content-Type':'application/zip'}).json()['id']
     assert plan_for(storage,new)['allow_high_compression'] is True
-    assert before['allow_high_compression'] is False
-    assert plan_for(storage,old)==before
-    assert plan_for(storage,new)['limits']==before['limits']
-
-
-def test_result_workplace_xlsx_authorization_and_sorting(setup):
-    import runpy
-    client, storage, mode, _ = setup
-    ident = upload(client, mode).json()['id']
-    store = JobStore(storage)
-    def runner(plan, work, check, emit):
-        output = work/'PostMortem'
-        output.mkdir()
-        runpy.run_path('tests/test_xlsx_preview.py')['package'](output/'own.xlsx')
-        (output/'own.csv').write_text('Value\n10\n2\n1\n',encoding='utf-8')
-        return 0
-    endpoint='/api/jobs/'+ident+'/preview'
-    assert client.get(endpoint).status_code==409
-    process_job(store,ident,store.plan(ident),threading.Event(),runner=runner)
-    catalog=client.get(endpoint,params={'format':'all'}).json()
-    assert sorted(catalog['files'])==['own.csv','own.xlsx']
-    result=client.get(endpoint,params={'format':'xlsx','path':'own.xlsx','sort_column':1,'sort_kind':'number','limit':1})
-    assert result.status_code==200,result.text
-    assert result.json()['rows'][0]['values']==['Alpha','2']
-    assert result.json()['sheets'][0]['id']=='s1'
-    assert client.get(endpoint,params={'format':'xlsx','path':'own.xlsx','sheet_id':'missing'}).status_code==422
-    assert client.get(endpoint,params={'format':'xlsx','path':'own.xlsx'},headers={'Authorization':''}).status_code==401
-    with sqlite3.connect(storage.database) as c:
-        c.execute("INSERT INTO archive_requests(job_id,status) VALUES (?,'queued')",(ident,))
-    assert client.get(endpoint,params={'format':'all'}).status_code==409
+    assert plan_for(storage,old)==legacy
+    assert plan_for(storage,new)['limits']==legacy['limits']
 
 
 def test_job_locale_is_frozen_and_old_plan_unchanged(setup):

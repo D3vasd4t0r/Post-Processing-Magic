@@ -18,7 +18,6 @@ from starlette.concurrency import run_in_threadpool
 
 from forensic_app import __version__
 from forensic_app.app_errors import AppValueError, ErrorText, request_locale
-from forensic_app.malware_modes import MalwareMode, MalwareModes
 from forensic_app.modes import EFFORTS, ModeDraft
 from forensic_app.processing_settings import ProcessingLimits, read_limits, write_limits
 from forensic_app.storage import Storage
@@ -36,25 +35,21 @@ class ExportMode(ModeDraft):
     id: str = Field(min_length=1, max_length=80, pattern=r"^[A-Za-z0-9_-]+$")
 
 
-class ExportMalwareMode(MalwareMode):
-    id: str = Field(min_length=1,max_length=80,pattern=r'^[A-Za-z0-9_-]+$')
-
-
 class ConfigurationFile(BaseModel):
     model_config = ConfigDict(extra="forbid")
     format: Literal["post-processing-magic.configuration"]
-    schema_version: Literal[1, 2, 3]
+    schema_version: Literal[1, 2, 3, 4]
     app_version: str = Field(min_length=1, max_length=40)
     exported_at: datetime
     tools: list[ExportTool] = Field(max_length=1000)
     modes: list[ExportMode] = Field(max_length=100)
-    malware_modes: list[ExportMalwareMode] = Field(default_factory=list,max_length=100)
+    malware_modes: list[dict] | None = Field(default=None, max_length=100)
     limits: ProcessingLimits | None = None
 
     @model_validator(mode='after')
     def complete_unified_document(self):
-        if self.schema_version==3 and 'malware_modes' not in self.model_fields_set:
-            raise AppValueError('error.ec9b73ddee1a')
+        if self.schema_version == 4 and 'malware_modes' in self.model_fields_set:
+            raise AppValueError('config.legacy_in_current_schema')
         return self
 
 
@@ -68,6 +63,7 @@ class ApplyRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     ticket: str = Field(min_length=1, max_length=100)
     confirm_replace: bool = False
+    confirm_legacy_fields: bool = False
 
 
 def dump(value) -> str:
@@ -81,17 +77,14 @@ def snapshot(connection) -> dict:
     modes = [{"id": row[0], **json.loads(row[1])} for row in connection.execute(
         "SELECT id, body_json FROM mode_drafts ORDER BY id"
     )]
-    malware = []
-    if connection.execute("SELECT 1 FROM sqlite_master WHERE name='malware_modes'").fetchone():
-        malware = [{'id':r[0],**json.loads(r[1])} for r in connection.execute('SELECT id,body_json FROM malware_modes ORDER BY id')]
-    return {"tools": tools, "modes": modes, 'malware_modes':malware, "limits": read_limits(connection)}
+    return {"tools": tools, "modes": modes, "limits": read_limits(connection)}
 
 
 def document(state: dict) -> dict:
-    state = dict(state)
-    state.setdefault('malware_modes',[])
-    return {"format": "post-processing-magic.configuration", "schema_version": 3,
-            "app_version": __version__, "exported_at": datetime.now(UTC).isoformat(), **state}
+    return {"format": "post-processing-magic.configuration", "schema_version": 4,
+            "app_version": __version__, "exported_at": datetime.now(UTC).isoformat(),
+            **{key: state[key] for key in ("tools", "modes", "limits")}}
+
 
 
 def fingerprint(state: dict) -> str:
@@ -100,7 +93,7 @@ def fingerprint(state: dict) -> str:
 
 def validate_state(state: dict) -> list[str]:
     errors = []
-    for kind in ("tools", "modes", "malware_modes"):
+    for kind in ("tools", "modes"):
         ids, names = set(), set()
         for item in state.get(kind,[]):
             if item["id"] in ids:
@@ -111,7 +104,7 @@ def validate_state(state: dict) -> list[str]:
             names.add(item["name"].casefold())
     tools = {tool["id"] for tool in state["tools"]}
     slots = set()
-    for mode in [*state['modes'],*state.get('malware_modes',[])]:
+    for mode in state['modes']:
         effort = mode["effort"]
         if effort not in EFFORTS:
             errors.append(ErrorText('config.unknown_effort', name=mode['name'], effort=effort))
@@ -142,7 +135,6 @@ class ConfigurationTransfer:
         self.tickets = {}
 
     def initialize(self):
-        MalwareModes(self.storage).initialize()
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.execute("""
                 CREATE TABLE IF NOT EXISTS configuration_import_events (
@@ -162,21 +154,19 @@ class ConfigurationTransfer:
     def preview(self, request: PreviewRequest) -> dict:
         before = self.current()
         incoming = {"tools": [tool.model_dump() for tool in request.document.tools],
-                    "modes": [mode.model_dump() for mode in request.document.modes],
-                    "malware_modes":[mode.model_dump() for mode in request.document.malware_modes]}
-        if request.document.schema_version<3:
-            incoming["malware_modes"] = before["malware_modes"]
+                    "modes": [mode.model_dump() for mode in request.document.modes]}
+        legacy_fields = 'malware_modes' in request.document.model_fields_set
         errors = validate_state(incoming)
         after = {}
-        for kind in ("tools", "modes", "malware_modes"):
+        for kind in ("tools", "modes"):
             combined = {item["id"]: item for item in before[kind]} if request.strategy == "merge" else {}
             combined.update({item["id"]: item for item in incoming[kind]})
             after[kind] = sorted(combined.values(), key=lambda item: item["id"])
         after["limits"] = request.document.limits.model_dump() if request.document.limits else before["limits"]
         errors.extend(validate_state(after))
         errors = list(dict.fromkeys(errors))
-        summary = {kind: changes(before[kind], after[kind]) for kind in ("tools", "modes", "malware_modes")}
-        warnings = []
+        summary = {kind: changes(before[kind], after[kind]) for kind in ("tools", "modes")}
+        warnings = [ErrorText("config.legacy_fields_warning")] if legacy_fields else []
         for tool in after["tools"]:
             status = inspect_path(tool["path"])
             if status["kind"] in ("missing", "unavailable"):
@@ -187,7 +177,7 @@ class ConfigurationTransfer:
                 warnings.append(ErrorText('config.incomplete', name=mode['name']))
         result = {"valid": not errors, "errors": errors, "warnings": warnings,
                   "strategy": request.strategy, "changes": summary,
-                  "total_tools": len(after["tools"]), "total_modes": len(after["modes"]),"total_malware_modes":len(after["malware_modes"])}
+                  "total_tools": len(after["tools"]), "total_modes": len(after["modes"]), "requires_legacy_confirmation": legacy_fields}
         result["limits"] = {"before": before["limits"], "after": after["limits"], "changed": before["limits"] != after["limits"]}
         if not errors:
             with self.lock:
@@ -197,7 +187,8 @@ class ConfigurationTransfer:
                     raise HTTPException(429, ErrorText('error.9834eab14186'))
                 ticket = secrets.token_urlsafe(24)
                 self.tickets[ticket] = {"expires": now + TICKET_TTL, "before": fingerprint(before),
-                                        "after": after, "strategy": request.strategy, "summary": summary}
+                                        "after": after, "strategy": request.strategy, "summary": summary,
+                                        "legacy_fields": legacy_fields}
                 result["ticket"] = ticket
         return result
 
@@ -209,6 +200,8 @@ class ConfigurationTransfer:
                 raise HTTPException(409, ErrorText('error.658836555ad3'))
             if preview["strategy"] == "replace" and not request.confirm_replace:
                 raise HTTPException(422, ErrorText('error.e82b2ef2795d'))
+            if preview["legacy_fields"] and not request.confirm_legacy_fields:
+                raise HTTPException(422, ErrorText("config.legacy_confirmation_required"))
             with closing(sqlite3.connect(self.storage.database)) as connection, connection:
                 connection.execute("BEGIN IMMEDIATE")
                 before = snapshot(connection)
@@ -223,9 +216,6 @@ class ConfigurationTransfer:
                     json.dump(document(before), output, ensure_ascii=False, indent=2)
                 after = preview["after"]
                 write_limits(connection, after["limits"])
-                connection.execute("DELETE FROM malware_modes")
-                connection.executemany("INSERT INTO malware_modes(id,name,body_json) VALUES (?,?,?)",
-                    [(item["id"],item["name"],dump({k:v for k,v in item.items() if k!="id"})) for item in after["malware_modes"]])
                 connection.execute("DELETE FROM mode_drafts")
                 connection.execute("DELETE FROM tool_locations")
                 connection.executemany("INSERT INTO tool_locations(id,name,path) VALUES (?,?,?)",
@@ -241,7 +231,7 @@ class ConfigurationTransfer:
                 )
             del self.tickets[request.ticket]
             return {"imported": True, "backup_file": str(backup_path), "changes": preview["summary"],
-                    "total_tools": len(after["tools"]), "total_modes": len(after["modes"]),"total_malware_modes":len(after["malware_modes"])}
+                    "total_tools": len(after["tools"]), "total_modes": len(after["modes"])}
 
 
 async def read_payload(request: Request, model):

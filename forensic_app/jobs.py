@@ -9,7 +9,6 @@ import sqlite3
 import threading
 import time
 from contextlib import closing
-from datetime import date
 from pathlib import Path, PureWindowsPath
 from typing import Literal
 from uuid import UUID, uuid4
@@ -26,10 +25,8 @@ from forensic_app.file_browser import BrowseRequest, browse
 from forensic_app.job_errors import describe_error
 from forensic_app.kape_plan import compile_plan
 from forensic_app.local_paths import validate_local_path
-from forensic_app.malware_modes import MAX_SAMPLE_BYTES, MalwareModes, compile_static
 from forensic_app.processing_settings import ProcessingSettings
 from forensic_app.server_control import accepting
-from forensic_app.static_analysis import EXTENSIONS, validate_name
 from forensic_app.storage import Storage
 from forensic_app.windows_access import input_identity, is_admin, locked_input
 from forensic_app.workspaces import Workspaces, job_paths, no_links
@@ -48,9 +45,9 @@ class LocalJob(JobMetadata):
     model_config = ConfigDict(extra="forbid")
     mode_id: str = Field(min_length=1, max_length=80)
     path: str = Field(min_length=1, max_length=4096)
-    allow_high_compression: bool = False
+    allow_high_compression: bool = True
     create_zip: bool = True
-    workspace: Literal['forensics','malware'] = 'forensics'
+    workspace: Literal['forensics'] = 'forensics'
 
 
 class JobStore:
@@ -75,6 +72,8 @@ class JobStore:
                 );
                 CREATE INDEX IF NOT EXISTS job_event_cursor ON job_events(job_id,id);
             """)
+            from forensic_app.source_access import initialize_sources
+            initialize_sources(connection)
             columns = {row[1] for row in connection.execute("PRAGMA table_info(jobs)")}
             for name in ("error_detail", "effective_json", "input_sha1", "result_sha1", "input_inventory_json"):
                 if name not in columns:
@@ -84,8 +83,8 @@ class JobStore:
 
     def recover(self, reason='Server wurde neu gestartet. Keine automatische Wiederholung.'):
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
-            connection.execute("UPDATE archive_requests SET status='interrupted',error=? WHERE status IN ('queued','running')",(reason,))
-            for ident, in connection.execute("SELECT id FROM jobs WHERE status NOT IN (?,?,?,?)", TERMINAL):
+            connection.execute("UPDATE archive_requests SET status='interrupted',error=? WHERE status IN ('queued','running') AND job_id IN (SELECT id FROM jobs WHERE COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics')",(reason,))
+            for ident, in connection.execute("SELECT id FROM jobs WHERE status NOT IN (?,?,?,?) AND COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics'", TERMINAL):
                 connection.execute("UPDATE jobs SET status='interrupted',phase='Unterbrochen',error=? WHERE id=?",
                                    (reason, ident))
                 connection.execute("INSERT INTO job_events(job_id,kind,payload) VALUES (?,'status',?)",
@@ -94,7 +93,7 @@ class JobStore:
     def search(self, *, q='', status=None, mode_id=None, date_from=None, date_to=None, limit=50, offset=0, workspace=None):
         if date_from and date_to and date_from > date_to:
             raise HTTPException(422, ErrorText('error.dbd0af04dfb6'))
-        conditions, values = [], []
+        conditions, values = ["COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics'"], []
         if workspace:
             conditions.append("COALESCE(json_extract(config_json,'$.workspace'),'forensics')=?")
             values.append(workspace)
@@ -124,8 +123,8 @@ class JobStore:
                 ' ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?',(*values,limit,offset)).fetchall()
             modes = connection.execute("SELECT DISTINCT json_extract(config_json,'$.mode.id') AS id,"
                 "json_extract(config_json,'$.mode.name') AS name FROM jobs"+
-                (" WHERE COALESCE(json_extract(config_json,'$.workspace'),'forensics')=?" if workspace else '')+
-                ' ORDER BY name,id', (workspace,) if workspace else ()).fetchall()
+                " WHERE COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics'"+
+                ' ORDER BY name,id').fetchall()
         return {'jobs':[dict(row) for row in rows], 'total':total, 'limit':limit, 'offset':offset,
                 'modes':[dict(row) for row in modes if row['id']]}
 
@@ -149,7 +148,7 @@ class JobStore:
         with closing(sqlite3.connect(self.storage.database)) as connection:
             connection.row_factory = sqlite3.Row
             row = connection.execute("SELECT * FROM jobs WHERE id=?", (ident,)).fetchone()
-        if row is None:
+        if row is None or json.loads(row["config_json"]).get("workspace", "forensics") != "forensics":
             raise HTTPException(404, ErrorText('error.5b762ab6b75f'))
         result = dict(row)
         config = json.loads(result.pop("config_json"))
@@ -165,17 +164,20 @@ class JobStore:
                       filename=config.get("filename", "Evidence.zip"), tool=current["tool"])
         result["current_name"] = current.get("name", "KAPE")
         result["current_kind"] = current.get("kind", "kape")
-        result["command_running"] = result["status"] == "running" and result["phase"] in ("PowerShell läuft", "KAPE läuft", "Statische Prüfung läuft")
+        result["command_running"] = result["status"] == "running" and result["phase"] in ("PowerShell läuft", "KAPE läuft")
         result["source_kind"] = config.get("source_kind", "upload")
         result['workspace'] = config.get('workspace','forensics')
         result['locale'] = config.get('locale','de')
         result["local_path"] = config.get("local_input", {}).get("path")
         result["source_resolution"] = effective.get("source_resolution")
-        result["input_inventory"] = json.loads(result.pop("input_inventory_json") or "null")
+        from forensic_app.artifacts import metadata_report
+        inventory = json.loads(result.pop("input_inventory_json") or "null")
+        result["input_inventory"] = metadata_report({'input_inventory': inventory})['input_inventory']
         result['storage_error'] = None
         result['output_available'] = False
         try:
             root,_work,archive = job_paths(self.storage,config,ident)
+            result['work_directory'] = str(_work)
             result['data_root'] = str(root)
             result['result_available'] = result['status'] == 'succeeded' and archive.is_file()
             result['report_available'] = (root/'results'/ident/'Abschlussbericht.html').is_file()
@@ -186,6 +188,7 @@ class JobStore:
         except (ValueError,OSError) as exc:
             result['data_root'] = config.get('data_root',str(self.storage.root))
             result['storage_error'] = str(exc)
+            result['work_directory'] = None
             result['result_available'] = result['report_available'] = False
         result['create_zip'] = config.get('create_zip',True)
         with closing(sqlite3.connect(self.storage.database)) as c:
@@ -266,12 +269,14 @@ class JobService:
         return self.process is not None and self.process.is_alive()
 
     def catalog(self,workspace='forensics'):
+        if workspace != 'forensics':
+            raise HTTPException(422, 'Only ZIP processing is supported.')
         state = ConfigurationTransfer(self.storage).current()
-        modes = state['modes'] if workspace=='forensics' else MalwareModes(self.storage).list()
+        modes = state['modes']
         result = []
         for mode in modes:
             try:
-                compile_plan(mode, state["tools"]) if workspace=='forensics' else compile_static(mode)
+                compile_plan(mode, state["tools"])
                 if sum((item['evidence_format'],item["effort"]) == (mode['evidence_format'],mode["effort"]) for item in modes) != 1:
                     raise AppValueError('error.bb749987affc')
                 reason = ""
@@ -282,51 +287,45 @@ class JobService:
         return {"worker": self.available(), "administrator": is_admin(), "test_no_admin": self.test_no_admin,
                 "modes": result, "max_upload_bytes": limits["max_upload_bytes"], "limits": limits}
 
-    def begin(self, mode_id: str, filename: str, *, local_input: dict | None = None, allow_high_compression: bool = False, create_zip: bool = True, workspace='forensics', case_number='', device_name=''):
+    def begin(self, mode_id: str, filename: str, *, local_input: dict | None = None, allow_high_compression: bool = True, create_zip: bool = True, workspace='forensics', case_number='', device_name=''):
+        if workspace != "forensics":
+            raise HTTPException(422, "Only ZIP processing is supported.")
         metadata = JobMetadata(case_number=case_number,device_name=device_name).model_dump()
         if not self.available():
             raise HTTPException(503, ErrorText('error.027017c7806b'))
         if not is_admin() and not self.test_no_admin:
             raise HTTPException(403, ErrorText('error.1984eabb0680'))
         state = ConfigurationTransfer(self.storage).current()
-        modes = state['modes'] if workspace=='forensics' else MalwareModes(self.storage).list()
+        modes = state['modes']
         mode = next((mode for mode in modes if mode["id"] == mode_id), None)
         if mode is None:
             raise HTTPException(404, ErrorText('error.ffd5597c4261'))
         if sum((item['evidence_format'],item["effort"]) == (mode['evidence_format'],mode["effort"]) for item in modes) != 1:
             raise HTTPException(409, ErrorText('error.bb749987affc'))
         try:
-            if workspace=='malware':
-                validate_name(filename,mode['evidence_format'])
-                plan = compile_static(mode,capture=True)
-            else:
-                plan = compile_plan(mode, state["tools"], capture=True)
+            plan = compile_plan(mode, state["tools"], capture=True)
             destination = Workspaces(self.storage).get()['path']
             ensure_space(Path(destination))
         except (ValueError, OSError) as exc:
             raise HTTPException(422, error_detail(exc)) from exc
         from forensic_app.interface_preferences import InterfacePreferences
         plan['locale'] = InterfacePreferences(self.storage).get()['locale']
-        if workspace == 'malware':
-            plan['report_features'] = {'pe_details':1, 'indicators':1}
         plan.update(metadata)
         plan["data_root"] = destination
         plan['workspace'] = workspace
         plan["create_zip"] = create_zip
         plan["filename"] = Path(filename.replace("\\", "/")).name[:240]
         plan["source_kind"] = "local" if local_input else "upload"
-        plan["allow_high_compression"] = allow_high_compression
+        plan["allow_high_compression"] = True
         plan["test_no_admin"] = self.test_no_admin
         plan["limits"] = state["limits"]
-        if workspace=='malware':
-            plan['limits'] = {**state['limits'],'max_upload_bytes':min(state['limits']['max_upload_bytes'],MAX_SAMPLE_BYTES)}
         if local_input:
             plan["local_input"] = local_input
         ident = str(uuid4())
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             accepting(connection)
-            active = connection.execute("SELECT count(*) FROM jobs WHERE status NOT IN (?,?,?,?)", TERMINAL).fetchone()[0]
+            active = connection.execute("SELECT count(*) FROM jobs WHERE status NOT IN (?,?,?,?) AND COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics'", TERMINAL).fetchone()[0]
             if connection.execute('SELECT active FROM cleanup_state WHERE id=1').fetchone()[0]:
                 raise HTTPException(409,ErrorText('error.1663aa533a0d'))
             if active >= 4:
@@ -339,14 +338,12 @@ class JobService:
         try:
             path = Path(validate_local_path(value.path)).resolve(strict=True)
             validate_local_path(str(path))
-            if not path.is_file() or (value.workspace=='forensics' and path.suffix.casefold() != ".zip"):
+            if not path.is_file() or path.suffix.casefold() != ".zip":
                 raise AppValueError('error.53c1d7d23bae')
             with locked_input(path) as source:
                 identity = input_identity(source)
                 if not identity["size"]:
                     raise AppValueError('error.e0f9bcae119b')
-                if value.workspace=='malware' and identity['size']>MAX_SAMPLE_BYTES:
-                    raise AppValueError('error.e52d60f41892')
             ident = self.begin(value.mode_id, path.name, local_input={"path": str(path), **identity},
                                allow_high_compression=value.allow_high_compression,create_zip=value.create_zip,workspace=value.workspace,case_number=value.case_number,device_name=value.device_name)
             self.store.update(ident, status="queued", phase="Lokale ZIP wartet", input_size=identity["size"])
@@ -368,37 +365,32 @@ def jobs_router(service: JobService, authorize):
         return explorer.open(ident, request.client.host if request.client else None)
 
     @router.get("/catalog")
-    def catalog(workspace:Literal['forensics','malware']='forensics'):
+    def catalog(workspace:Literal['forensics']='forensics'):
         return service.catalog(workspace)
 
     @router.get("")
-    def list_jobs(q: str = Query(default='',max_length=200),
-                  status: Literal['uploading','validating','queued','running','succeeded','failed','cancelled','interrupted'] | None = None,
-                  mode_id: str | None = Query(default=None,max_length=80), date_from: date | None = None,
-                  date_to: date | None = None, limit: int = Query(default=50,ge=1,le=100), offset: int = Query(default=0,ge=0),workspace:Literal['forensics','malware']|None=None):
-        return service.store.search(q=q,status=status,mode_id=mode_id,date_from=date_from,date_to=date_to,limit=limit,offset=offset,workspace=workspace)
+    def list_jobs(limit: int = Query(default=50,ge=1,le=100), offset: int = Query(default=0,ge=0)):
+        return service.store.search(limit=limit,offset=offset,workspace='forensics')
 
     @router.post("/local")
     def local_job(value: LocalJob):
         return service.local(value)
 
     @router.post("/browse")
-    def browse_local(value: BrowseRequest,workspace:Literal['forensics','malware']='forensics'):
+    def browse_local(value: BrowseRequest,workspace:Literal['forensics']='forensics'):
         result = browse(value)
-        suffixes = {'.zip'} if workspace=='forensics' else set.union(*EXTENSIONS.values())
+        suffixes = {'.zip'}
         result["entries"] = [entry for entry in result["entries"] if entry["kind"] == "directory" or Path(entry['name']).suffix.casefold() in suffixes]
         return result
 
     @router.post("")
-    async def upload(request: Request, mode_id: str, filename: str = "Evidence.zip", allow_high_compression: bool = False, create_zip: bool = True,workspace:Literal['forensics','malware']='forensics', case_number: str = Query(default='',max_length=120), device_name: str = Query(default='',max_length=120)):
-        if workspace=='forensics' and not filename.lower().endswith(".zip"):
+    async def upload(request: Request, mode_id: str, filename: str = "Evidence.zip", allow_high_compression: bool = True, create_zip: bool = True,workspace:Literal['forensics']='forensics', case_number: str = Query(default='',max_length=120), device_name: str = Query(default='',max_length=120)):
+        if not filename.lower().endswith(".zip"):
             raise HTTPException(422, ErrorText('error.6160041021ab'))
-        if request.headers.get("content-type", "").split(";")[0] != ('application/zip' if workspace=='forensics' else 'application/octet-stream'):
+        if request.headers.get("content-type", "").split(";")[0] != 'application/zip':
             raise HTTPException(415, ErrorText('error.479c110f90ed'))
         declared = request.headers.get("content-length")
         max_upload = service.limits.get()["max_upload_bytes"]
-        if workspace=='malware':
-            max_upload = min(max_upload,MAX_SAMPLE_BYTES)
         if declared and (not declared.isdecimal() or int(declared) > max_upload):
             raise HTTPException(413, ErrorText('error.527a5b6b2fe0', p0=f'{max_upload:,}'))
         ident = await run_in_threadpool(service.begin, mode_id, filename, allow_high_compression=allow_high_compression,create_zip=create_zip,workspace=workspace,case_number=case_number,device_name=device_name)
@@ -422,7 +414,7 @@ def jobs_router(service: JobService, authorize):
                     sha1.update(chunk)
             if size == 0 or declared and int(declared) != size:
                 raise AppValueError('error.b7c3767d30f0')
-            (folder / "upload.part").replace(folder / ('Evidence.zip' if workspace=='forensics' else 'Evidence.bin'))
+            (folder / "upload.part").replace(folder / 'Evidence.zip')
             await run_in_threadpool(service.store.update, ident, status="queued", phase="Warteschlange",
                                     input_size=size, input_sha256=checksum.hexdigest(),input_sha1=sha1.hexdigest())
         except BaseException as exc:
@@ -460,83 +452,28 @@ def jobs_router(service: JobService, authorize):
             raise HTTPException(503,ErrorText('error.7de4f6ec7722'))
         return ArchiveQueue(service.store).request(ident)
 
-    @router.get('/{ident}/preview')
-    @router.get('/{ident}/csv')
-    def csv_result(ident: str, path: str | None = Query(default=None,max_length=240),
-                   search: str = Query(default='',max_length=128), offset: int = Query(default=0,ge=0,le=2000),
-                   limit: int = Query(default=25,ge=1,le=50),
-                   format: Literal['csv','xlsx','all'] = 'csv', sheet_id: str = Query(default='s1',max_length=32),
-                   sort_column: int | None = Query(default=None,ge=0,le=63),
-                   sort_kind: Literal['text','number','time'] = 'text', descending: bool = False):
-        from forensic_app.csv_preview import preview_csv
-        from forensic_app.result_access import result_file
-        from forensic_app.xlsx_preview import preview_xlsx
-        extensions=('.csv','.xlsx') if format=='all' else ('.'+format,)
-        with result_file(service.store,ident,path,extensions) as (files,candidate):
-            if candidate is None:
-                return {'files':files[:200],'partial':len(files)>200,
-                        'note':'Maximal 200 Dateien aus der gespeicherten Ergebnisliste.'}
-            options={'search':search,'offset':offset,'limit':limit,'sort_column':sort_column,
-                     'sort_kind':sort_kind,'descending':descending}
-            if candidate.suffix.lower()=='.xlsx':
-                return preview_xlsx(candidate,sheet_id=sheet_id,**options)
-            return preview_csv(candidate,**options)
+    @router.get('/{ident}/report')
+    def report(ident: str, format: Literal['html','json'] = 'html'):
+        from fastapi.responses import Response
 
-    def ui_report(ident: str):
-        # Separate bounded UI projection; original report downloads remain unchanged.
-        from forensic_app.workspaces import no_links
+        from forensic_app.artifacts import metadata_report, render_report
         service.store.get(ident)
-        path = service.store.paths(ident)[0] / 'results' / ident / 'Abschlussbericht.json'
+        path = service.store.paths(ident)[0]/'results'/ident/'Abschlussbericht.json'
         try:
             no_links(path)
             if not path.is_file() or path.stat().st_nlink != 1:
                 raise ValueError('Report is not a regular independent file.')
             with path.open('rb') as source:
-                payload = source.read(16 * 1024**2 + 1)
-            if len(payload) > 16 * 1024**2:
-                raise ValueError('Report exceeds the preview limit.')
-            return json.loads(payload)
-        except (ValueError, OSError) as exc:
-            raise HTTPException(404, ErrorText('error.45e10e99bf67')) from exc
-
-    @router.get('/{ident}/summary')
-    def summary(ident: str):
-        report_data = ui_report(ident)
-        return {'finding_summaries': report_data.get('finding_summaries', []),
-                'pe_details':report_data.get('pe_details',[]),
-                'pe_details_partial':bool(report_data.get('pe_details_partial')),
-                'indicators':report_data.get('indicators')}
-
-    @router.get('/{ident}/indicators')
-    def indicators(ident: str):
-        from fastapi.responses import JSONResponse
-        data = ui_report(ident).get('indicators')
-        if not isinstance(data,dict):
-            raise HTTPException(409, ErrorText('error.indicators_missing'))
-        return JSONResponse(data,headers={'Content-Disposition':'attachment; filename="Indikatoren-'+ident+'.json"'})
-
-    @router.get('/{ident}/report')
-    def report(ident: str, format: Literal['html','json'] = 'html'):
-        root = service.store.paths(ident)[0]
-        path = root/'results'/ident/('Abschlussbericht.'+format)
-        from forensic_app.workspaces import no_links
-        try:
-            no_links(path)
+                payload = source.read(16*1024**2+1)
+            if len(payload) > 16*1024**2:
+                raise ValueError('Report exceeds the size limit.')
+            data = metadata_report(json.loads(payload))
         except (ValueError,OSError) as exc:
             raise HTTPException(404,ErrorText('error.45e10e99bf67')) from exc
-        if format == 'html':
-            from fastapi.responses import Response
-
-            from forensic_app.artifacts import render_report
-            source = path.with_suffix('.json')
-            no_links(source)
-            if source.is_file():
-                return Response(render_report(json.loads(source.read_text(encoding='utf-8'))),media_type='text/html',
-                                headers={'Content-Disposition':'attachment; filename="Abschlussbericht-'+ident+'.html"',
-                                         'Content-Security-Policy':"sandbox; default-src 'none'; style-src 'unsafe-inline'"})
-        return FileResponse(path,media_type='text/html' if format == 'html' else 'application/json',
-                            filename='Abschlussbericht-'+ident+'.'+format,
-                            headers={'Content-Security-Policy':"sandbox; default-src 'none'; style-src 'unsafe-inline'"})
+        content = render_report(data) if format == 'html' else json.dumps(data,ensure_ascii=False,indent=2)
+        return Response(content,media_type='text/html' if format == 'html' else 'application/json',
+                        headers={'Content-Disposition':f'attachment; filename="Abschlussbericht-{ident}.{format}"',
+                                 'Content-Security-Policy':"sandbox; default-src 'none'; style-src 'unsafe-inline'"})
 
     @router.post("/{ident}/cancel")
     def cancel(ident: str):

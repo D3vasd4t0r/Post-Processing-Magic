@@ -219,7 +219,8 @@ def test_banner_uses_translated_labels_and_keeps_product_name():
     canvas = Canvas()
     draw_server_banner(canvas,True,DesktopTranslations('en').t)
     assert 'DIGITAL FORENSICS' in canvas.text
-    assert 'STATIC MALWARE ANALYSIS' in canvas.text
+    assert 'STATIC MALWARE ANALYSIS' not in canvas.text
+    assert 'Server control' in canvas.text
     assert 'Post-Processing-Magic' in canvas.text
     assert 'Administrator privileges active' in canvas.text
 

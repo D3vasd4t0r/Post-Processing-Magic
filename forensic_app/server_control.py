@@ -36,8 +36,8 @@ class ServerControl:
         with closing(sqlite3.connect(self.storage.database)) as c:
             c.execute('BEGIN')
             return {'stopping':draining(c),
-                    'active_jobs':c.execute("SELECT count(*) FROM jobs WHERE status IN ('running','uploading','validating')").fetchone()[0],
-                    'active_archives':c.execute("SELECT count(*) FROM archive_requests WHERE status='running'").fetchone()[0],
+                    'active_jobs':c.execute("SELECT count(*) FROM jobs WHERE status IN ('running','uploading','validating') AND COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics'").fetchone()[0],
+                    'active_archives':c.execute("SELECT count(*) FROM archive_requests WHERE status='running' AND job_id IN (SELECT id FROM jobs WHERE COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics')").fetchone()[0],
                     'cleanup':bool(c.execute('SELECT active FROM cleanup_state WHERE id=1').fetchone()[0])}
 
     def request(self):

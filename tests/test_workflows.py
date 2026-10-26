@@ -100,8 +100,8 @@ def test_real_powershell_blocks_order_cd_and_explicit_working_directory(tmp_path
         assert (work/"PostMortem"/"first.txt").read_text().strip() == "first"
         assert (work/"PostMortem"/"third.txt").read_text().strip() == "third"
         payload = client.get('/api/settings/configuration/export').json()
-        assert payload["schema_version"] == 3 and payload["modes"][0]["steps"] == draft.model_dump()["steps"]
-        assert payload['malware_modes']==[]
+        assert payload["schema_version"] == 4 and payload["modes"][0]["steps"] == draft.model_dump()["steps"]
+        assert 'malware_modes' not in payload
         preview = client.post('/api/settings/configuration/preview',json={"document":payload}).json()
         assert preview["valid"] and not preview["warnings"]
 

@@ -117,7 +117,7 @@ class Storage:
     def tool_usage(self, tool_id: str) -> list[dict]:
         with closing(sqlite3.connect(self.database)) as connection:
             result = []
-            for table in ('mode_drafts','malware_modes'):
+            for table in ('mode_drafts',):
                 if connection.execute('SELECT 1 FROM sqlite_master WHERE name=?',(table,)).fetchone():
                     result.extend({'id':row[0],'name':row[1]} for row in connection.execute('SELECT id,name,body_json FROM '+table)
                                   if any(step.get('tool_id') == tool_id for step in json.loads(row[2]).get('steps',[])))
@@ -140,11 +140,6 @@ class Storage:
                            if any(step.get("tool_id") == tool_id for step in json.loads(mode_body).get("steps", []))]
                 if used_by:
                     raise AppValueError('error.e34bff9c3716', p0=', '.join(used_by))
-            if connection.execute("SELECT 1 FROM sqlite_master WHERE name='malware_modes'").fetchone():
-                names = [name for name,body in connection.execute('SELECT name,body_json FROM malware_modes')
-                         if any(step.get('tool_id') == tool_id for step in json.loads(body).get('steps',[]))]
-                if names:
-                    raise AppValueError('error.cb4c04abf13f', p0=', '.join(names))
             connection.execute("DELETE FROM tool_locations WHERE id = ?", (tool_id,))
             connection.execute(
                 "INSERT INTO configuration_events "

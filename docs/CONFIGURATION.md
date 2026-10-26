@@ -1,140 +1,27 @@
-# Konfiguration im Browser und Datenaustausch
+# Konfiguration 0.40
 
-Nutzervorgaben vom 21.10.2026 nach dem ersten Startgerüst.
+Die vier Kategorien sind Tools, Modi, Allgemein und Konfiguration. Einstellungen speichern führt keinen Befehl aus. Erst Run startet die bewusst gewählte Befehlsfolge.
 
-## Aktuell ab 0.9.0
+## Tools und Modi
 
-JSON-Export verwendet Schema 2 und enthält zusätzlich Verarbeitungslimits sowie
-Blocktyp, PowerShell-Code und relatives Arbeitsverzeichnis. Schema-1-Dateien
-bleiben importierbar; ohne Limits bleiben die aktuellen Werte erhalten. Vorschau
-zeigt Limitänderungen; Änderungen der Limits machen alte Vorschauen ungültig.
-Backup und atomare Anwendung schließen die Limits ein. Keine Tokens oder Evidencen.
+Tools mit Namen und absolutem Serverpfad anlegen, prüfen und bearbeiten. Der Picker merkt den letzten Ordner. Das Prüfen startet kein Tool. Wird ein Tool in einem Modus verwendet, warnt Entfernen mit den betroffenen Modi und verändert weder Tool noch Referenzen.
 
-Einstellungen → Verarbeitung: Upload in GiB (Standard 50), Entpacklimit in TB dezimal
-(Standard 2 = 2.000.000.000.000 Bytes). Werte werden pro Auftrag eingefroren.
+ZIP-Modi je Aufwand schnell, Medium, langsam sind eindeutig. Belegte Slots beim Neuanlegen gesperrt, eigene Stufe beim Bearbeiten erlaubt. Altbestand mit doppelten Slots bleibt als sichtbarer Konflikt erhalten. Nur vollständig konfigurierte Stufen werden für Run freigegeben.
 
-Im Modus-Editor stehen Tool-Aufruf und „Freier PowerShell-Befehl“ zur Wahl.
-PowerShell benötigt keinen Tool-Eintrag und unterstützt mehrzeiligen Code. Das
-Arbeitsverzeichnis ist relativ zum eigenen Auftragsordner, standardmäßig `.`;
-Unterordner müssen vorher angelegt sein. cd gilt nur innerhalb eines Blocks.
-KAPE bleibt im Auftragsordner `.`. Geordnete PowerShell-Blöcke vor/nach höchstens
-einem KAPE-Block oder reine PowerShell-Modi sind ausführbar; andere Toolrunner
-folgen später. Fehler stoppen nachfolgende Blöcke. Speichern und Import führen
-nichts aus; Run startet bewusst die gewählte Befehlsfolge mit Administratorrechten.
+Import: relatives Entpackziel. Verarbeitung: geordnete Tool- oder freie PowerShell-Blöcke, einfügen/verschieben/entfernen. Export: Ergebnisordner als eigene Zeile. ZIP mit C und Ziel Targets ergibt Targets/C. Toolparameter ohne exe-Namen eingeben; Programmdatei kommt aus der Referenz. Aktueller Runner höchstens ein KAPE-Befehl plus PowerShell oder reine PowerShell. Nicht unterstützte Toolfolgen bleiben gesperrt.
 
-Die folgenden Abschnitte beschreiben auch historische Editor-Zwischenstände.
+PowerShell unterstützt mehrzeiligen Code, relatives Arbeitsverzeichnis und Zeitlimit. Unterordner müssen vor Verwendung existieren; cd gilt nur im eigenen Block. Neue Jobs erhalten unveränderliche Snapshots. Änderungen betreffen keine laufenden/alten Jobs.
 
-## Produktmodell
+## Portable Datei
 
-Die Anwendung startet ohne vorgegebene Analysekonfiguration. Nutzer hinterlegen
-Tools und bauen darauf eigene Modi mit geordneten Verarbeitungsschritten auf.
-PS1-Dateien müssen für diese Anpassungen nicht editiert werden.
+Export Schema 4 enthält Tools, Forensikmodi einschließlich Schritten/Argumenten/Reihenfolge und gemeinsame Verarbeitungslimits. Keine Tokens, Schlüssel, Jobs, Evidenzen oder Toolprogramme. Arbeitslaufwerk, Port/LAN/Logrotation und Sprache bleiben serverlokal.
 
-Auf ausdrücklichen Nutzerwunsch wird ab 0.3.0 einmalig eine bearbeitbare KAPE-Vorlage
-„Medium / ohne Timeline“ angelegt. Sie ist ausschließlich ein Entwurf ohne Ausführung.
-Version 1 unterstützt nur ZIP (KAPE-Target); E01 und VMDK bleiben in Planung.
+Import: Datei wählen, Zusammenführen oder ausdrücklich bestätigtes Ersetzen, Vorschau prüfen, anwenden. Validierung und Konfliktprüfung erfolgen vor atomarer Änderung; automatische Sicherung vor Anwendung. Veraltete/abgelaufene Vorschauen werden abgewiesen. Auf dem Zielsystem Toolpfade erneut prüfen und importierte Modi bewusst freigeben.
 
-Ein Tool beschreibt Name, lokale Programmdatei bzw. Installationsverzeichnis und
-später seine überprüfte Version. Ein Modus enthält Name, Beschreibung und eine
-Liste von Schritten. Ein Schritt referenziert ein Tool und definiert Argumente
-sowie unterstützte Platzhalter für Ein- und Ausgabe. Die Reihenfolge bestimmt,
-wann welches Tool aufgerufen wird. Geräte-/Evidence-Zuordnung und weitere
-Bedingungen werden gemeinsam mit dem Nutzer pro Aufbereitungsart festgelegt.
+Alte Schemas 1/2/3 bleiben kontrolliert einlesbar. Enthaltene entfallene Malwarefelder lösen eine deutliche Vorschauwarnung und gesonderte Bestätigungscheckbox aus, auch wenn die Liste leer ist. Ohne Bestätigung keine Übernahme. Historische Altdaten werden weder gelöscht noch umgedeutet.
 
-Die Ausführung verwendet Programmdatei und getrennte Argumentliste; „als CMD“
-bedeutet zunächst Kommandozeilenaufruf. Shell-Verkettungen, Umleitungen oder
-PowerShell-Code werden nicht stillschweigend aus Freitext interpretiert. Wenn
-solche Funktionen gebraucht werden, ist dafür ein expliziter Schritttyp erforderlich.
-Gespeicherte Einstellungen allein starten keinen Prozess.
+## Allgemein
 
-## Implementierter Editor ab 0.3.0
+Uploadlimit in GiB, Standard 50; Entpacklimit in TB dezimal, Standard 2. Hohe Kompression bei neuen Jobs immer erlaubt ohne Checkbox; andere ZIP-Grenzen gelten weiter. Limits pro Auftrag eingefroren. Arbeitsziel gilt nur für neue Jobs, keine automatische Datenmigration.
 
-- Modi anlegen, bearbeiten, kopieren und entfernen
-- Relatives Entpackziel im eigenen lokalen Arbeitsordner jeder Evidence-Aufbereitung
-- Geordnete Befehlsblöcke: Toolreferenz per Dropdown, Parameter ohne Programmname
-- Schritte davor/danach einfügen, nach oben/unten verschieben und entfernen
-- Vorschau mit konfiguriertem Toolpfad, keine Shell- oder Programmausführung
-- Ergebnisordner für das spätere abschließende ZIP festlegen
-- Alles zusammen in SQLite speichern, inklusive stabiler Schritt-IDs und Reihenfolge
-
-Ab 0.4.0 ist das Neuanlegen auf genau einen Modus pro ZIP-Aufwandsstufe begrenzt.
-Bestehende doppelte Testdefinitionen werden markiert und nicht automatisch verändert.
-Prüfung und Speichern einer Stufe sind transaktional; parallele Anfragen können
-nicht beide dieselbe freie Stufe neu belegen. Änderungen im eigenen bisherigen
-Slot bleiben möglich. Eine vorgefundene Konfliktsituation muss der Nutzer bewusst
-auflösen. Die Übersicht unterscheidet fehlende, unvollständige, konfigurierte und
-mehrfach belegte Stufen. Das ist keine Freigabe einer echten Programmausführung.
-
-Beispiel: Die ZIP-Struktur enthält C. Entpackziel Targets ergibt Targets/C unter
-work/{Aufbereitungs-ID}. Der KAPE-Schritt nutzt --msource .\Targets\C und
---mdest .\PostMortem. Am Ende wird künftig PostMortem gezippt. Ordner werden jetzt
-noch nicht angelegt; der Runner folgt in einem späteren Testpaket.
-
-Parameter sind aktuell gespeicherter Text. Vor echter Ausführung ist noch eine
-getestete Windows-Argumentverarbeitung notwendig; Texte werden nie als freie
-Shell-Befehle gestartet. Die KAPE-Vorlage wählt kein beliebiges vorhandenes Tool
-automatisch aus: Der Nutzer ordnet den passenden KAPE-Toolpfad ausdrücklich zu.
-
-## Import und Export ab 0.5.0
-
-Eine versionierte JSON-Konfigurationsdatei transportiert zusammen:
-
-- Tooldefinitionen mit stabilen Referenzen und Pfaden
-- Eigene Modi und Zuordnungen
-- Geordnete Verarbeitungsschritte, Argumente und unterstützte Platzhalter
-- Künftig ergänzte Workflowoptionen innerhalb eines versionierten Schemas
-
-Nicht enthalten sind Zugangstokens, Zertifikatsschlüssel, Evidence-Dateien, Jobs
-oder die ausführbaren Forensiktools selbst. Die verwendeten Programme müssen auf
-dem Zielrechner vorhanden sein; importierte Pfade können dort neu zugeordnet werden.
-
-Unter Einstellungen → Konfiguration werden alle Tools und Modi als JSON exportiert.
-Formatkennung: `post-processing-magic.configuration`, `schema_version: 1`.
-Der Import akzeptiert Anfragen bis 4 MiB und validiert Schema, Pfade, Namen,
-Toolreferenzen und eindeutige Format-/Aufwandsstufen. Unbekannte Felder und
-Schema-Versionen werden abgewiesen. Parameter bleiben unveränderter Text;
-Platzhalterauflösung und Windows-Argumentverarbeitung sind noch nicht implementiert.
-
-Zusammenführen behält Einträge bei, aktualisiert gleiche IDs und ergänzt neue IDs.
-Gleiche Namen oder bereits anderweitig belegte Stufen blockieren den Import.
-Ersetzen übernimmt genau die Datei und zeigt entfallende Einträge in der Vorschau.
-Es verlangt zusätzlich die ausdrückliche Bestätigung per Checkbox. Fehlende lokale
-Toolpfade und unvollständige Entwürfe werden als Hinweis angezeigt; nicht mehr
-vorhandene Toolreferenzen sind ein Fehler. Vorhandene Altkonflikte müssen vor
-einem erfolgreichen Import im Modus-Editor aufgelöst werden.
-
-Eine gültige Vorschau gilt zehn Minuten und genau einmal. Änderungen an der
-Konfiguration seit der Vorschau erfordern eine erneute Prüfung. Vor dem Anwenden
-wird eine vollständige JSON-Sicherung unter `config/backups/before-import-*.json`
-angelegt. Alle Änderungen einschließlich Importprotokoll werden in einer
-SQLite-Transaktion gespeichert. Die Vorschau verändert keine Konfiguration.
-Import startet niemals einen Workflow. Tokens, Zertifikate, Jobs und Evidencen
-werden weder importiert noch ersetzt. Die automatische Sicherung lässt sich über
-denselben Dateiimport mit Vorschau wiederherstellen.
-
-## Kleine Testpakete
-
-1. Toolverwaltung und Tokenanzeige: Testlauf 1 vom Nutzer abgenommen.
-2. Aktuell: Path-Picker für Datei-/Ordnerauswahl und Abbrechen testen.
-3. Aktuell: Modi und Befehlsblöcke einschließlich KAPE-Referenz, Entpackziel,
-   Reihenfolge und Ergebnisordner testen, weiterhin ohne Toolausführung.
-4. Anschließend geprüfte Argumentverarbeitung und Platzhalter separat planen.
-5. Konfiguration exportieren/importieren; danach Roundtrip und Konflikte testen.
-6. Einfache Hauptoberfläche: Datei, Format, Aufwand, Run, Command-Fortschritt,
-   ausklappbare Kommandozeile und „Download Evidences“ gemeinsam testen.
-7. Aufbereitungsarten und konkrete Tools gemeinsam festlegen, dann kontrollierte
-   Ausführung pro bestätigtem Ablauf implementieren.
-
-Bei jeder Iteration: Änderungen/Features, Testadresse, aktueller Token, wenige
-nummerierte Schritte und die Aufforderung, Feedback hier im Chat zu geben.
-Diese Reihenfolge kann der Nutzer jederzeit anpassen. Import/Export und Hauptseite
-sind vom Nutzer abgenommen. Der erste Runner ab 0.7.0 führt ausschließlich einen
-KAPE-Modulbefehl aus; mehrere Schritte und andere Programme bleiben vorerst reine
-Entwürfe. Windows-Argumentverarbeitung nutzt CommandLineToArgvW und startet eine
-getrennte Argumentliste ohne Shell. Erlaubt sind --msource, --mdest, --module und
-optional --gui. Pfadparameter sind relativ und werden mit den Ordnern im Modus
-abgeglichen. Platzhalterauflösung folgt weiterhin später.
-
-Eingebundene Tools zeigen ihre verwendenden Modi an. Ein Löschversuch warnt direkt
-am Tool und bleibt serverseitig gesperrt; Verknüpfungen werden nicht automatisch gelöst.
-Das gilt auch nach einem Konfigurationsimport.
+Speicher-/Queue-/Bereinigungs-/Diagnosefunktionen bleiben betriebliche Einstellungen. Vorschau vor Löschung/Diagnoseexport prüfen. Diagnose exportiert keine Toolausgaben oder Evidenzen. Feedback wird lokal gespeichert und erst auf bewussten Export geteilt.

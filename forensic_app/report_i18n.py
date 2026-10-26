@@ -36,25 +36,3 @@ class ReportText:
         if type(value) is bool:
             return self('true' if value else 'false')
         return value
-
-    def inspector(self, inspector):
-        """Return a localized copy; source summary/JSON remains untouched."""
-        return dict(inspector,
-                    name=self.known_text(inspector['name'], prefix='inspector.'),
-                    scope=self.known_text(self.known_text(inspector['scope'], prefix='inspector.'), prefix='office.'),
-                    status=self('status.'+inspector['status']) if 'status.'+inspector['status'] in self.de else inspector['status'],
-                    limitations=[self.known_text(v, prefix='limitation.') for v in inspector['limitations']])
-
-
-    def coverage(self, summary):
-        """Show a limit only for the inspector that actually applies it."""
-        inspector_id=summary['inspector'].get('id')
-        rows=[]
-        for key,value in summary['coverage'].items():
-            if key=='entry_limit_reached' and inspector_id!='strings':
-                continue
-            if key=='name_token_limit_reached' and inspector_id!='pdf':
-                continue
-            label=self('coverage.'+key) if 'coverage.'+key in self.de else key
-            rows.append((label,self.value(value)))
-        return rows

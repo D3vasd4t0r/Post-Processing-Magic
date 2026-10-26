@@ -40,30 +40,25 @@ def main():
     try:
         session.start();wait_ready(session)
         original=api('/api/settings/configuration/export')
-        assert original['schema_version']==3 and original['malware_modes']==[] and original['modes']
-        saved=api('/api/settings/malware',{'name':'Own unified PDF draft','evidence_format':'PDF','effort':'Medium',
-                                          'steps':[{'name':'Metadata only','inspector':'metadata'}]})
-        document=api('/api/settings/configuration/export')
-        assert document['malware_modes'][0]['id']==saved['id'] and document['modes']==original['modes']
-        (folder/'own-export.json').write_text(json.dumps(document),encoding='utf-8')
-        broken={k:v for k,v in document.items() if k!='malware_modes'}
+        assert original['schema_version'] == 4 and 'malware_modes' not in original and original['modes']
+        document = dict(original, schema_version=3, malware_modes=[{'id':'legacy', 'never_execute':True}])
+        preview = api('/api/settings/configuration/preview', {'document':document})
+        assert preview['valid'] and preview['requires_legacy_confirmation']
         try:
-            api('/api/settings/configuration/preview',{'document':broken,'strategy':'replace'})
-            raise AssertionError('Incomplete schema 3 accepted')
+            api('/api/settings/configuration/apply', {'ticket':preview['ticket']})
+            raise AssertionError('Legacy omission accepted without confirmation')
         except HTTPError as exc:
-            assert exc.code==422
-        preview=api('/api/settings/configuration/preview',{'document':document})
-        assert preview['valid'] and preview['total_modes']==preview['total_malware_modes']==1
-        api('/api/settings/configuration/apply',{'ticket':preview['ticket']})
-        assert api('/api/jobs')['total']==0
+            assert exc.code == 422
+        api('/api/settings/configuration/apply', {'ticket':preview['ticket'], 'confirm_legacy_fields':True})
+        assert api('/api/jobs')['total'] == 0
         session.stop();wait(lambda:not session.poll()['alive'])
         session.start();wait_ready(session)
         after=api('/api/settings/configuration/export')
-        assert after['modes']==document['modes'] and after['malware_modes']==document['malware_modes']
+        assert after['modes']==original['modes'] and 'malware_modes' not in after
         assert api('/api/jobs')['total']==0
         session.stop();wait(lambda:not session.poll()['alive'])
-        report={'passed':True,'version':__version__,'checks':['both categories even when empty','one export with both workflow categories',
-            'incomplete schema 3 rejected','preview and atomic import without jobs','restart preserves both categories']}
+        report={'passed':True,'version':__version__,'checks':['schema 4 forensic export', 'legacy omission preview and explicit confirmation',
+            'atomic import without jobs', 'restart preserves forensic configuration']}
         (folder/'report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
         print(json.dumps({'passed':True,'report':str(folder/'report.json'),'checks':len(report['checks'])}))
     finally:

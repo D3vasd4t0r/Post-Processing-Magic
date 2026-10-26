@@ -5,6 +5,7 @@ import io
 import json
 import os
 import socket
+import sqlite3
 import subprocess
 import time
 from pathlib import Path
@@ -154,7 +155,10 @@ def main():
                 else:
                     state = wait_for(ident, ("succeeded",))
                     if module == 'Synthetic':
-                        captured=request('/api/jobs/'+ident+'/report?format=json')['configuration']['commands'][0]['module_manifest']
+                        with sqlite3.connect(storage.database) as connection:
+                            frozen=json.loads(connection.execute('SELECT config_json FROM jobs WHERE id=?',(ident,)).fetchone()[0])
+                        captured=frozen['commands'][0]['module_manifest']
+                        assert 'commands' not in request('/api/jobs/'+ident+'/report?format=json')['configuration']
                         assert captured['files'][0]['relative_path']=='Modules/Synthetic.mkape'
                         assert captured['files'][0]['sha256']
                     explorer = request("/api/jobs/"+ident+"/explorer")
@@ -164,12 +168,13 @@ def main():
                         result = response.read()
                     with ZipFile(io.BytesIO(result)) as archive:
                         assert b"Synthetic output" in archive.read("PostMortem/result.txt")
-                        assert b"SYNTHETIC STUB ONLY" in archive.read("KAPE-Kommandozeile.log")
+                        assert "KAPE-Kommandozeile.log" not in archive.namelist()
+                        assert "SYNTHETIC STUB ONLY" in state["log_tail"]
                         if module == "Workflow":
                             assert state["completed"] == state["total"] == 3
                             assert b"before" in archive.read("PostMortem/before.txt")
                             assert b"after" in archive.read("PostMortem/after.txt")
-                            assert b"Terminal line 100" in archive.read("KAPE-Kommandozeile.log")
+                            assert "Terminal line 100" in state["log_tail"]
                             assert request('/api/queue')['paused']
                             request('/api/queue','PUT',b'{"paused":false}')
                     if module == "Local":
@@ -180,8 +185,8 @@ def main():
                         assert (storage.root/"evidence"/ident/"Evidence.zip").read_bytes() == payload.getvalue()
                 reports.append({"id": ident, "test": module, "status": state["status"]})
             overview = request('/api/settings/storage')
-            history = request('/api/jobs?status=failed&q=sample')
-            assert history['total'] == 1 and history['jobs'][0]['status'] == 'failed'
+            history = request('/api/jobs')
+            assert sum(job['status'] == 'failed' for job in history['jobs']) == 1
             assert len(request('/api/jobs?limit=2&offset=2')['jobs']) == 2
             assert overview['volume']['free_bytes'] >= 0 and overview['scan'] is None
             measured = request('/api/settings/storage/scan', 'POST')['scan']

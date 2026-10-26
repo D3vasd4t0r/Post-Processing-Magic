@@ -19,7 +19,8 @@ from forensic_app.storage import Storage
 
 def test_error_catalog_parity_and_canonical_integrity():
     de,en=catalog('de'),catalog('en')
-    assert de.keys()==en.keys() and len(de)>=200
+    assert de.keys()==en.keys()
+    assert {"config.legacy_fields_warning", "config.legacy_confirmation_required"} <= de.keys()
     formatter=string.Formatter()
     for key,source in de.items():
         fields={field for _,field,_,_ in formatter.parse(source) if field is not None}

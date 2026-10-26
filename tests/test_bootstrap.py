@@ -23,7 +23,15 @@ def test_startup_creates_persistent_storage_and_protects_api(tmp_path):
         assert response.status_code == 200
         assert response.json()["profiles"] == []
         assert not any(response.json()["capabilities"].values())
-        assert "Startgerüst" in client.get("/").text
+        assert 'id="nav-overview"' in client.get("/").text
+        assert client.get('/workspace.js').status_code == 200
+        for removed in ('/presentation.js', '/malware.js', '/evidence-details.js'):
+            assert client.get(removed).status_code == 404
+        for removed in ('/api/settings/malware', '/api/static/catalog', '/api/static/jobs',
+                        '/api/jobs/00000000-0000-0000-0000-000000000000/summary',
+                        '/api/jobs/00000000-0000-0000-0000-000000000000/preview',
+                        '/api/jobs/00000000-0000-0000-0000-000000000000/viewer'):
+            assert client.get(removed, headers={"Authorization":"Bearer test-token"}).status_code == 404
         assert client.get("/", headers={"host": "hostile.example"}).status_code == 400
         assert client.get("/config/access-token.txt").status_code == 404
         assert client.get("/state.sqlite3").status_code == 404

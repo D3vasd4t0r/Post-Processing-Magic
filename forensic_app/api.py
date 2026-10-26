@@ -21,13 +21,12 @@ from forensic_app.diagnostics import Diagnostics, diagnostics_router
 from forensic_app.feedback import FeedbackStore, feedback_router
 from forensic_app.interface_preferences import InterfacePatch, InterfacePreferences
 from forensic_app.jobs import JobService, jobs_router, results_router
-from forensic_app.malware_modes import MalwareModes, malware_router
 from forensic_app.modes import ModeStore, modes_router
 from forensic_app.onboarding import tool_guidance
 from forensic_app.processing_settings import ProcessingSettings, processing_settings_router
 from forensic_app.queue_control import QueueControl, queue_router
-from forensic_app.result_viewers import viewer_router
 from forensic_app.server_control import ServerControl
+from forensic_app.source_access import SourceAccess, source_download_router, source_router
 from forensic_app.storage import Storage
 from forensic_app.storage_overview import StorageOverview, storage_overview_router
 from forensic_app.tool_settings import settings_router
@@ -59,7 +58,6 @@ def create_app(storage: Storage, token: str, *, lan: bool = False, processing: b
         InterfacePreferences(storage).initialize()
         limits.initialize()
         mode_store.initialize()
-        MalwareModes(storage).initialize()
         transfer.initialize()
         jobs.store.initialize()
         queue.initialize()
@@ -141,11 +139,12 @@ def create_app(storage: Storage, token: str, *, lan: bool = False, processing: b
     app.include_router(modes_router(mode_store, authorize))
     app.include_router(configuration_router(transfer, authorize))
     app.include_router(jobs_router(jobs, authorize))
-    app.include_router(viewer_router(jobs, authorize))
     app.include_router(feedback_router(FeedbackStore(storage),authorize))
     app.include_router(diagnostics_router(Diagnostics(storage,lambda:{'server_running':True,'worker_running':jobs.available(),'administrator':is_admin(),**(runtime or {})}),authorize))
     app.include_router(results_router(jobs))
-    app.include_router(malware_router(MalwareModes(storage),authorize))
+    sources = SourceAccess(jobs.store)
+    app.include_router(source_router(sources, authorize))
+    app.include_router(source_download_router(sources))
 
     @app.post("/api/system/stop", dependencies=[Depends(authorize)])
     def stop_server():
@@ -159,21 +158,18 @@ def create_app(storage: Storage, token: str, *, lan: bool = False, processing: b
     def index():
         return FileResponse(Path(__file__).parent / "web" / "index.html")
 
-    @app.get('/malware.js',include_in_schema=False)
-    def malware_script():
-        return FileResponse(Path(__file__).parent/'web'/'malware.js',media_type='text/javascript')
-
-    @app.get('/evidence-details.js',include_in_schema=False)
-    def evidence_script():
-        return FileResponse(Path(__file__).parent/'web'/'evidence-details.js',media_type='text/javascript')
-
     @app.get('/i18n.js',include_in_schema=False)
     def i18n_script():
         return FileResponse(Path(__file__).parent/'web'/'i18n.js',media_type='text/javascript')
 
-    @app.get('/presentation.js', include_in_schema=False)
-    def presentation_script():
-        return FileResponse(Path(__file__).parent / 'web' / 'presentation.js',
+    @app.get('/workspace.js', include_in_schema=False)
+    def workspace_script():
+        return FileResponse(Path(__file__).parent / 'web' / 'workspace.js',
+                            media_type='text/javascript')
+
+    @app.get('/job-views.js', include_in_schema=False)
+    def job_views_script():
+        return FileResponse(Path(__file__).parent / 'web' / 'job-views.js',
                             media_type='text/javascript')
 
     @app.get('/locales/web/{locale}.json',include_in_schema=False)

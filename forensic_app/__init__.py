@@ -1,4 +1,4 @@
-"""Local forensic service bootstrap; analysis pipelines are not implemented yet."""
+"""Local Windows service for configured ZIP evidence post-processing."""
 
-__version__ = "0.32.0"
+__version__ = "0.40.0"
 

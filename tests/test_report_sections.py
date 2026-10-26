@@ -1,11 +1,9 @@
 import copy
 from html.parser import HTMLParser
-from pathlib import Path
 
 import pytest
 
 from forensic_app.artifacts import render_report
-from forensic_app.jobs import LocalJob
 
 
 class Elements(HTMLParser):
@@ -16,7 +14,7 @@ class Elements(HTMLParser):
         self.tags.append((tag,dict(attrs)))
 
 
-@pytest.mark.parametrize('workspace',['forensics','malware'])
+@pytest.mark.parametrize('workspace',['forensics'])
 def test_every_report_section_has_native_open_disclosure_without_mutating_report(workspace):
     report={'configuration':{'workspace':workspace,'mode':{'name':'<script>own</script>'}},'files':[]}
     original=copy.deepcopy(report)
@@ -30,14 +28,6 @@ def test_every_report_section_has_native_open_disclosure_without_mutating_report
     assert not any(tag=='script' for tag,_ in parsed.tags)
     assert '&lt;script&gt;own&lt;/script&gt;' in page
     assert report==original
-
-
-def test_high_compression_is_only_browser_preselection():
-    parsed=Elements();parsed.feed(Path('forensic_app/web/index.html').read_text(encoding='utf-8'))
-    checkbox=next(attrs for tag,attrs in parsed.tags if tag=='input' and attrs.get('id')=='allow-high-compression')
-    assert 'checked' in checkbox
-    # Existing API clients and snapshots retain their explicit/legacy choice.
-    assert LocalJob(mode_id='own',path='own.zip').allow_high_compression is False
 
 
 def test_print_content_exists_independently_of_details():

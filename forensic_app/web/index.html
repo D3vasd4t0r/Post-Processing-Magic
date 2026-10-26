@@ -5,186 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Post-Processing-Magic</title>
   <style>
-    :root{font:16px/1.55 system-ui,sans-serif;color:#e5edf3;background:#101922;color-scheme:dark}
-    *{box-sizing:border-box}body{max-width:1120px;margin:40px auto;padding:0 24px}
-    h1{font-size:clamp(1.8rem,4vw,2.6rem);line-height:1.15;margin:8px 0 16px}
-    h2{font-size:1.2rem;margin:0 0 16px}h3{font-size:1rem;margin:0 0 8px}p{margin:8px 0 16px}
-    .eyebrow{color:#82dec5;letter-spacing:.12em;font-size:.75rem;text-transform:uppercase}
-    .muted,dt{color:#b3c1cc}.panel{background:#192631;border:1px solid #34444f;border-radius:12px;padding:24px;margin:20px 0}
-    .note{border-left:3px solid #e6b876;padding:10px 16px;background:#262b2d;border-radius:4px}
-    nav,.actions,.heading{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    nav{border-bottom:1px solid #34444f;padding:12px 0}.heading{justify-content:space-between}
-    nav button{background:transparent;color:#b3c1cc;margin:0}nav button[aria-current=page]{background:#2c4846;color:#b3f2df}
-    button,input{font:inherit;border-radius:6px;padding:10px 14px}
-    button{background:#82dec5;border:1px solid transparent;color:#10251f;cursor:pointer}
-    button.secondary{background:#253745;color:#e5edf3;border-color:#506475}
-    button.danger{background:transparent;color:#ffb5a9;border-color:#73504d}
-    button:disabled{opacity:.5;cursor:not-allowed}button:focus-visible,input:focus-visible{outline:2px solid #b3f2df;outline-offset:3px}
-    label{display:block;font-weight:600;margin-top:16px}input{display:block;background:#101922;color:#e5edf3;border:1px solid #6d879a;width:100%;margin:8px 0}
-    textarea,select{font:inherit;display:block;background:#101922;color:#e5edf3;border:1px solid #6d879a;border-radius:6px;padding:10px;width:100%;margin:8px 0}
-    textarea{resize:vertical}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#101922;padding:16px;border-radius:6px;font-size:.85rem}
-    .fields{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}.settings-tabs{margin-top:12px}
-    .mode-category{border-top:1px solid #34444f;margin-top:24px;padding-top:20px}
-    .command-step{border:1px solid #506475;border-radius:8px;padding:18px;margin:16px 0;background:#14212b}
-    .command-preview{color:#b3c1cc;font-size:.85rem}.command-step .actions button{font-size:.85rem;padding:8px 10px}
-    .actions{margin-top:16px}.columns{display:grid;grid-template-columns:1fr 1fr;gap:20px}.columns>.panel{margin:0}
-    .path-input{display:flex;gap:8px;align-items:center}.path-input input{min-width:0;flex:1}
-    dialog{background:#192631;color:#e5edf3;border:1px solid #506475;border-radius:12px;width:min(760px,95vw);max-height:90vh;padding:24px}
-    dialog::backdrop{background:#000a}.picker-list{max-height:35vh;overflow:auto;border:1px solid #34444f;border-radius:6px;margin:12px 0}
-    .picker-entry{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid #34444f}
-    .picker-entry:last-child{border-bottom:0}.picker-entry span{overflow-wrap:anywhere;min-width:0}.picker-entry button{flex-shrink:0}
-    #picker-error{color:#ffb5a9}.picker-roots{margin:12px 0}dialog h2{margin:0}
-    dl{display:grid;grid-template-columns:140px 1fr;gap:12px;margin:0}dd{margin:0;overflow-wrap:anywhere}
-    code,.path{overflow-wrap:anywhere;font-size:.9rem}.tool{padding:18px 0;border-top:1px solid #34444f}
-    .tool:first-child{border:0;padding-top:0}.tool:last-child{padding-bottom:0}.tool .actions{margin:12px 0 0}
-    .badge{display:inline-block;background:#2c4846;color:#b3f2df;border-radius:4px;padding:3px 9px;font-size:.8rem}
-    .badge.missing,.badge.unavailable{background:#463a2b;color:#ffe0b3}
-    progress{display:block;width:100%;height:14px;margin:10px 0 18px;accent-color:#82dec5}
-    #run-file-message.error{color:#ffb5a9}.run-status{font-size:.9rem;color:#b3c1cc}
-    .run-placeholder{color:#b3c1cc;font-size:.9rem}.run-placeholder summary{cursor:pointer}
-    .terminal-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#253745;padding:10px 14px;border-radius:8px 8px 0 0;margin-top:16px;font-size:.85rem}
-    .terminal-bar button{font-size:.8rem;padding:5px 10px}
-    .terminal-output{height:360px;max-height:60vh;min-height:160px;overflow:auto;overflow-anchor:none;margin:0;background:#080e14;color:#d6f4e5;border:1px solid #34444f;border-radius:0 0 8px 8px;font:13px/1.5 Consolas,'Cascadia Code',monospace;white-space:pre-wrap;tab-size:4}
-    .terminal-command{max-height:160px;overflow:auto;font-family:Consolas,monospace}
-    #log-job-error{max-height:320px;overflow:auto}
-    #message{min-height:1.6em;color:#b3f2df}#message.error{color:#ffb5a9}
-    #login{max-width:650px;margin:24px auto}.help{font-size:.9rem;color:#b3c1cc}footer{margin:28px 0;color:#a4b5c1;font-size:.85rem}
-    [hidden]{display:none!important}@media(max-width:760px){.columns,.fields{grid-template-columns:1fr}dl{grid-template-columns:1fr;gap:4px}dd{margin-bottom:12px}body{padding:0 16px;margin:24px auto}.panel{padding:20px}}
-    /* Forensic workspace: blue identity, quiet surfaces, decorative shield only. */
-    :root{background:#07111f;color:#e7f0fc;--blue:#78bdff;--edge:#294663;--muted:#a7bbd2}
-    html{min-height:100%;background:radial-gradient(ellipse at 95% 0%,#16395c 0,transparent 50%),#07111f}
-    body{max-width:1200px;margin:36px auto;padding:0 28px;position:relative;isolation:isolate;background:transparent}
-    .workspace-shield{position:fixed;right:-180px;top:18vh;width:min(760px,80vw);height:760px;color:#5eaafa;opacity:.09;z-index:-1;pointer-events:none}
-    header{position:relative;overflow:hidden;padding:34px 36px;margin-bottom:28px;border:1px solid #355b7f;border-radius:22px;
-      background:linear-gradient(115deg,#10223a 0%,#12304f 68%,#17436c 100%);box-shadow:0 20px 70px #0003}
-    .brand{position:relative;z-index:1;display:flex;align-items:center;gap:22px}
-    .brand-icon{display:grid;place-items:center;flex-shrink:0;width:70px;height:78px;border:1px solid #5787b5;border-radius:18px;
-      background:linear-gradient(145deg,#234e78,#112a46);color:#9dd2ff;box-shadow:inset 0 1px #ffffff15,0 8px 24px #0003}
-    .brand-icon svg{width:44px;height:52px}
-    header h1{font-size:clamp(1.65rem,3.3vw,2.45rem);letter-spacing:-.045em;margin:8px 0 10px}
-    header p{margin:0;color:#bdcee1;font-size:.94rem;max-width:580px}
-    .eyebrow{color:#9ccfff;letter-spacing:.18em;font-size:.67rem;font-weight:700}
-    .hero-shield{position:absolute;right:38px;top:-54px;width:290px;height:330px;opacity:.13;color:#b3dcff;pointer-events:none}
-    .scope-label{position:absolute;right:20px;top:16px;display:flex;gap:6px;align-items:center;font-size:.62rem;letter-spacing:.14em;
-      color:#b8dfff;border:1px solid #72b5ee55;padding:4px 9px;border-radius:30px;background:#0a244755}
-    .scope-label svg{width:12px;height:14px}
-    .panel{background:linear-gradient(120deg,#10223aed,#0d1c31f5);border-color:var(--edge);border-radius:18px;padding:28px;
-      box-shadow:0 14px 42px #0002,inset 0 1px #ffffff04}
-    h2{letter-spacing:-.025em;color:#e5f1ff}h3{color:#c5ddf7}
-    .muted,dt,.help,.command-preview,.run-status,.run-placeholder{color:var(--muted)}
-    nav{gap:8px;padding:8px;margin-bottom:22px;background:#0e2034e8;border:1px solid var(--edge);border-radius:14px}
-    nav button{color:#b5c9e0;border-radius:9px;padding:10px 19px;background:transparent}
-    nav button[aria-current=page]{color:#d7ecff;background:#1e4770;border:1px solid #3e73a0;box-shadow:inset 0 1px #ffffff09}
-    .settings-tabs{background:transparent;border:none;padding:0 0 16px;border-bottom:1px solid var(--edge);border-radius:0}
-    button{background:linear-gradient(135deg,#89c9ff,#5da9f2);color:#06203a;border-color:#9dd3ff66;font-weight:600;
-      box-shadow:0 4px 12px #0002;transition:background .15s,border-color .15s,box-shadow .15s}
-    button:hover:not(:disabled){filter:brightness(1.09);box-shadow:0 5px 16px #0004}
-    button.secondary{background:#182f49;color:#d0e2f7;border-color:#3a5776;font-weight:500;box-shadow:none}
-    button.danger{background:#341d29;color:#ffb7b9;border-color:#85505d}
-    nav button:hover:not(:disabled){background:#1b3958}button:disabled{opacity:.46;box-shadow:none}
-    button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #a3d8ff;outline-offset:3px}
-    input,textarea,select{background:#09182a;border-color:#365875;color:#e4effd;border-radius:9px}
-    input::placeholder,textarea::placeholder{color:#7892ad}select option{background:#10233a;color:#e4effd}
-    input[type=file]::file-selector-button{border:1px solid #436c92;border-radius:6px;background:#203f60;color:#dceeff;padding:7px 12px;margin-right:14px;cursor:pointer}
-    .note{background:#122e4a;border-left-color:#72b9f9;color:#c3d9ee;border-radius:0 8px 8px 0}
-    .badge{background:#1c4267;color:#c1e3ff;border:1px solid #3b6d99;border-radius:6px}
-    .badge.missing,.badge.unavailable{background:#463a2b;color:#ffe0b3;border-color:#7c6744}
-    progress{accent-color:#69b5ff;height:10px;border-radius:8px;overflow:hidden;background:#0a1a2d}
-    progress::-webkit-progress-bar{background:#0a1a2d;border-radius:8px}
-    progress::-webkit-progress-value{background:linear-gradient(90deg,#3879c6,#8fd5ff);border-radius:8px}
-    progress::-moz-progress-bar{background:linear-gradient(90deg,#3879c6,#8fd5ff);border-radius:8px}
-    pre,.command-step{background:#0a192c;border-color:#2c4b6a}.mode-category,.tool{border-color:var(--edge)}
-    .terminal-bar{background:#1c3552;color:#b9d5f3;border:1px solid #365572;border-bottom:0}
-    .terminal-output{background:#060f1d;color:#d1e6ff;border-color:#365572;scrollbar-color:#456b91 #0a1728}
-    .terminal-command{border:1px solid #243f5b;color:#c4dbf6}
-    dialog{background:#10223a;border-color:#466c91;border-radius:18px;box-shadow:0 30px 100px #0008}dialog::backdrop{background:#020913cc}
-    .picker-list{border-color:#315477}.picker-entry{border-color:#243f5b}#message{color:#b8dcff}#message.error{color:#ffb5a9}
-    footer{color:#829dbb;border-top:1px solid #28425d;padding-top:18px;font-size:.8rem}
-    @media(max-width:760px){body{padding:0 16px;margin:20px auto}header{padding:34px 22px 26px;border-radius:18px}
-      .brand{gap:14px}.brand-icon{width:48px;height:58px;border-radius:13px}.brand-icon svg{width:31px;height:39px}
-      header h1{font-size:clamp(1.35rem,4.3vw,1.9rem);overflow-wrap:anywhere}header p{font-size:.83rem}.eyebrow{font-size:.56rem;letter-spacing:.1em}
-      .hero-shield{right:-65px;opacity:.10}.scope-label{font-size:.53rem;top:10px;right:12px}.panel{padding:20px;border-radius:14px}
-      nav{gap:4px}nav button{padding:9px 12px;font-size:.9rem}.workspace-shield{right:-180px;width:650px;opacity:.06}}
-    @media(prefers-reduced-motion:reduce){button{transition:none}}
-    .search-results{display:grid;gap:10px;margin:16px 0;max-height:480px;overflow:auto;padding:4px}.result-card{display:flex;align-items:center;justify-content:space-between;gap:16px;
-      border:1px solid #41698f;border-left:4px solid #70baff;padding:16px;background:#122b46;border-radius:10px}
-    .result-card.selected{background:#1a4268;border-color:#a5d9ff;box-shadow:0 0 0 1px #8acbff33}
-    .result-card strong{display:block;overflow-wrap:anywhere}.result-card p{margin:5px 0 0;font-size:.85rem;color:#b9d1ea}
-    #job-search-count{padding:12px 16px;background:#1a3e61;border:1px solid #5285b0;border-radius:8px;font-weight:700;color:#d8efff}
-    label.checkbox-inline{display:flex;align-items:center;gap:10px}
-    label.checkbox-inline input[type=checkbox]{display:inline-block;width:18px;height:18px;flex:0 0 18px;margin:0;padding:0}
-    #admin-status{margin:0 0 16px;padding:10px 16px;font-weight:600}
-    .settings-category-label{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;padding:8px}.settings-intro{margin-top:0}body.settings-view .area-switch{display:none}
-    .area-switch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 18px}.area-switch button[aria-pressed=true]{outline:2px solid currentColor;outline-offset:2px}
-    body.malware{--edge:#613342;--muted:#d3b4be;color:#f8e8ed}html:has(body.malware){background:radial-gradient(ellipse at 95% 0%,#592234 0,transparent 50%),#170b12}
-    body.malware header{background:linear-gradient(115deg,#2d1320,#4b1d2d 68%,#6e293c);border-color:#98445c}body.malware .brand-icon{background:#4e2031;border-color:#b25a72;color:#ffb2c5}
-    body.malware .panel,body.malware dialog{background:linear-gradient(120deg,#2b1520f5,#211018f5)}body.malware .workspace-shield,body.malware .hero-shield{color:#fb809f}body.malware .eyebrow{color:#ffa2bd}
-    body.malware nav{background:#2b1420;border-color:#613342}body.malware nav button[aria-current=page]{background:#6b2b40;border-color:#b45670;color:#ffe7ef}
-    body.malware button{background:linear-gradient(135deg,#ffacc2,#e87799);color:#35121e;border-color:#ffbfd166}body.malware button.secondary{background:#482031;color:#f9dbe5;border-color:#835066}
-    body.malware input,body.malware select,body.malware textarea,body.malware pre,body.malware .command-step{background:#1c0e16;color:#f4e1e9;border-color:#794155}
-    body.malware select option{background:#2a1420;color:#ffe7ef}body.malware .note{background:#431f2e;border-left-color:#fc92b0;color:#f5d7e1}body.malware .badge{background:#56243a;color:#ffd8e5;border-color:#ab5772}
-    body.malware .terminal-bar{background:#492034;border-color:#8d4d64}body.malware .terminal-output{background:#10080d;border-color:#8d4d64;color:#f7d5e1}body.malware .terminal-output:focus-visible{outline:2px solid #ffb7d0}
-    body.malware progress::-webkit-progress-value{background:linear-gradient(90deg,#b84066,#ffa4c0)}body.malware .result-card{background:#381a29;border-color:#8b435e;border-left-color:#fa99b7}body.malware #job-search-count{background:#50263b;color:#ffe4ef;border-color:#a95a77}
-      .result-preview-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.9rem}
-    .result-preview-table th,.result-preview-table td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid #35516d;overflow-wrap:anywhere;min-width:5rem}
-    .result-preview-table th{color:#c9e6ff;background:#132b43}
-    .result-header-sort{display:block;width:100%;text-align:left;background:transparent;color:inherit;border:0;padding:6px 0;white-space:nowrap}.result-header-sort:focus-visible{outline:2px solid #8acfff;outline-offset:2px}.result-header-kind{font-size:12px;padding:4px 6px;margin:4px 0;white-space:nowrap}[role="tab"][aria-selected="false"]{background:transparent;border:1px solid var(--edge)}
-    #result-workplace.maximized{position:fixed;inset:12px;z-index:1000;overflow:auto;background:var(--panel,#102238)} #result-workplace label{margin-top:10px}#result-workplace .fields{grid-template-columns:repeat(4,minmax(0,1fr))}#result-workplace.maximized #csv-table{height:max(280px,calc(100vh - 500px))}@media(max-width:800px){#result-workplace .fields{grid-template-columns:1fr 1fr}} #csv-table th{position:sticky;top:0} #csv-search-button,#csv-next{margin-right:.5rem;margin-top:.5rem}
-
-    /* Persistent workspace shell. Login keeps its independent, compact landing. */
-    body.authenticated{max-width:none;margin:0;padding:24px 32px 24px 264px}
-    body.authenticated>header{padding:12px 18px;margin:0 180px 20px 0;border-radius:12px;box-shadow:none}
-    body.authenticated>header h1{font-size:1.05rem;margin:0}
-    body.authenticated>header .eyebrow{font-size:.62rem;letter-spacing:.03em}
-    body.authenticated>header .brand{gap:12px}
-    body.authenticated>header .brand-icon{width:36px;height:40px;border-radius:8px}
-    body.authenticated>header .brand-icon svg{width:24px;height:30px}
-    body.authenticated>header .brand p,body.authenticated .hero-shield,body.authenticated .scope-label,body.authenticated .workspace-shield{display:none}
-    body.authenticated #language-controls{position:absolute;right:32px;top:20px;margin:0;gap:8px}
-    #language-controls label{margin:0}
-    #workspace{max-width:1100px;margin:0 auto;min-width:0}
-    #main-navigation{position:fixed;left:0;top:0;bottom:0;width:232px;z-index:50;display:flex;flex-direction:column;align-items:stretch;flex-wrap:nowrap;border-radius:0;border-width:0 1px 0 0;margin:0;padding:24px 16px;overflow:auto;gap:8px}
-    #main-navigation button{min-height:44px;text-align:left;margin:0;width:100%;white-space:normal}
-    #main-navigation button[aria-current=page]{border-left:4px solid #9bd4ff}
-    body.malware #main-navigation button[aria-current=page]{border-left-color:#ffb7cf}
-    #main-navigation #logout{margin-top:auto}
-    .sidebar-brand{font-size:.95rem;font-weight:700;margin:4px 4px 24px;overflow-wrap:anywhere}
-    #main-navigation #admin-status{font-size:.75rem;padding:8px;white-space:normal;margin:8px 0 0}
-    #nav-overview::before{content:'▷ ';}#nav-settings::before{content:'⚙ ';}#nav-logs::before{content:'≡ ';}#nav-results::before{content:'▦ ';}#nav-feedback::before{content:'✎ ';}
-    .page-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:24px 0 16px}
-    .page-heading h1{font-size:1.75rem;margin:0;letter-spacing:-.035em}
-    #preparation-view{display:flex;gap:4px;flex-wrap:wrap}
-    #preparation-view button{min-height:44px}
-    #preparation-view button[aria-pressed=false]{background:transparent;color:inherit;border-color:var(--edge);box-shadow:none}
-    #preparation-view button[aria-pressed=true]{outline:2px solid currentColor;outline-offset:2px}
-    #presentation-message:empty{display:none}#presentation-message{color:#ffe0b3}
-    #custom-options{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-    #custom-options button{padding:6px 12px;min-height:44px}
-    #page-title:focus{outline:none}#onboarding summary{cursor:pointer}
-    #workspace .panel{margin:20px 0}#overview,#malware-overview{max-width:880px}
-    body.simple-view #overview [data-advanced],body.simple-view #malware-overview [data-advanced]{display:none!important}
-    #onboarding{font-size:.9rem}#onboarding ul{max-height:160px;overflow:auto}
-    #menu-toggle,#nav-backdrop{display:none}
-    #workspace input,#workspace select,#workspace button{min-height:44px}
-    #workspace input[type=checkbox]{min-height:0}
-    #workspace .fields{grid-template-columns:repeat(2,minmax(0,1fr))}
-    #workspace .fields>*,#workspace .columns>*,#workspace .panel{min-width:0}
-    #workspace p,#workspace pre{overflow-wrap:anywhere}
-    body.settings-view .area-switch,body.feedback-view .area-switch{display:none}
-    @media(max-width:980px){body.authenticated{padding-left:252px;padding-right:20px}body.authenticated #language-controls{right:20px}}
-    @media(max-width:760px){
-      body.authenticated{padding:80px 16px 20px;margin:0}
-      body.authenticated>header{margin:0 0 16px;padding:12px}
-      body.authenticated #language-controls{top:12px;right:16px}
-      #menu-toggle{display:block;position:fixed;top:12px;left:16px;z-index:61;min-height:44px}
-      #main-navigation{visibility:hidden;width:min(280px,85vw);padding-top:78px;z-index:60}
-      body.nav-open #main-navigation{visibility:visible}
-      body.nav-open #nav-backdrop{display:block;position:fixed;inset:0;z-index:55;background:#000b;border:0;border-radius:0;box-shadow:none}
-      #workspace .fields,#workspace .columns{grid-template-columns:1fr}
-      .page-heading{align-items:flex-start}.page-heading h1{font-size:1.6rem}
-      #preparation-view{width:100%}#preparation-view button{flex:1;padding:10px 8px;font-size:.92rem}
-      .actions button{max-width:100%;white-space:normal}#workspace .panel{padding:20px}
-    }
+    :root{font:16px/1.5 system-ui,sans-serif;color:#e6effa;background:#081321;color-scheme:dark;--edge:#294663;--muted:#abc0d7}
+    *{box-sizing:border-box}body{margin:32px auto;max-width:1000px;padding:0 24px}h1{font-size:1.7rem;letter-spacing:-.03em}h2{font-size:1.2rem;margin:0 0 16px}h3{font-size:1rem;margin:20px 0 8px}p{margin:8px 0 16px;overflow-wrap:anywhere}
+    header{background:#10263e;border:1px solid var(--edge);padding:18px;border-radius:12px;margin-bottom:20px}.brand{display:flex;gap:12px;align-items:center}.brand h1{font-size:1.1rem;margin:2px 0}.brand p{font-size:.85rem;margin:0;color:var(--muted)}.brand-icon{color:#89c9ff;flex:0 0 36px}.brand-icon svg{width:36px;height:42px}.eyebrow{font-size:.65rem;letter-spacing:.06em;color:#8ecaff}.hero-shield,.workspace-shield,.scope-label{display:none}
+    body.authenticated{max-width:none;margin:0;padding:24px 32px 24px 264px}body.authenticated>header{margin-right:180px}body.authenticated>header .brand p{display:none}#workspace{max-width:1100px;margin:0 auto;min-width:0}.page-heading{margin:20px 0}.page-heading h1{margin:0}.page-heading h1:focus{outline:0}#language-controls{justify-content:flex-end}body.authenticated #language-controls{position:absolute;right:32px;top:20px;margin:0;gap:8px}#language-controls label{margin:0}
+    .panel{background:#102138;border:1px solid var(--edge);border-radius:12px;padding:24px;margin:20px 0;min-width:0}.help,.muted,dt{color:var(--muted);font-size:.9rem}.note{padding:12px 16px;border-left:3px solid #8ac8ff;background:#17314c}.badge{display:inline-block;font-size:.85rem;background:#1c3d5e;border-radius:6px;padding:5px 10px}.unavailable{background:#463a2b;color:#ffe0b3}.heading,.actions,.path-input{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.heading{justify-content:space-between}.actions{margin-top:16px}.fields,.columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px}.fields>*,.columns>*{min-width:0}.columns>.panel{margin-top:0}.path-input{flex-wrap:nowrap;gap:8px}.path-input input{flex:1;min-width:0}.path-input button{flex-shrink:0}
+    button,input,select,textarea{font:inherit;border-radius:7px;padding:10px 12px;min-height:44px}button{border:1px solid #71b4f1;background:#83c5ff;color:#09223c;font-weight:600;cursor:pointer}button.secondary{background:#19324c;color:#deecfc;border-color:#3c5f7f;font-weight:500}button.danger{background:#3f202c;color:#ffd2d9;border-color:#855064}button:disabled{opacity:.45;cursor:not-allowed}button:hover:not(:disabled){filter:brightness(1.12)}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid #addbff;outline-offset:3px}
+    label{display:block;font-weight:600;margin-top:16px}input,select,textarea{display:block;width:100%;margin:8px 0;background:#08182a;color:#e6effa;border:1px solid #42617e}textarea{resize:vertical}input[type=checkbox]{display:inline-block;min-height:0;width:18px;height:18px;margin:0 8px 0 0;vertical-align:middle}.checkbox-inline{display:flex;gap:8px;align-items:center}input::placeholder{color:#859fb9}input[type=file]::file-selector-button{background:#234765;color:#e7f2ff;border:1px solid #527b9e;border-radius:5px;padding:8px;margin-right:10px}select option{background:#10263e}
+    nav{display:flex;gap:8px;flex-wrap:wrap}nav button{background:transparent;color:#c4d7ec;border-color:var(--edge)}nav button[aria-current=page]{background:#234d75;border-color:#72afe4;color:white}#main-navigation{position:fixed;left:0;top:0;bottom:0;width:232px;z-index:50;display:flex;flex-direction:column;align-items:stretch;flex-wrap:nowrap;background:#0e2034;border-right:1px solid var(--edge);padding:24px 16px;overflow:auto;gap:8px}#main-navigation button{min-height:44px;text-align:left;width:100%;margin:0}#main-navigation button[aria-current=page]{border-left:4px solid #b3dfff}#main-navigation #logout{margin-top:auto}#main-navigation #admin-status{font-size:.75rem;padding:8px;margin:8px 0 0}.sidebar-brand{font-size:.95rem;font-weight:700;margin:4px 4px 24px}#nav-overview::before{content:'▷ '}#nav-settings::before{content:'⚙ '}#nav-logs::before{content:'≡ '}#nav-results::before{content:'▦ '}#nav-feedback::before{content:'✎ '}.settings-tabs{padding:0 0 16px;border-bottom:1px solid var(--edge)}
+    progress{display:block;width:100%;height:12px;margin:10px 0 18px;accent-color:#81c6ff}pre{background:#08182a;border-radius:7px;padding:14px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.85rem}code,.path{overflow-wrap:anywhere}.terminal-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#1c3552;padding:10px 14px;border-radius:8px 8px 0 0;margin-top:20px}.terminal-output{height:50vh;min-height:220px;max-height:650px;overflow:auto;overflow-anchor:none;margin:0;border:1px solid #365572;border-radius:0 0 8px 8px;background:#060f1d;color:#d1e6ff;font:13px/1.5 Consolas,monospace;scrollbar-color:#456b91 #0a1728}.terminal-command{max-height:180px;overflow:auto}.command-step{padding:18px;border:1px solid #3c5f7f;border-radius:8px;margin:16px 0}.command-step .actions button{font-size:.85rem}.command-preview{font-size:.85rem;color:var(--muted)}.mode-category{border-top:1px solid var(--edge);margin-top:24px;padding-top:20px}.tool{border-top:1px solid var(--edge);padding:18px 0}.tool:first-child{border-top:0}.case-list{display:grid;gap:12px}.case-card{border:1px solid var(--edge);border-radius:8px;padding:16px;background:#112943}.case-card.selected{border-color:#a8d8ff;background:#1b3b5a}.case-card p{margin:6px 0}
+    dialog{background:#102138;color:#e6effa;border:1px solid #4d7194;border-radius:12px;width:min(760px,95vw);max-height:90vh;padding:24px}dialog::backdrop{background:#000b}.picker-list{max-height:35vh;overflow:auto;border:1px solid var(--edge);margin:12px 0}.picker-entry{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--edge)}.picker-entry span{overflow-wrap:anywhere;min-width:0}.picker-entry button{flex-shrink:0}.picker-roots{margin:12px 0}#picker-error,.error{color:#ffb8bd}dl{display:grid;grid-template-columns:140px 1fr;gap:12px}dd{margin:0;overflow-wrap:anywhere}#login{max-width:650px;margin:24px auto}#message{min-height:1.5em;color:#b4dcff}#message.error{color:#ffb8bd}footer{font-size:.8rem;color:#94aec8;margin:24px 0}details summary{cursor:pointer}[hidden]{display:none!important}#menu-toggle,#nav-backdrop{display:none}
+    @media(max-width:980px){body.authenticated{padding-left:252px;padding-right:20px}body.authenticated #language-controls{right:20px}}@media(max-width:760px){body.authenticated{padding:80px 16px 20px;margin:0}body.authenticated>header{margin:0 0 16px}body.authenticated #language-controls{right:16px;top:12px}#menu-toggle{display:block;position:fixed;top:12px;left:16px;z-index:61}#main-navigation{visibility:hidden;width:min(280px,85vw);padding-top:78px;z-index:60}body.nav-open #main-navigation{visibility:visible}body.nav-open #nav-backdrop{display:block;position:fixed;inset:0;z-index:55;background:#000b;border:0;border-radius:0}body{margin:20px auto;padding:0 16px}.fields,.columns{grid-template-columns:1fr}.panel{padding:20px}.actions button{max-width:100%;white-space:normal}dl{grid-template-columns:1fr;gap:4px}dd{margin-bottom:10px}.settings-tabs button{flex:1;min-width:120px}}
   </style>
 </head>
 <body>
@@ -206,7 +37,7 @@
         <path d="m32 5 25 10v22c0 16-11 27-25 34C18 64 7 53 7 37V15Z" stroke="currentColor" stroke-width="2"/>
         <path d="M32 16v42M17 31h30" stroke="currentColor" stroke-opacity=".45"/><circle cx="32" cy="36" r="11" stroke="currentColor" stroke-width="1.5"/>
       </svg></span>
-      <div><div class="eyebrow" data-i18n="web.s001">Digital Forensics · Workspace 0.32.0 · Entwicklung</div>
+      <div><div class="eyebrow" data-i18n="web.s001">Digital Forensics · Workspace 0.40.0</div>
         <h1 data-i18n="web.s002">Post-Processing-Magic</h1>
         <p data-i18n="web.s003">Dein Arbeitsbereich für die forensische Nachbearbeitung.</p></div>
     </div>
@@ -214,13 +45,11 @@
   <div id="language-controls" class="actions" style="justify-content:flex-end"><label for="interface-locale" data-i18n="interface.language">Sprache</label><select id="interface-locale" style="width:auto"><option value="de">Deutsch</option><option value="en">English</option></select></div>
   <section class="panel" id="login">
     <h2 data-i18n="web.s004">Mit dem Dienst verbinden</h2>
-    <p data-i18n="web.s005">Der Access Token ist dein Zugangsschlüssel. Beim automatischen Browserstart
-      meldet dich die App direkt an.</p>
+    <p data-i18n="web.s005">Der Access Token ist dein Zugangsschlüssel. Beim automatischen Browserstart meldet dich die App direkt an.</p>
     <form id="login-form">
       <label for="token" data-i18n="web.s006">Access Token</label>
       <input id="token" type="password" autocomplete="off" required aria-describedby="token-help">
-      <p class="help" id="token-help" data-i18n="web.s007">Bei manuell geöffneter Adresse: Token-Datei auf dem
-        Server öffnen und den Inhalt hier einfügen. Der Schlüssel ändert sich nach jedem Serverneustart.</p>
+      <p class="help" id="token-help" data-i18n="web.s007">Bei manuell geöffneter Adresse: Token-Datei auf dem Server öffnen und den Inhalt hier einfügen. Der Schlüssel ändert sich nach jedem Serverneustart.</p>
       <button type="submit" data-i18n="web.s008">Verbinden</button>
     </form>
     <details style="margin-top:20px">
@@ -244,185 +73,56 @@
     <p id="admin-status" class="badge" role="status" data-i18n="web.s016">Administratorstatus wird geprüft…</p>
     </nav>
     <div class="page-heading"><h1 id="page-title" tabindex="-1" data-i18n="page.overview">Aufbereitung</h1>
-      <div id="preparation-view" role="group" aria-label="Darstellung" data-i18n-aria-label="view.label">
-        <button id="view-simple" aria-pressed="true" data-i18n="view.simple">Einfach</button>
-        <button id="view-advanced" aria-pressed="false" data-i18n="view.advanced">Fortgeschritten</button>
-      </div>
+
     </div>
-    <p id="presentation-message" tabindex="-1" role="status"></p>
-    <p id="custom-options" class="note" hidden><span data-i18n="view.custom">Angepasste Optionen aktiv</span> · <button id="show-custom-options" class="secondary" data-i18n="view.show">Anzeigen</button></p>
+
+
     <button id="ongoing-job" class="secondary" hidden data-i18n="nav.ongoing">Auftrag läuft – zur Aufbereitung</button>
 
 
-    <div class="area-switch" role="group" aria-label="Arbeitsbereich" data-i18n-aria-label="label.x000">
-      <button id="area-forensics" aria-pressed="true" data-i18n="web.s013">♢ Forensik</button>
-      <button id="area-malware" aria-pressed="false" data-i18n="web.s014">☠ Statische Malware-Analyse</button>
-      <span id="area-note" class="help" data-i18n="web.s015">Getrennte Module und Aufträge · gemeinsame Tools</span>
-    </div>
-    <aside id="onboarding" class="panel" hidden aria-labelledby="onboarding-title">
-      <div class="heading"><h2 id="onboarding-title" data-i18n="onboarding.title">Tools einrichten</h2><button id="onboarding-close" class="secondary" aria-label="Hinweis schließen" data-i18n-aria-label="onboarding.close">×</button></div>
-      <p data-i18n="onboarding.intro">Benötigte Tools richten sich nach deinen gespeicherten unterstützten Abläufen. Speichern und Sprachwechsel starten kein Programm und laden nichts herunter.</p>
-      <details><summary data-i18n="onboarding.details">Einrichtung prüfen</summary><ul id="onboarding-required"></ul><p id="onboarding-empty"></p>
-      <h3 data-i18n="onboarding.optional">Optionale Ergebnis-Viewer</h3><ul id="onboarding-optional"></ul><p id="onboarding-scope" class="help"></p>
-      </details><div class="actions"><button id="onboarding-tools" class="secondary" data-i18n="onboarding.tools">Toolverwaltung öffnen</button><button id="onboarding-processing" class="secondary" data-i18n="onboarding.processing">Allgemeine Tools zuweisen</button><button id="onboarding-malware" class="secondary" data-i18n="onboarding.malware">Malware-Analyse-Module öffnen</button><button id="onboarding-modes" class="secondary" data-i18n="onboarding.modes">Forensik-Modi öffnen</button></div>
-    </aside>
+
+
     <div id="overview">
       <section class="panel">
         <h2 data-i18n="web.s023">Evidence aufbereiten</h2>
-        <p id="run-intro" data-advanced class="note" data-i18n="web.s024">ZIP/KAPE-Test: Run lädt deine ZIP hoch und führt den ausgewählten
-          KAPE-Befehl aus. Das Original-ZIP bleibt erhalten.</p>
-        <div data-advanced><label for="run-source-kind" data-i18n="web.s025">Quelle</label>
-        <select id="run-source-kind">
-          <option value="upload" data-i18n="web.s026">Upload</option>
-          <option value="local" data-i18n="web.s027">Lokale Datei auf dem Server</option>
-        </select></div>
-        <div class="fields" data-advanced><div><label for="run-case" data-i18n="web.s028">Fallnummer (optional)</label><input id="run-case" maxlength="120" type="text"></div><div><label for="run-device" data-i18n="web.s029">Gerätename (optional)</label><input id="run-device" maxlength="120" type="text"></div></div>
-        <div id="upload-source">
-        <label for="run-file" data-i18n="web.s030">1. ZIP-Datei auswählen</label>
-        <input id="run-file" type="file" accept=".zip,application/zip" aria-describedby="run-file-message">
-        <p id="run-file-message" class="help" role="status" data-i18n="web.s031">Noch keine Datei ausgewählt.</p>
-        </div>
-        <div id="local-source" data-advanced hidden>
-          <label for="local-zip-path" data-i18n="web.s032">1. Lokale ZIP-Datei auf dem Server</label>
-          <div class="path-input"><input id="local-zip-path" maxlength="4096" spellcheck="false" placeholder="D:\Sicherungen\KAPE-Target.zip">
-            <button id="browse-evidence" class="secondary" data-i18n="web.s033">Durchsuchen…</button></div>
-          <p class="help" data-i18n="web.s034">ZIP direkt referenzieren, auch über 50 GiB. Kein Upload und keine zusätzliche Eingangskopie.
-            Das Original wird ausschließlich gelesen; Entpacken und Ergebnis-ZIP benötigen freien Platz im Datenordner.</p>
-        </div>
-        <div class="fields">
-          <div><label for="run-format" data-i18n="web.s035">2. Evidence-Format</label>
-            <select id="run-format">
-              <option value="ZIP" data-i18n="web.s036">ZIP (KAPE-Target)</option>
-              <option value="E01" disabled data-i18n="web.s037">E01 — in Planung</option>
-              <option value="VMDK" disabled data-i18n="web.s038">VMDK — in Planung</option>
-            </select>
-          </div>
-          <div><label for="run-effort" data-i18n="web.s039">3. Aufwand</label>
-            <select id="run-effort" disabled><option value="" data-i18n="web.s040">Modi werden geladen…</option></select>
-          </div>
-        </div>
-        <p id="run-mode-message" class="help" role="status"></p>
-<button id="open-settings" class="secondary" data-i18n="web.s053">Modi einrichten</button>
-        <div class="actions">
-          <button id="run-start" disabled aria-describedby="run-start-note" data-i18n="web.s041">Run</button>
-          <button id="preview-run" data-advanced class="secondary" disabled data-i18n="web.s042">Ablauf ansehen</button>
-          <button id="cancel-run" class="danger" hidden data-i18n="web.s043">Abbrechen</button>
-        </div>
-        <p id="run-start-note" data-advanced class="help" data-i18n="web.s044">Limits werden geladen…</p>
-        <details data-advanced class="run-placeholder">
-          <summary data-i18n="web.s045">Archivoptionen</summary>
-          <label><input id="allow-high-compression" type="checkbox" checked style="display:inline;width:auto">
-            <span data-i18n="web.s046">Hohe Kompression zulassen</span></label>
-          <p class="help" data-i18n="web.s047">Für bekannte eigene Sicherungen mit stark komprimierten Dateien (über 1000:1).
-            Das eingestellte Entpacklimit sowie alle Pfad-/Speicherplatzprüfungen bleiben aktiv.</p>
-        </details>
-        <label data-advanced class="checkbox-inline"><input type="checkbox" id="create-result-zip" checked> <span data-i18n="web.s048">Ergebnis-ZIP direkt erstellen</span></label>
-        <p data-advanced class="help" data-i18n="web.s049">Ohne ZIP steht der Ergebnisordner lokal bereit. Ein Archiv kannst du später ausdrücklich erstellen lassen, ohne erneute Analyse.</p>
-        <label id="upload-label" for="upload-progress" hidden data-i18n="web.s050">ZIP hochladen</label>
-        <progress id="upload-progress" value="0" max="100" hidden></progress>
-        <details data-advanced class="run-placeholder" style="margin-top:16px">
-          <summary data-i18n="web.s051">Modusauswahl prüfen</summary>
-          <ul id="run-availability"></ul>
-          <div class="actions">
-            <button id="reload-run" class="secondary" data-i18n="web.s052">Modi aktualisieren</button>
-
-          </div>
-        </details>
-        <section data-advanced id="run-plan" class="mode-category" hidden>
-          <h3 data-i18n="web.s054">Geplanter Ablauf</h3>
-          <p id="run-plan-summary"></p>
-          <p id="run-plan-folders" class="help"></p>
-          <details><summary data-i18n="web.s055">Geplante Kommandozeilen anzeigen</summary><div id="run-plan-commands"></div></details>
-          <p class="help" data-i18n="web.s056">Dies ist eine Vorschau deiner Konfiguration. Es wurde kein Arbeitsordner
-            angelegt und kein Befehl ausgeführt.</p>
-        </section>
+        <label for="run-source-kind" data-i18n="web.s025">Quelle</label>
+        <select id="run-source-kind"><option value="upload" data-i18n="web.s026">Upload</option><option value="local" data-i18n="web.s027">Lokale Datei auf dem Server</option></select>
+        <div id="upload-source"><label for="run-file" data-i18n="web.s030">1. ZIP-Datei auswählen</label><input id="run-file" type="file" accept=".zip,application/zip" aria-describedby="run-file-message"><p id="run-file-message" class="help" role="status" data-i18n="web.s031">Noch keine Datei ausgewählt.</p></div>
+        <div id="local-source" hidden><label for="local-zip-path" data-i18n="web.s032">1. Lokale ZIP-Datei auf dem Server</label><div class="path-input"><input id="local-zip-path" maxlength="4096" spellcheck="false"><button id="browse-evidence" class="secondary" data-i18n="web.s033">Durchsuchen…</button></div><p class="help" data-i18n="ui040.local_note">Das Original bleibt eine lokale Referenz. Kein Upload und keine zusätzliche Eingangskopie.</p></div>
+        <div class="fields"><div><label for="run-format" data-i18n="web.s035">2. Evidence-Format</label><select id="run-format"><option value="ZIP" data-i18n="web.s036">ZIP (KAPE-Target)</option></select></div><div><label for="run-effort" data-i18n="web.s039">3. Aufwand</label><select id="run-effort" disabled><option value="" data-i18n="web.s040">Modi werden geladen…</option></select></div></div>
+        <div class="fields"><div><label for="run-case" data-i18n="web.s028">Fallnummer (optional)</label><input id="run-case" maxlength="120"></div><div><label for="run-device" data-i18n="ui040.device">Device Name (optional)</label><input id="run-device" maxlength="120"></div></div>
+        <p id="run-mode-message" class="help" role="status"></p><p id="run-start-note" class="help"></p>
+        <div class="actions"><button id="run-start" disabled data-i18n="web.s041">Run</button><button id="cancel-run" class="danger" hidden data-i18n="web.s043">Abbrechen</button><button id="open-settings" class="secondary" data-i18n="web.s053">Modi einrichten</button></div>
+        <label id="upload-label" for="upload-progress" hidden data-i18n="web.s050">ZIP hochladen</label><progress id="upload-progress" value="0" max="100" hidden></progress>
       </section>
       <section class="panel" id="run-status-panel" hidden>
         <div class="heading"><h2 data-i18n="web.s057">Fortschritt</h2><span id="run-status" class="badge" data-i18n="web.s058">Nicht gestartet</span></div>
-        <label for="run-total-progress" id="run-total-label" data-i18n="web.s059">Gesamt: 0 Befehle ausgeführt</label>
-        <progress id="run-total-progress" value="0" max="1" aria-describedby="run-progress-note"></progress>
-        <label id="run-command-label" for="run-command-progress" data-i18n="web.s060">Aktueller Befehl: noch keiner gestartet</label>
-        <progress id="run-command-progress" value="0" max="100"></progress>
-        <p id="run-progress-note" class="run-status" role="status" data-i18n="web.s061">Noch keine Aufbereitung gestartet.</p><div data-advanced id="run-inventory"></div>
-        <details id="run-error-panel" hidden>
-          <summary data-i18n="web.s062">Fehlerdetails</summary>
-          <pre id="run-error-detail"></pre>
-          <button id="open-job-logs" class="secondary" data-i18n="web.s063">Diesen Lauf in Logs öffnen</button>
-        </details>
-        <details data-advanced id="run-terminal" class="run-placeholder"><summary data-i18n="web.s064">Kommandozeile anzeigen</summary>
-          <pre id="run-live-command" class="terminal-command" data-i18n="web.s065">Kein Befehl gestartet.</pre>
-          <div class="terminal-bar"><span data-i18n="web.s066">Terminal · Live-Ausgabe</span><button id="follow-output" class="secondary" data-i18n="web.s067">Live folgen: an</button></div>
-          <pre id="run-live-output" class="terminal-output" aria-label="Live-Ausgabe" tabindex="0" data-i18n-aria-label="label.x003" data-i18n="web.s068">Noch keine Ausgabe.</pre>
-          <p class="help" data-i18n="web.s069">Nach oben scrollen pausiert das Mitscrollen. „Live folgen“ springt zur neuesten Ausgabe.
-            Der vollständige gespeicherte Log ist im Tab Logs abrufbar.</p>
-        </details>
-        <div class="actions"><button id="download-evidences" disabled data-i18n="web.s070">Download Evidences</button>
-          <button id="run-archive" class="secondary" disabled data-i18n="web.s071">Ergebnis-ZIP erstellen</button>
-          <button id="run-report" class="secondary" disabled data-i18n="web.s072">Abschlussbericht herunterladen</button>
-          <button id="run-explorer" data-advanced class="secondary" hidden disabled data-i18n="web.s073">Show in Explorer</button></div>
-        <p data-advanced id="run-explorer-note" class="help" role="status"></p>
-        <div class="actions"><button id="new-run" class="secondary" hidden data-i18n="web.s074">Neuen Lauf vorbereiten</button></div>
+        <label id="run-total-label" for="run-total-progress" data-i18n="web.s059">Gesamt: 0 Befehle ausgeführt</label><progress id="run-total-progress" value="0" max="1"></progress>
+        <label id="run-command-label" for="run-command-progress" data-i18n="web.s060">Aktueller Befehl: noch keiner gestartet</label><progress id="run-command-progress" value="0" max="100"></progress>
+        <p id="run-progress-note" role="status" data-i18n="web.s061">Noch keine Aufbereitung gestartet.</p>
+        <div id="run-error-panel" hidden><p id="run-error-detail" class="note"></p></div>
+        <div class="actions"><button id="download-evidences" disabled data-i18n="ui040.zip_download">Ergebnis-ZIP herunterladen</button><button id="run-report" class="secondary" disabled data-i18n="web.s072">Abschlussbericht herunterladen</button><button id="open-job-logs" class="secondary" data-i18n="web.s063">Diesen Lauf in Logs öffnen</button></div>
         <p id="run-download-note" class="help" data-i18n="web.s075">Der Download wird nach erfolgreicher Verarbeitung verfügbar.</p>
+        <button id="new-run" class="secondary" hidden data-i18n="web.s074">Neuen Lauf vorbereiten</button>
       </section>
     </div>
-    <div id="malware-overview" hidden>
-      <section class="panel">
-        <div class="heading"><div><div class="eyebrow" data-i18n="web.s076">STATIC ANALYSIS · OFFLINE</div><h2 data-i18n="web.s077">Verdächtige Datei untersuchen</h2></div><span class="badge" data-i18n="web.s078">☠ Keine Sample-Ausführung</span></div>
-        <p class="note" data-i18n="web.s079">Eine einzelne PDF-, Office- oder Windows-PE-Datei als Daten untersuchen. Interne Prüfungen lesen Rohdaten; sie starten keine Samples, Makros oder eingebetteten Inhalte. Kein Cloud-Upload.</p>
-        <p data-advanced class="help" data-i18n="web.s080">0.25 ist eine erste statische Triage, keine Sandbox und keine Malware-Erkennung. Befunde und Grenzen stehen im Bericht. Maximal 256 MiB pro Datei.</p>
-        <div data-advanced><label for="static-source" data-i18n="web.s081">1. Quelle</label><select id="static-source"><option value="upload" data-i18n="web.s026">Upload</option><option value="local" data-i18n="web.s027">Lokale Datei auf dem Server</option></select></div>
-        <div class="fields" data-advanced><div><label for="static-case" data-i18n="web.s028">Fallnummer (optional)</label><input id="static-case" maxlength="120" type="text"></div><div><label for="static-device" data-i18n="web.s029">Gerätename (optional)</label><input id="static-device" maxlength="120" type="text"></div></div>
-        <div id="static-upload"><label for="static-file" data-i18n="web.s082">Einzeldatei auswählen</label><input id="static-file" type="file" accept=".pdf,.exe,.dll,.sys,.scr,.doc,.docx,.docm,.xls,.xlsx,.xlsm,.ppt,.pptx,.pptm"></div>
-        <div id="static-local" data-advanced hidden><label for="static-path" data-i18n="web.s083">Absoluter Dateipfad auf dem Server</label><div class="path-input"><input id="static-path" maxlength="4096" spellcheck="false"><button id="static-browse" class="secondary" data-i18n="web.s033">Durchsuchen…</button></div><p class="help" data-i18n="web.s084">Das Original bleibt erhalten. Eine lesend geprüfte Arbeitskopie wird unter neutralem Dateinamen erstellt.</p></div>
-        <div class="fields"><div><label for="static-format" data-i18n="web.s085">2. Dateiformat</label><select id="static-format"><option value="PDF" data-i18n="web.s086">PDF</option><option value="OFFICE" data-i18n="web.s087">Office-Dokument</option><option value="EXE" data-i18n="web.s088">Windows Executable / PE</option></select></div>
-        <div><label for="static-mode" data-i18n="web.s089">3. Aufwand / Modul</label><select id="static-mode"></select></div></div>
-        <p id="static-ready" class="help" role="status"></p>
-        <label data-advanced class="checkbox-inline"><input id="static-zip" type="checkbox" checked> <span data-i18n="web.s048">Ergebnis-ZIP direkt erstellen</span></label>
-        <div class="actions"><button id="static-run" disabled data-i18n="web.s090">Statische Analyse starten</button><button id="static-reload" data-advanced class="secondary" data-i18n="web.s091">Module aktualisieren</button><button id="static-configure" class="secondary" data-i18n="web.s092">Module einrichten</button></div>
-        <details data-advanced><summary data-i18n="web.s054">Geplanter Ablauf</summary><pre id="static-plan" data-i18n="web.s093">Noch kein Modul gewählt.</pre></details>
-      </section>
-      <section class="panel" id="static-status-panel" hidden><h2 id="static-status" data-i18n="web.s094">Noch keine Analyse gestartet</h2><p id="static-detail" role="status"></p><div data-advanced id="static-findings"></div>
-        <label id="static-progress-label" for="static-progress" data-i18n="web.s095">0 Schritte abgeschlossen</label><progress id="static-progress" max="1" value="0"></progress>
-        <details data-advanced><summary data-i18n="web.s096">Aktuelle Prüfung und Terminal anzeigen</summary><pre id="static-command" class="terminal-command" data-i18n="web.s097">Kein Schritt gestartet.</pre>
-        <div class="terminal-bar"><span data-i18n="web.s098">Statische Prüfungen · Live-Ausgabe</span><button id="static-follow" class="secondary" data-i18n="web.s067">Live folgen: an</button></div><pre id="static-terminal" class="terminal-output" tabindex="0" aria-label="Ausgabe der statischen Analyse" data-i18n-aria-label="label.x005" data-i18n="web.s068">Noch keine Ausgabe.</pre></details>
-        <div class="actions"><button id="static-cancel" class="danger" disabled data-i18n="web.s043">Abbrechen</button><button id="static-download" disabled data-i18n="web.s099">Ergebnisse herunterladen</button><button id="static-report" class="secondary" disabled data-i18n="web.s100">HTML-Abschlussbericht</button><button id="static-archive" class="secondary" disabled data-i18n="web.s071">Ergebnis-ZIP erstellen</button><button id="static-explorer" data-advanced class="secondary" hidden data-i18n="web.s073">Show in Explorer</button></div>
-        <p id="static-archive-note" class="help" role="status"></p>
-        <p class="help" data-i18n="web.s101">Das Ergebnisarchiv enthält Prüfberichte, keine Kopie der verdächtigen Eingangsdatei. Frühere Analysen stehen im Logs-Tab dieses Bereichs.</p>
-      </section>
-    </div>
+
     <div id="settings" hidden>
-      <section class="panel settings-intro"><h2 data-i18n="web.s102">Zentrale Einstellungen</h2>
-        <p data-i18n="web.s103">Eine gemeinsame Konfiguration für Forensik und Malware-Analyse. Beide Modulbereiche sind hier jederzeit erreichbar, unabhängig von der Auswahl auf der Hauptseite.</p>
+      <section class="panel settings-intro"><h2 data-i18n="web.s102">Einstellungen</h2>
+        <p data-i18n="web.s103">Tools, ZIP-Modi und Betriebseinstellungen für die lokale Aufbereitung.</p>
       </section>
-      <nav class="settings-tabs" aria-label="Zentrale Einstellungskategorien" data-i18n-aria-label="label.x002">
-        <span class="settings-category-label" data-i18n="web.s104">Gemeinsam</span>
+      <nav class="settings-tabs" aria-label="Einstellungen" data-i18n-aria-label="page.settings">
         <button id="settings-tools" aria-current="page" data-i18n="web.s105">Tools</button>
+        <button id="settings-modes" data-i18n="ui040.modes">Modi</button>
         <button id="settings-processing" data-i18n="web.s106">Allgemein</button>
         <button id="settings-transfer" data-i18n="web.s107">Konfiguration</button>
-        <span class="settings-category-label" data-i18n="web.s108">Bereichsspezifisch</span>
-        <button id="settings-modes" data-i18n="web.s109">Forensik-Modi</button>
-        <button id="settings-malware" data-i18n="web.s110">Malware-Module</button>
       </nav>
-      <div id="malware-settings" hidden>
-      <section class="panel"><div class="heading"><div><div class="eyebrow" data-i18n="web.s111">MALWARE-MODULE</div><h2 data-i18n="web.s112">Statische Abläufe</h2></div><button id="static-new-module" data-i18n="web.s113">Modul hinzufügen</button></div>
-      <p data-i18n="web.s114">Eigene Reihenfolge aus internen statischen Prüfungen zusammenstellen. Tools sind mit Forensik gemeinsam; Module und Aufträge sind getrennt.</p><p class="help" data-i18n="web.s115">Externe Toolblöcke mit Parametern können als Entwurf gespeichert werden. Ihre Ausführung folgt nach gemeinsamer Adapter-Abstimmung. Keine freien PowerShell-Blöcke in diesem Bereich.</p>
-      <p id="static-module-message" role="status"></p><div id="static-modules"></div></section>
-      <section id="static-editor" class="panel" hidden><h2 id="static-editor-title" data-i18n="web.s116">Malware-Modul hinzufügen</h2><form id="static-module-form">
-        <label for="static-module-name" data-i18n="web.s117">Modulname</label><input id="static-module-name" maxlength="120" required>
-        <label for="static-module-description" data-i18n="web.s118">Beschreibung</label><textarea id="static-module-description" maxlength="4000" rows="2"></textarea>
-        <div class="fields"><div><label for="static-module-format" data-i18n="web.s119">Import · einzelne Datei</label><select id="static-module-format"><option value="PDF" data-i18n="web.s086">PDF</option><option value="OFFICE" data-i18n="web.s120">Office</option><option value="EXE" data-i18n="web.s121">Windows PE</option></select></div><div><label for="static-module-effort" data-i18n="web.s122">Aufwand</label><select id="static-module-effort"><option data-i18n="web.s123" value="schnell">schnell</option><option selected data-i18n="web.s124" value="Medium">Medium</option><option data-i18n="web.s125" value="langsam">langsam</option></select></div></div>
-        <div class="mode-category"><div class="heading"><h3 data-i18n="web.s126">Verarbeitung</h3><button type="button" id="static-add-step" class="secondary" data-i18n="web.s127">Prüfung hinzufügen</button></div><div id="static-steps"></div></div>
-        <div class="mode-category"><h3 data-i18n="web.s128">Export</h3><label for="static-module-output" data-i18n="web.s129">Diesen Ergebnisordner am Ende zippen</label><input id="static-module-output" value="Analysis" maxlength="240" required><p class="help" data-i18n="web.s130">Relativer Unterordner des eigenen Auftrags. Der reservierte Sample-Ordner ist ausgeschlossen.</p></div>
-        <p id="static-editor-error" class="help" role="alert"></p><div class="actions"><button id="static-save-module" type="submit" data-i18n="web.s131">Modul speichern</button><button id="static-cancel-module" type="button" class="secondary" data-i18n="web.s043">Abbrechen</button></div>
-      </form></section>
-    </div>
+
     <div id="tool-settings">
       <section class="panel">
-        <h2 data-i18n="web.s132">Gemeinsame Toolverwaltung</h2>
+        <h2 data-i18n="web.s132">Toolverwaltung</h2>
         <p data-i18n="web.s133">Hinterlege pro Tool die Programmdatei oder das Installationsverzeichnis.</p>
-        <p class="help" data-i18n="web.s134">Die Pfade gelten auf dem Rechner, auf dem die EXE läuft.
-          „Pfad prüfen“ kontrolliert die Erreichbarkeit. Es wird dabei kein Programm gestartet.
-          Die Zuordnung zu einer Aufbereitungsart folgt später.</p>
+        <p class="help" data-i18n="web.s134">Die Pfade gelten auf dem Serverrechner. Prüfen kontrolliert den Pfad und startet kein Programm.</p>
       </section>
       <div class="columns">
         <section class="panel">
@@ -435,8 +135,7 @@
               <input id="tool-path" maxlength="4096" placeholder="C:\Forensiktools\MeinTool\tool.exe" required spellcheck="false">
               <button type="button" id="browse-tool" class="secondary" data-i18n="web.s033">Durchsuchen…</button>
             </div>
-            <p class="help" data-i18n="web.s138">Ohne Anführungszeichen oder Startparameter. Ein noch nicht vorhandener
-              lokaler Pfad kann bereits gespeichert werden.</p>
+            <p class="help" data-i18n="web.s138">Ohne Anführungszeichen oder Startparameter. Ein noch nicht vorhandener lokaler Pfad kann bereits gespeichert werden.</p>
             <div class="actions">
               <button type="button" id="check-path" class="secondary" data-i18n="web.s139">Pfad prüfen</button>
               <button type="submit" id="save-tool" data-i18n="web.s140">Speichern</button>
@@ -455,8 +154,7 @@
         <p data-i18n="web.s144">Token-Datei auf dem Server:</p><p><code id="token-file"></code></p>
         <div class="actions"><button id="show-token" class="secondary" data-i18n="web.s145">Aktuellen Token anzeigen</button></div>
         <p><code id="current-token" hidden></code></p>
-        <p class="help" data-i18n="web.s146">Der angezeigte Token gehört zu dieser Serversitzung und gewährt Zugriff
-          auf die App. Nach einem Serverneustart erneut anmelden.</p>
+        <p class="help" data-i18n="web.s146">Der angezeigte Token gehört zu dieser Serversitzung und gewährt Zugriff auf die App. Nach einem Serverneustart erneut anmelden.</p>
       </section>
       <details class="panel">
         <summary data-i18n="web.s147">Technischer Dienststatus (Startgerüst)</summary>
@@ -469,10 +167,8 @@
       <div id="mode-settings" hidden>
         <section class="panel">
           <h2 data-i18n="web.s151">Aufbereitungsmodi</h2>
-          <p data-i18n="web.s152">Lege fest, wie eine Evidence aufbereitet werden soll. Deine KAPE-Vorlage
-            ist als bearbeitbarer Entwurf vorhanden.</p>
-          <p class="note" data-i18n="web.s153">Nur Konfiguration: Es wird nichts entpackt, ausgeführt oder gezippt.
-            Jeder spätere Lauf arbeitet in einem eigenen lokalen Ordner.</p>
+          <p data-i18n="web.s152">Lege fest, wie eine Evidence aufbereitet werden soll. Deine KAPE-Vorlage ist als bearbeitbarer Entwurf vorhanden.</p>
+          <p class="note" data-i18n="web.s153">Nur Konfiguration: Es wird nichts entpackt, ausgeführt oder gezippt. Jeder spätere Lauf arbeitet in einem eigenen lokalen Ordner.</p>
         </section>
         <section class="panel">
           <div class="heading"><h2 id="mode-list-title" tabindex="-1" data-i18n="web.s154">Gespeicherte Modi</h2><div class="actions" style="margin:0">
@@ -501,18 +197,15 @@
               <h3 id="mode-import-title" data-i18n="web.s158">Import</h3>
               <label for="mode-format" data-i18n="web.s159">Evidence-Format</label>
                 <select id="mode-format"><option value="ZIP" data-i18n="web.s036">ZIP (KAPE-Target)</option>
-                  <option value="E01" disabled data-i18n="web.s037">E01 — in Planung</option>
-                  <option value="VMDK" disabled data-i18n="web.s038">VMDK — in Planung</option></select>
+
+                  </select>
               <label for="mode-source" data-i18n="web.s160">ZIP entpacken in</label><input id="mode-source" maxlength="240" required>
-              <p class="help" data-i18n="web.s161">Relativ zum eigenen Arbeitsordner dieser Evidence.
-                Beispiel: Entpacken in Targets; ein im ZIP enthaltener Ordner C liegt danach unter Targets\C.
-                Dateien und Ordner im ZIP behalten ihre Namen.</p>
+              <p class="help" data-i18n="web.s161">Relativ zum eigenen Arbeitsordner dieser Evidence. Beispiel: Entpacken in Targets; ein im ZIP enthaltener Ordner C liegt danach unter Targets\C. Dateien und Ordner im ZIP behalten ihre Namen.</p>
             </section>
             <section class="mode-category" aria-labelledby="mode-processing-title">
             <h3 id="mode-processing-title" data-i18n="web.s126">Verarbeitung</h3>
             <p data-i18n="web.s162">Befehle in dieser Reihenfolge</p>
-            <p class="help" data-i18n="web.s163">Tool aus den Einstellungen auswählen und nur die Parameter eintragen.
-              Der Programmpfad wird automatisch ergänzt. Ausgabeziele stehen in deinen Parametern.</p>
+            <p class="help" data-i18n="web.s163">Tool aus den Einstellungen auswählen und nur die Parameter eintragen. Der Programmpfad wird automatisch ergänzt. Ausgabeziele stehen in deinen Parametern.</p>
             <div id="mode-steps"></div>
             <button type="button" id="add-mode-step" class="secondary" data-i18n="web.s164">+ Befehl hinzufügen</button>
             <details id="mode-original-reference" style="margin-top:20px" hidden>
@@ -524,14 +217,12 @@
               <h3 id="mode-export-title" data-i18n="web.s128">Export</h3>
               <label for="mode-output" data-i18n="web.s129">Diesen Ergebnisordner am Ende zippen</label>
               <input id="mode-output" maxlength="240" required>
-              <p class="help" data-i18n="web.s166">Relativ zum Arbeitsordner dieser Evidence. Dieser Ordner wird nach
-                Abschluss aller Befehle als Ergebnis-ZIP zum Download bereitgestellt.</p>
+              <p class="help" data-i18n="web.s166">Relativ zum Arbeitsordner dieser Evidence. Dieser Ordner wird nach Abschluss aller Befehle als Ergebnis-ZIP zum Download bereitgestellt.</p>
             </section>
             <section class="mode-category" aria-labelledby="mode-preview-title">
             <h3 id="mode-preview-title" data-i18n="web.s167">Vorgesehener lokaler Ablauf</h3>
             <pre id="mode-workspace-preview"></pre>
-            <p class="help" data-i18n="web.s168">Vorschau: Diese Ordner werden jetzt noch nicht angelegt. Das Original
-              bleibt separat erhalten. Der spätere Runner verwendet je Lauf eine eindeutige ID.</p>
+            <p class="help" data-i18n="web.s168">Vorschau: Diese Ordner werden jetzt noch nicht angelegt. Das Original bleibt separat erhalten. Der spätere Runner verwendet je Lauf eine eindeutige ID.</p>
             </section>
             <div class="actions"><button type="submit" id="save-mode" data-i18n="web.s169">Modus speichern</button>
               <button type="button" id="cancel-mode" class="secondary" data-i18n="web.s170">Bearbeitung abbrechen</button></div>
@@ -540,22 +231,18 @@
         </section>
       </div>
       <div id="processing-settings" hidden>
-        <section class="panel"><h2 data-i18n="web.s171">Lokale Ergebnis-Viewer</h2><p data-i18n="web.s172">Gemeinsame Toolpfade für beide Bereiche; im Konfigurationsexport enthalten. Speichern startet kein Programm. Getestet: 2026.5.0; andere Builds bleiben als ungeprüft gesperrt. Fremdviewer verarbeiten Ergebnisse außerhalb der internen Vorschau und erben die Serverrechte; keine Sandbox.</p><div id="viewer-settings"></div></section>
+
         <section class="panel">
           <h2 data-i18n="web.s173">Warteschlange</h2>
           <p id="queue-status" role="status"></p>
           <div class="actions"><button id="pause-queue" data-i18n="web.s174">Warteschlange pausieren</button>
             <button id="refresh-queue" class="secondary" data-i18n="web.s148">Status aktualisieren</button></div>
-          <p class="help" data-i18n="web.s175">Die Pause verhindert die Übernahme des nächsten Auftrags. Ein bereits übernommener
-            Auftrag läuft vollständig weiter. Neue Läufe können währenddessen in die Warteschlange gestellt werden.
-            Die Pause bleibt nach einem Neustart erhalten; unterbrochene Aufträge werden weiterhin nicht automatisch wiederholt.</p>
+          <p class="help" data-i18n="web.s175">Die Pause verhindert die Übernahme des nächsten Auftrags. Ein bereits übernommener Auftrag läuft vollständig weiter. Neue Läufe können währenddessen in die Warteschlange gestellt werden. Die Pause bleibt nach einem Neustart erhalten; unterbrochene Aufträge werden weiterhin nicht automatisch wiederholt.</p>
         </section>
         <section class="panel">
           <h2 data-i18n="web.s176">Technisches Diagnosepaket</h2>
-          <p data-i18n="web.s177">Version, Server-/Workerstatus und bereinigte technische Ereignisse als ZIP exportieren.
-            Die Vorschau zeigt alle enthaltenen Dateien und Inhalte. Kein automatischer Versand.</p>
-          <p class="help" data-i18n="web.s178">Keine Tokens, Evidenzen, Ergebnisse, Befehlsausgaben oder Feedbacktexte.
-            Unbekannte Logmeldungen und freie Fehlerdetails werden ausgelassen. Auch im Serverfenster verfügbar.</p>
+          <p data-i18n="web.s177">Version, Server-/Workerstatus und bereinigte technische Ereignisse als ZIP exportieren. Die Vorschau zeigt alle enthaltenen Dateien und Inhalte. Kein automatischer Versand.</p>
+          <p class="help" data-i18n="web.s178">Keine Tokens, Evidenzen, Ergebnisse, Befehlsausgaben oder Feedbacktexte. Unbekannte Logmeldungen und freie Fehlerdetails werden ausgelassen. Auch im Serverfenster verfügbar.</p>
           <button id="preview-diagnostics" data-i18n="web.s179">Diagnosepaket vorbereiten</button>
         </section>
         <section class="panel">
@@ -564,16 +251,11 @@
           <p id="storage-path" class="help"></p>
           <div id="storage-areas"></div>
           <p id="storage-measurement" class="help" role="status"></p>
-          <p class="help" data-i18n="web.s183">Gemessen werden Dateigrößen in den App-Ordnern; Dateiinhalte werden nicht gelesen.
-            Lokal referenzierte Originaldateien außerhalb dieser Ordner sind nicht enthalten.
-            Logische Dateigrößen können vom belegten Platz auf dem Datenträger abweichen.
-            Während laufender Aufbereitungen ändern sich die Werte. Eine Messung ist auf 10 Sekunden
-            und 500.000 Einträge begrenzt; Teilmessungen werden ausdrücklich gekennzeichnet.</p>
+          <p class="help" data-i18n="web.s183">Gemessen werden Dateigrößen in den App-Ordnern; Dateiinhalte werden nicht gelesen. Lokal referenzierte Originaldateien außerhalb dieser Ordner sind nicht enthalten. Logische Dateigrößen können vom belegten Platz auf dem Datenträger abweichen. Während laufender Aufbereitungen ändern sich die Werte. Eine Messung ist auf 10 Sekunden und 500.000 Einträge begrenzt; Teilmessungen werden ausdrücklich gekennzeichnet.</p>
         </section>
         <section class="panel">
           <h2 data-i18n="web.s184">Daten bereinigen</h2>
-          <p data-i18n="web.s185">Nur Daten bekannter, abgeschlossener Aufträge im App-Datenordner entfernen.
-            Historie und Einstellungen bleiben erhalten. Offene Aufträge sperren die Bereinigung.</p>
+          <p data-i18n="web.s185">Nur Daten bekannter, abgeschlossener Aufträge im App-Datenordner entfernen. Historie und Einstellungen bleiben erhalten. Offene Aufträge sperren die Bereinigung.</p>
           <label for="cleanup-scope" data-i18n="web.s186">Umfang der Bereinigung</label>
           <select id="cleanup-scope"><option value="" data-i18n="web.s187">Alle abgeschlossenen Aufträge</option></select>
           <div class="actions">
@@ -581,15 +263,12 @@
             <button data-cleanup="evidence" class="secondary" data-i18n="web.s189">Evidences leeren</button>
             <button data-cleanup="results" class="secondary" data-i18n="web.s190">Results leeren</button>
           </div>
-          <p class="help" data-i18n="web.s191">Cache: entpackte Eingänge, Arbeitsreste und vollständige Command-Logs.
-            Evidences: hochgeladene Eingangskopien. Results: Ergebnisordner, Ergebnis-ZIPs und Abschlussberichte.
-            Lokal referenzierte Originaldateien werden in allen Kategorien geschützt.</p>
+          <p class="help" data-i18n="web.s191">Cache: entpackte Eingänge, Arbeitsreste und vollständige Command-Logs. Evidences: hochgeladene Eingangskopien. Results: Ergebnisordner, Ergebnis-ZIPs und Abschlussberichte. Lokal referenzierte Originaldateien werden in allen Kategorien geschützt.</p>
           <p id="cleanup-message" role="status"></p>
         </section>
         <section class="panel">
           <h2 data-i18n="web.s192">Arbeitslaufwerk / Zielordner</h2>
-          <p data-i18n="web.s193">Für neue Aufträge einen vorhandenen Ordner auf einer lokalen SSD/Festplatte wählen.
-            Die App erstellt darunter einen eigenen gekennzeichneten Datenordner. Bestehende Aufträge bleiben an ihrem bisherigen Ort.</p>
+          <p data-i18n="web.s193">Für neue Aufträge einen vorhandenen Ordner auf einer lokalen SSD/Festplatte wählen. Die App erstellt darunter einen eigenen gekennzeichneten Datenordner. Bestehende Aufträge bleiben an ihrem bisherigen Ort.</p>
           <label for="workspace-folder" data-i18n="web.s194">Übergeordneter Ordner auf dem Server</label>
           <div class="path-input"><input id="workspace-folder" placeholder="D:\Aufbereitungen"><button id="browse-workspace" class="secondary" data-i18n="web.s195">Ordner auswählen…</button></div>
           <div class="actions"><button id="save-workspace" data-i18n="web.s196">Arbeitsziel speichern</button><button id="reset-workspace" class="secondary" data-i18n="web.s197">Standard verwenden</button></div>
@@ -603,9 +282,7 @@
             <input id="upload-limit-gib" type="number" min="0.000000001" step="any" required>
             <label for="extract-limit-tb" data-i18n="web.s201">Entpacklimit (TB, dezimal)</label>
             <input id="extract-limit-tb" type="number" min="0.000000000001" step="any" required>
-            <p class="help" data-i18n="web.s202">Standard: 50 GiB Upload und 2 TB entpackte Daten (2.000 GB).
-              Lokale ZIPs benötigen keinen Upload. Der Ergebnisordner verwendet dasselbe Größenlimit wie die entpackten Daten.
-              Neue Werte gelten nur für neu gestartete Läufe; freier Speicherplatz wird zusätzlich geprüft.</p>
+            <p class="help" data-i18n="web.s202">Standard: 50 GiB Upload und 2 TB entpackte Daten (2.000 GB). Lokale ZIPs benötigen keinen Upload. Der Ergebnisordner verwendet dasselbe Größenlimit wie die entpackten Daten. Neue Werte gelten nur für neu gestartete Läufe; freier Speicherplatz wird zusätzlich geprüft.</p>
             <button id="save-limits" type="submit" data-i18n="web.s203">Limits speichern</button>
             <p id="limits-message" role="status"></p>
           </form>
@@ -614,19 +291,16 @@
       <div id="transfer-settings" hidden>
         <section class="panel">
           <h2 data-i18n="web.s204">Konfiguration exportieren</h2>
-          <p data-i18n="web.s205">Gemeinsame Tools und Limits sowie Forensik-Modi und Malware-Module einschließlich aller Befehle, Parameter und Reihenfolgen in einer einzigen JSON-Datei sichern oder übertragen. Beide Bereiche sind immer enthalten, auch wenn einer leer ist.</p>
-          <p class="help" data-i18n="web.s206">Enthalten sind Tool-Pfade und Konfigurationen. Zugangstokens,
-            Zertifikate, Evidence-Dateien und die Programme selbst sind nicht enthalten.</p>
+          <p data-i18n="web.s205">Tools, ZIP-Modi, Befehle, Parameter, Reihenfolgen und gemeinsame Verarbeitungslimits als versionierte JSON-Datei übertragen.</p>
+          <p class="help" data-i18n="web.s206">Enthalten sind Tool-Pfade und Konfigurationen. Zugangstokens, Zertifikate, Evidence-Dateien und die Programme selbst sind nicht enthalten.</p>
           <button id="export-config" data-i18n="web.s204">Konfiguration exportieren</button>
         </section>
         <section class="panel">
           <h2 data-i18n="web.s207">Konfiguration importieren</h2>
-          <p data-i18n="web.s208">Wähle eine exportierte JSON-Datei und prüfe zuerst die Vorschau.
-            Es werden keine Tools ausgeführt. Vor dem Anwenden wird die bisherige Konfiguration gesichert.</p>
+          <p data-i18n="web.s208">Wähle eine exportierte JSON-Datei und prüfe zuerst die Vorschau. Es werden keine Tools ausgeführt. Vor dem Anwenden wird die bisherige Konfiguration gesichert.</p>
           <label for="config-file" data-i18n="web.s209">JSON-Konfigurationsdatei</label>
           <input id="config-file" type="file" accept=".json,application/json" aria-describedby="config-file-help">
-          <p id="config-file-help" class="help" data-i18n="web.s210">Maximal 4 MiB. Tool-Pfade beziehen sich auf den Server;
-            auf einem anderen Rechner müssen sie gegebenenfalls angepasst werden.</p>
+          <p id="config-file-help" class="help" data-i18n="web.s210">Maximal 4 MiB. Tool-Pfade beziehen sich auf den Server; auf einem anderen Rechner müssen sie gegebenenfalls angepasst werden.</p>
           <label for="import-strategy" data-i18n="web.s211">Importart</label>
           <select id="import-strategy">
             <option value="merge" data-i18n="web.s212">Zusammenführen — vorhandene Einträge behalten, gleiche IDs aktualisieren</option>
@@ -643,77 +317,32 @@
               <input id="replace-confirm" type="checkbox" style="width:auto;display:inline;margin-right:8px">
               <span data-i18n="web.s216">Ich möchte die bisherige Tool- und Moduskonfiguration vollständig ersetzen.</span>
             </label>
-            <div class="actions"><button id="apply-config" disabled data-i18n="web.s217">Import anwenden</button></div>
+            <label id="legacy-confirm-label" hidden class="checkbox-inline"><input id="legacy-confirm" type="checkbox"><span data-i18n="ui040.legacy_confirm">Ich bestätige, dass entfallene Bereiche nicht übernommen werden. Bestehende Altdaten bleiben unverändert.</span></label><div class="actions"><button id="apply-config" disabled data-i18n="web.s217">Import anwenden</button></div>
           </div>
           <p id="config-message" role="status" aria-live="polite"></p>
         </section>
       </div>
     </div>
-    <div id="logs" hidden>
-      <section class="panel">
-        <div class="heading"><h2 data-i18n="web.s218">Logs und Fehlerdiagnose</h2><button id="reload-job-logs" class="secondary" data-i18n="web.s142">Aktualisieren</button></div>
-        <form id="job-search">
-          <label for="job-query" data-i18n="web.s219">Dateiname, Modus, Fallnummer oder Gerätename suchen</label>
-          <input id="job-query" type="search" maxlength="200" placeholder="Zum Beispiel C-low.zip" data-i18n-placeholder="label.x011">
-          <div class="fields">
-            <div><label for="job-status-filter" data-i18n="web.s220">Status</label><select id="job-status-filter">
-              <option value="" data-i18n="web.s221">Alle Status</option><option value="succeeded" data-i18n="web.s222">Abgeschlossen</option>
-              <option value="failed" data-i18n="web.s223">Fehlgeschlagen</option><option value="cancelled" data-i18n="web.s224">Abgebrochen</option>
-              <option value="interrupted" data-i18n="web.s225">Unterbrochen</option><option value="queued" data-i18n="web.s173">Warteschlange</option>
-              <option value="running" data-i18n="web.s226">Läuft</option><option value="uploading" data-i18n="web.s026">Upload</option>
-              <option value="validating" data-i18n="web.s227">Validierung</option></select></div>
-            <div><label for="job-mode-filter" data-i18n="web.s228">Modus</label><select id="job-mode-filter"><option value="" data-i18n="web.s229">Alle Modi</option></select></div>
-            <div><label for="job-date-from" data-i18n="web.s230">Von (UTC-Datum)</label><input id="job-date-from" type="date"></div>
-            <div><label for="job-date-to" data-i18n="web.s231">Bis (UTC-Datum, einschließlich)</label><input id="job-date-to" type="date"></div>
-          </div>
-          <div class="actions"><button type="submit" data-i18n="web.s232">Suchen</button><button id="clear-job-search" type="button" class="secondary" data-i18n="web.s233">Filter zurücksetzen</button></div>
-        </form>
-        <p id="job-search-count" role="status"></p>
-        <div id="job-results" class="search-results" aria-label="Suchtreffer" data-i18n-aria-label="label.x006"></div>
-        <div class="actions"><button id="jobs-prev" class="secondary" disabled data-i18n="web.s234">Vorherige Seite</button><button id="jobs-next" class="secondary" disabled data-i18n="web.s235">Nächste Seite</button></div>
-        <label for="log-job" data-i18n="web.s236">Aufbereitung auswählen (50 je Seite)</label>
-        <select id="log-job"></select>
-        <p id="log-job-status" role="status"></p><div id="log-inventory"></div>
-        <pre id="log-job-error" hidden></pre>
-        <h3 data-i18n="web.s237">Kommandozeile</h3><pre id="log-job-command" class="terminal-command"></pre>
-        <div class="terminal-bar"><span data-i18n="web.s238">Terminal · gespeicherte Ausgabe</span></div>
-        <pre id="log-job-output" class="terminal-output" tabindex="0"></pre>
-        <div class="actions"><button id="download-diagnostics" class="secondary" disabled data-i18n="web.s239">Diagnose als TXT herunterladen</button>
-          <button id="download-job-log" class="secondary" disabled data-i18n="web.s240">KAPE-Log herunterladen</button>
-          <button id="log-download" class="secondary" disabled data-i18n="web.s070">Download Evidences</button>
-          <button id="log-archive" class="secondary" disabled data-i18n="web.s071">Ergebnis-ZIP erstellen</button>
-          <button id="log-report" class="secondary" disabled data-i18n="web.s072">Abschlussbericht herunterladen</button>
-          <button id="log-cleanup" class="secondary" disabled data-i18n="web.s241">Diesen Auftrag bereinigen</button>
-          <button id="log-cancel-archive" class="secondary" hidden data-i18n="web.s242">Archivierung abbrechen</button>
-          <button id="log-report-json" class="secondary" disabled data-i18n="web.s243">Bericht als JSON</button>
-          <button id="log-explorer" class="secondary" hidden disabled data-i18n="web.s073">Show in Explorer</button></div>
-        <p id="log-artifacts-note" class="help" role="status"></p>
-        <p id="log-explorer-note" class="help" role="status"></p>
-      </section>
-    </div>
-    <div id="results" hidden>
-      <section id="result-workplace" class="panel">
-        <div class="heading"><h2 data-i18n="web.s244">Ergebnis-Arbeitsplatz</h2><button id="results-maximize" type="button" data-i18n="web.s245">Ansicht vergrößern</button></div>
-        <label for="result-job" data-i18n="web.s246">Erfolgreicher Auftrag · letzte 50 im gewählten Bereich</label><select id="result-job"></select>
-        <p id="result-job-note" role="status"></p>
-        <p data-i18n="web.s247">Vorschau, keine Gesamtdateisuche: CSV maximal 1 MiB / 2.000 Zeilen; XLSX maximal 64 MiB Paket / 2.000 Datenzeilen, 64 Spalten. Originalwerte bleiben erhalten. Keine Formelauswertung oder externen Verbindungen. XLSX zeigt gespeicherte Formelwerte und rohe Excel-Datumsserien, ohne Neuberechnung oder Datumsumwandlung.</p>
-        <button id="csv-load" type="button" disabled data-i18n="web.s248">Dateiliste aktualisieren</button>
-        <div role="tablist" aria-label="Ergebnisformat" data-i18n-aria-label="label.x007"><button id="results-csv" role="tab" aria-selected="true" aria-controls="result-format-panel" data-i18n="web.s249">CSV</button><button id="results-xlsx" role="tab" aria-selected="false" aria-controls="result-format-panel" tabindex="-1" data-i18n="web.s250">XLSX</button></div>
-        <div id="result-format-panel" role="tabpanel" aria-labelledby="results-csv">
-        <label for="csv-file" id="result-file-label" data-i18n="web.s251">CSV-Ergebnisdatei</label><select id="csv-file"></select>
-        <div id="result-sheet-fields" hidden><label for="result-sheet" data-i18n="web.s252">XLSX-Blatt</label><select id="result-sheet" disabled></select></div>
-        <label for="csv-search" data-i18n="web.s253">Im eingelesenen Ausschnitt filtern</label><input id="csv-search" maxlength="128" type="search">
-        <p class="help" data-i18n="web.s254">Spaltenüberschrift anklicken: aufsteigend, erneut: absteigend. Der Sortiertyp wird aus dem gesamten eingelesenen Ausschnitt abgeleitet und im Header angezeigt. Bei Mehrdeutigkeit gilt Text. Mit dem Typ-Button lässt er sich ausdrücklich wechseln. Filter und Sortierung gelten vor der Seitenteilung für den begrenzten Ausschnitt.</p>
-        <button id="csv-search-button" type="button" disabled data-i18n="web.s255">Filter anwenden</button><button id="result-source-order" type="button" data-i18n="web.s256">Quellreihenfolge</button><button id="result-first" type="button" data-i18n="web.s257">Erste Seite</button><button id="csv-next" type="button" disabled data-i18n="web.s258">Weitere Treffer im Ausschnitt</button>
-        <p id="csv-note" role="status"></p><div id="csv-table" tabindex="0" style="overflow:auto;height:55vh"></div>
-        <button id="result-viewer" type="button" disabled data-i18n="web.s259">Im lokalen Viewer öffnen</button><p id="result-viewer-note" data-i18n="web.s260">Viewer wird ausschließlich nach eigenem Klick auf dem Server gestartet; keine Sandbox. Aufrufvertrag wird vor Freigabe geprüft.</p>
-        </div>
-      </section>
-    </div>
+    <div id="logs" hidden><section class="panel">
+      <div class="heading"><h2 data-i18n="page.logs">Logs</h2><button id="logs-reload" class="secondary" data-i18n="ui040.refresh">Aktualisieren</button></div>
+      <label for="log-job" data-i18n="ui040.job">Auftrag · Fall / Gerät / ZIP / Datum / Modus</label><select id="log-job"></select>
+      <p id="logs-page-note" class="help" role="status"></p><div class="actions"><button id="logs-prev" class="secondary" data-i18n="ui040.previous">Zurück</button><button id="logs-next" class="secondary" data-i18n="ui040.next">Weiter</button></div>
+      <p id="log-job-status" role="status"></p><p id="log-job-error" class="note" hidden></p>
+      <h3 data-i18n="ui040.work_directory">Arbeitsordner</h3><p id="log-work-directory" class="path"></p>
+      <div class="terminal-bar"><span data-i18n="ui040.terminal">Terminalausgabe</span><button id="log-follow" class="secondary" data-i18n="ui040.follow">Aktueller Ausgabe folgen</button></div><pre id="log-job-output" class="terminal-output" tabindex="0"></pre>
+    </section></div>
+    <div id="results" hidden><section class="panel">
+      <div class="heading"><h2 data-i18n="ui040.cases">Fälle und Aufträge</h2><button id="results-reload" class="secondary" data-i18n="ui040.refresh">Aktualisieren</button></div>
+      <p id="results-note" class="help" role="status"></p><div id="results-list" class="case-list"></div>
+      <div class="actions"><button id="results-prev" class="secondary" data-i18n="ui040.previous">Zurück</button><button id="results-next" class="secondary" data-i18n="ui040.next">Weiter</button></div>
+    </section><section id="result-detail" class="panel" hidden>
+      <h2 id="result-title"></h2><p id="result-state" role="status"></p>
+      <p id="result-source-note"></p><p id="result-source-path" class="path"></p>
+      <div class="actions"><button id="result-download" disabled data-i18n="ui040.zip_download">Ergebnis-ZIP herunterladen</button><button id="result-report" class="secondary" disabled data-i18n="web.s072">Abschlussbericht herunterladen</button><button id="result-source-download" class="secondary" hidden data-i18n="ui040.source_download">Hochgeladenes Original herunterladen</button><button id="result-archive" class="secondary" hidden data-i18n="web.s071">Ergebnis-ZIP erstellen</button></div>
+    </section></div>
   <section id="feedback" class="panel" hidden aria-labelledby="feedback-title">
     <div class="heading"><h2 id="feedback-title" data-i18n="web.s261">Feedback, Bugs und Wünsche</h2></div>
-    <p class="help" data-i18n="web.s263">Wird lokal auf dem Server gespeichert. Kein Versand und keine automatischen Loganhänge.
-      Beim Export werden deine eingegebenen Texte unverändert übernommen.</p>
+    <p class="help" data-i18n="web.s263">Wird lokal auf dem Server gespeichert. Kein Versand und keine automatischen Loganhänge. Beim Export werden deine eingegebenen Texte unverändert übernommen.</p>
     <form id="feedback-form">
       <label for="feedback-category" data-i18n="web.s264">Kategorie</label><select id="feedback-category"><option value="bug" data-i18n="web.s265">Bug / Fehler</option><option value="wish" data-i18n="web.s266">Wunsch</option><option value="feedback" data-i18n="web.s267">Allgemeines Feedback</option></select>
       <label for="feedback-subject" data-i18n="web.s268">Titel</label><input id="feedback-subject" maxlength="160" required>
@@ -766,29 +395,10 @@
   <script>
     const byId = id => document.getElementById(id);
     function effortLabel(value) {return value === 'schnell' ? t('effort.fast') : value === 'langsam' ? t('effort.slow') : value;}
-    let onboardingDismissed=true;
-    async function loadOnboarding() {
-      const requestToken = token, data = await api('/api/settings/onboarding');
-      if (requestToken !== token || byId('workspace').hidden) return;
-      onboardingDismissed=data.dismissed; byId('onboarding').hidden=data.dismissed || currentPage!=='overview';
-      byId('onboarding-required').replaceChildren(); byId('onboarding-optional').replaceChildren();
-      for (const item of data.required) {
-        const row = document.createElement('li');
-        setUiText(row, () => t('onboarding.'+item.status,{mode:item.mode_name,step:item.step_name,tool:item.tool_name}),true);
-        byId('onboarding-required').append(row);
-      }
-      setUiText(byId('onboarding-empty'), () => data.required.length ? '' : t('onboarding.empty'),true);
-      for (const item of data.optional) {
-        const row = document.createElement('li');
-        setUiText(row, () => t('onboarding.viewer',{name:item.name,status:t(item.configured ? 'onboarding.configured' : 'onboarding.not_configured')}),true);
-        byId('onboarding-optional').append(row);
-      }
-      setUiText(byId('onboarding-scope'), () => [t('onboarding.scope'),data.partial ? t('onboarding.partial') : '',data.skipped_unsupported ? t('onboarding.skipped',{count:data.skipped_unsupported}) : ''].filter(Boolean).join(' '),true);
-    }
     const fragment = new URLSearchParams(location.hash.slice(1));
     let token = fragment.get('token') || sessionStorage.getItem('ppm-token') || '';
     let editingId = null;
-    let workspaceArea = 'forensics', currentPage = 'overview', currentSettingsSection = 'tools';
+    let currentPage = 'overview', currentSettingsSection = 'tools';
     let pickerFolder = null, pickerParent = null, pickerFile = null, pickerRequest = 0, searchTimer;
     let lastToolFolder = sessionStorage.getItem('ppm-last-tool-folder') || null;
     let pickerPurpose = 'tool', lastEvidenceFolder = sessionStorage.getItem('ppm-last-evidence-folder') || null;
@@ -798,7 +408,7 @@
     let modeSteps = [], modeTools = [];
     let savedModes = [];
     let importTicket = null, importGeneration = 0;
-    let preparationModes = [], preparationTools = [], preparationRequest = 0;
+    let preparationModes = [], preparationRequest = 0, preparationLoading=false;
     let processingAvailable = false, runBusy = false, activeJobId = null;
     let uploadRequest = null, eventController = null, eventRefreshTimer = null, eventGeneration = 0;
     if (location.hash) history.replaceState(null, '', location.pathname);
@@ -807,37 +417,16 @@
       byId('message').classList.toggle('error', error);
     }
     function hideWorkspace() {
-      if (typeof clearStaticSession === 'function') clearStaticSession();
-      for (const id of ['diagnostics-dialog']) byId(id).close();
-      byId('feedback-list').replaceChildren(); byId('diagnostics-files').replaceChildren();
-      byId('feedback-form').reset(); diagnosticsTicket = null;
-      resetExplorer('run'); resetExplorer('log');
-      closePicker();
-      byId('workspace').hidden = true; byId('login').hidden = false;
-      document.body.classList.remove('authenticated'); closeWorkspaceMenu(); runTouched=false;
-      byId('details').replaceChildren(); byId('tools-list').replaceChildren();
-      setUiText(byId('token-file'), () => ''); setUiText(byId('current-token'), () => '');
-      byId('current-token').hidden = true;
-      setUiText(byId('show-token'), () => t("web.s145"), true);
-      resetEditor();
-      modesRequest++; resetModeEditor(); byId('modes-list').replaceChildren();
-      savedModes = []; setUiText(byId('modes-message'), () => ''); setUiText(byId('mode-availability'), () => '');
-      invalidateImport(); byId('config-file').value = ''; setUiText(byId('config-message'), () => '');
-      preparationRequest++; preparationModes = []; preparationTools = [];
-      eventGeneration++; eventController?.abort(); uploadRequest?.abort(); clearTimeout(eventRefreshTimer);
-      processingAvailable = false; activeJobId = null; runBusy = false;
-      setUiText(byId('run-live-command'), () => t("web.s065"), true); setUiText(byId('run-live-output'), () => t("web.s068"), true);
-      byId('run-inventory').replaceChildren(); byId('log-inventory').replaceChildren(); resetCSV(null);
-      setUiText(byId('run-status'), () => t("web.s058"), true); setUiText(byId('run-progress-note'), () => t("web.s061"), true);
-      byId('run-total-progress').value = 0; byId('run-command-progress').value = 0;
-      byId('cancel-run').hidden = true; byId('download-evidences').disabled = true;
-      byId('upload-label').hidden = true; byId('upload-progress').hidden = true;
-      byId('run-file').value = ''; byId('run-effort').replaceChildren();
-      byId('local-zip-path').value = ''; byId('run-error-panel').hidden = true;
-      logsRequest++; byId('log-job').replaceChildren();
-      for (const id of ['log-job-error','log-job-output','log-job-command','log-job-status']) setUiText(byId(id), () => '');
-      byId('run-effort').disabled = true; byId('run-availability').replaceChildren();
-      setUiText(byId('run-mode-message'), () => ''); updatePreparation();
+      clearJobViewTimers(); eventGeneration++; eventController?.abort(); uploadRequest?.abort();clearTimeout(eventRefreshTimer);
+      byId('workspace').hidden=true;byId('login').hidden=false;document.body.classList.remove('authenticated');closeWorkspaceMenu();
+      for(const id of ['diagnostics-dialog','path-picker','cleanup-dialog'])byId(id).close();
+      for(const id of ['log-job-output','log-job-status','log-work-directory','results-list','feedback-list','tools-list','modes-list','details'])byId(id).replaceChildren();
+      byId('result-detail').hidden=true;byId('feedback-form').reset();resetEditor();resetModeEditor();invalidateImport();
+      preparationRequest++;preparationModes=[];activeJobId=null;runBusy=false;runTouched=false;processingAvailable=false;
+      byId('run-file').value='';byId('local-zip-path').value='';byId('config-file').value='';byId('run-effort').replaceChildren();
+      diagnosticsTicket=null;byId('diagnostics-files').replaceChildren();byId('token').value='';
+      setUiText(byId('current-token'),()=> '');byId('current-token').hidden=true;setUiText(byId('show-token'),()=>t('web.s145'),true);
+      updateWorkspaceStatus();
     }
     async function api(path, method='GET', payload) {
       const response = await fetch(path, {method, headers:{Authorization:'Bearer '+token,'Accept-Language':I18n.locale,
@@ -870,138 +459,67 @@
         const dt = document.createElement('dt'), dd = document.createElement('dd');
         setUiText(dt, () => label); setUiText(dd, () => value); byId('details').append(dt,dd);
       }
-      await loadOnboarding();
+
     }
     async function navigate(page) {
-      currentPage=page;
-      if (typeof updateWorkspacePresentation === 'function') updateWorkspacePresentation();
-      byId('malware-overview').hidden = workspaceArea !== 'malware' || page !== 'overview';
-      byId('overview').hidden = page !== 'overview'; byId('settings').hidden = page !== 'settings';
-      byId('logs').hidden = page !== 'logs'; byId('results').hidden = page !== 'results'; byId('feedback').hidden = page !== 'feedback';
-      updatePreparationPresentation(); closeWorkspaceMenu(); byId('page-title').focus();
-      for (const name of ['overview','settings','logs','results','feedback']) {
-        if (name === page) byId('nav-'+name).setAttribute('aria-current','page');
-        else byId('nav-'+name).removeAttribute('aria-current');
+      if(!['overview','settings','logs','results','feedback'].includes(page))return;
+      clearJobViewTimers();currentPage=page;
+      for(const name of ['overview','settings','logs','results','feedback']){
+        byId(name).hidden=name!==page;
+        if(name===page)byId('nav-'+name).setAttribute('aria-current','page');else byId('nav-'+name).removeAttribute('aria-current');
       }
-      if (page === 'settings') {preparationRequest++; await showSettings(currentSettingsSection);}
-      else if (page === 'logs') {preparationRequest++; await loadJobLogs();}
-      else if (page === 'results') {preparationRequest++; await loadResultJobs();}
-      else if (page === 'feedback') {preparationRequest++; await loadFeedback();}
-      else if (workspaceArea === 'malware') {byId('overview').hidden = true; await loadStaticPreparation();}
+      closeWorkspaceMenu();updateWorkspaceStatus();byId('page-title').focus();
+      if(page==='settings'){preparationRequest++;await showSettings(currentSettingsSection);}
+      else if(page==='logs'){preparationRequest++;await loadJobLogs();}
+      else if(page==='results'){preparationRequest++;await loadResultJobs();}
+      else if(page==='feedback'){preparationRequest++;await loadFeedback();}
       else await loadPreparation();
     }
-    function clearPreparationPlan() {
-      byId('run-plan').hidden = true;
-      setUiText(byId('run-plan-summary'), () => ''); setUiText(byId('run-plan-folders'), () => '');
-      byId('run-plan-commands').replaceChildren();
-      if (!activeJobId && !runBusy) {
-        setUiText(byId('run-total-label'), () => t("web.s059"), true);
-        byId('run-total-progress').max = 1;
-      }
+    function selectedPreparationMode(){return preparationModes.find(mode=>mode.id===byId('run-effort').value);}
+    function updatePreparation(){
+      const file=byId('run-file').files[0],local=byId('run-source-kind').value==='local';
+      byId('upload-source').hidden=local;byId('local-source').hidden=!local;
+      const valid=local?/\.zip$/i.test(byId('local-zip-path').value.trim()):Boolean(file&&/\.zip$/i.test(file.name)&&file.size>0);
+      setUiText(byId('run-file-message'),()=>!file?t('web.s031'):!/\.zip$/i.test(file.name)?t('web.s293'):!file.size?t('web.s294'):t('run.file',{filename:file.name,bytes:new Intl.NumberFormat(I18n.numberLocale).format(file.size)}),true);
+      byId('run-file-message').classList.toggle('error',Boolean(file&&!valid));
+      byId('run-start').disabled=runBusy||preparationLoading||!valid||!selectedPreparationMode()||!processingAvailable;
+      for(const id of ['run-case','run-device','run-file','run-format','run-effort','run-source-kind','local-zip-path','browse-evidence'])byId(id).disabled=runBusy || (id==='run-effort'&&preparationLoading);
+      byId('open-settings').hidden=preparationModes.length>0;
+      updateWorkspaceStatus();
     }
-    function selectedPreparationMode() {
-      return preparationModes.find(mode => mode.id === byId('run-effort').value);
-    }
-    function updatePreparation() {
-      clearPreparationPlan();
-      const file = byId('run-file').files[0];
-      const local = byId('run-source-kind').value === 'local';
-      setUiText(byId('run-intro'), () => local ? t("web.s291") :
-        t("web.s292"), true);
-      byId('upload-source').hidden = local; byId('local-source').hidden = !local;
-      const validFile = local ? /\.zip$/i.test(byId('local-zip-path').value.trim()) : Boolean(file && /\.zip$/i.test(file.name) && file.size > 0);
-      setUiText(byId('run-file-message'), () => !file ? t("web.s031") :
-        !/\.zip$/i.test(file.name) ? t("web.s293") :
-        !file.size ? t("web.s294") :
-        t('run.file',{filename:file.name,bytes:new Intl.NumberFormat(I18n.numberLocale).format(file.size)}), true);
-      byId('run-file-message').classList.toggle('error', Boolean(file && !validFile));
-      const mode = selectedPreparationMode();
-      byId('preview-run').disabled = runBusy || !validFile || !mode || byId('run-format').value !== 'ZIP';
-      byId('run-start').disabled = byId('preview-run').disabled || !processingAvailable;
-      for (const id of ['run-case','run-device','run-file','run-format','run-effort','run-source-kind','local-zip-path','browse-evidence','allow-high-compression','create-result-zip']) byId(id).disabled = runBusy;
-      if (typeof updatePreparationPresentation==='function') updatePreparationPresentation();
-    }
-    async function loadPreparation() {
-      const previous = byId('run-effort').value, request = ++preparationRequest;
-      // Keep the selected draft while a catalog refresh is in flight, including page changes.
-      byId('run-effort').disabled = true; setUiText(byId('run-mode-message'), () => t("web.s296"), true);
-      byId('run-availability').replaceChildren(); updatePreparation();
-      try {
-        const [data,tools,catalog] = await Promise.all([api('/api/settings/modes'),api('/api/settings/tools'),api('/api/jobs/catalog')]);
-        if (request !== preparationRequest || byId('workspace').hidden) return;
-        preparationTools = tools.tools;
-        processingAvailable = catalog.worker;
-        setUiText(byId('run-start-note'), () => t('limits.run',{upload:new Intl.NumberFormat(I18n.numberLocale,{maximumFractionDigits:3}).format(catalog.limits.max_upload_bytes/1024**3),extract:new Intl.NumberFormat(I18n.numberLocale,{maximumFractionDigits:3}).format(catalog.limits.max_extract_bytes/1e12)}), true);
-        setUiText(byId('admin-status'), () => catalog.administrator ? t("web.s299") :
-          catalog.test_no_admin ? t("web.s300") : t("web.s301"), true);
-        byId('admin-status').classList.toggle('unavailable', !catalog.administrator);
-        byId('run-effort').replaceChildren(new Option(t("web.s302"),''));
-        const labels = {missing:t("web.s303"),conflict:t("web.s304"),
-          incomplete:t("web.s305"),configured:t("web.s306")};
-        for (const slot of data.availability) {
-          const mode = data.modes.find(mode => mode.id === slot.mode_ids[0]);
-          const profile = catalog.modes.find(item => item.id === mode?.id);
-          const complete = profile?.ready && slot.state === 'configured' && mode && mode.evidence_format === 'ZIP' && mode.steps.length;
-          const reason = profile?.reason || labels[slot.state];
-          const option = new Option(effortLabel(slot.effort)+(complete ? '' : ' — '+reason),complete ? mode.id : 'unavailable-'+slot.effort);
-          option.disabled = !complete;
-          byId('run-effort').append(option);
-          if (complete) preparationModes.push(mode);
-          const item = document.createElement('li');
-          setUiText(item, () => effortLabel(slot.effort)+': '+(complete ? mode.name+' ('+mode.steps.length+t("label.x034") : reason), true);
-          byId('run-availability').append(item);
+    async function loadPreparation(){
+      const previous=byId('run-effort').value,request=++preparationRequest;preparationLoading=true;updatePreparation();
+      try{
+        const [data,catalog]=await Promise.all([api('/api/settings/modes'),api('/api/jobs/catalog')]);
+        if(request!==preparationRequest||byId('workspace').hidden)return;
+        processingAvailable=catalog.worker;preparationModes=[];
+        setUiText(byId('run-start-note'),()=>t('limits.run',{upload:new Intl.NumberFormat(I18n.numberLocale,{maximumFractionDigits:3}).format(catalog.limits.max_upload_bytes/1024**3),extract:new Intl.NumberFormat(I18n.numberLocale,{maximumFractionDigits:3}).format(catalog.limits.max_extract_bytes/1e12)}),true);
+        setUiText(byId('admin-status'),()=>catalog.administrator?t('web.s299'):catalog.test_no_admin?t('web.s300'):t('web.s301'),true);
+        byId('admin-status').classList.toggle('unavailable',!catalog.administrator);
+        byId('run-effort').replaceChildren(new Option(t('web.s302'),''));
+        for(const effort of ['schnell','Medium','langsam']){
+          const slot=data.availability.find(item=>item.effort===effort),mode=data.modes.find(item=>item.id===slot?.mode_ids[0]);
+          const profile=catalog.modes.find(item=>item.id===mode?.id),ready=slot?.state==='configured'&&profile?.ready&&mode?.evidence_format==='ZIP';
+          const option=new Option(effortLabel(effort)+(ready?'':' — '+(profile?.reason||t('ui040.no_mode'))),ready?mode.id:'unavailable-'+effort);option.disabled=!ready;byId('run-effort').append(option);if(ready)preparationModes.push(mode);
         }
-        byId('run-effort').disabled = false;
-        if (preparationModes.some(mode => mode.id === previous)) byId('run-effort').value = previous;
-        setUiText(byId('run-mode-message'), () => !processingAvailable ? t("web.s307") : preparationModes.length ?
-          t("web.s308") :
-          t("web.s309"), true);
-        updatePreparation();
-        if (!activeJobId && !runBusy) {
-          const previousJob = sessionStorage.getItem('ppm-job-id');
-          if (previousJob) {activeJobId = previousJob; await refreshJob(); watchJob();}
-        }
-      } catch (error) {
-        if (request !== preparationRequest || byId('workspace').hidden) return;
-        byId('run-effort').replaceChildren(new Option(t("web.s310"),''));
-        setUiText(byId('run-mode-message'), () => error.message); throw error;
-      }
-    }
-    function previewPreparation() {
-      updatePreparation(); if (byId('preview-run').disabled) return;
-      const mode = selectedPreparationMode(), file = byId('run-file').files[0];
-      const inputName = byId('run-source-kind').value === 'local' ? byId('local-zip-path').value.trim() : file.name;
-      setUiText(byId('run-plan-summary'), () => t('run.selected',{filename:inputName,effort:effortLabel(mode.effort),mode:mode.name,count:mode.steps.length}), true);
-      setUiText(byId('run-plan-folders'), () => t('run.folders',{source:mode.extract_folder,output:mode.output_folder}), true);
-      mode.steps.forEach((step,index) => {
-        const title = document.createElement('p'); setUiText(title, () => (index+1)+'. '+step.name);
-        const command = document.createElement('pre'), tool = preparationTools.find(tool => tool.id === step.tool_id);
-        setUiText(command, () => (step.type === 'powershell' ? 'PowerShell\n'+step.script : '"'+tool.path+'"'+(step.parameters ? ' '+step.parameters : ''))+
-          t("label.x032")+(step.working_directory || '.'), true);
-        byId('run-plan-commands').append(title,command);
-      });
-      if (!activeJobId) {
-        setUiText(byId('run-total-label'), () => t('run.total',{completed:0,total:mode.steps.length}), true);
-        byId('run-total-progress').max = mode.steps.length;
-      }
-      byId('run-plan').hidden = false;
+        if(preparationModes.some(mode=>mode.id===previous))byId('run-effort').value=previous;
+        setUiText(byId('run-mode-message'),()=>!processingAvailable?t('web.s307'):preparationModes.length?t('ui040.choose_mode'):t('web.s309'),true);
+        if(!activeJobId&&!runBusy){const previousJob=sessionStorage.getItem('ppm-job-id');if(previousJob){activeJobId=previousJob;await refreshJob();watchJob();}}
+      }finally{if(request===preparationRequest){preparationLoading=false;updatePreparation();}}
     }
     async function showSettings(section) {
       byId('tool-settings').hidden = section !== 'tools';
       currentSettingsSection=section;
       byId('mode-settings').hidden = section !== 'modes';
-      byId('malware-settings').hidden = section !== 'malware';
       byId('transfer-settings').hidden = section !== 'transfer';
       byId('processing-settings').hidden = section !== 'processing';
-      for (const name of ['tools','modes','malware','transfer','processing']) {
+      for (const name of ['tools','modes','transfer','processing']) {
         if (name === section) byId('settings-'+name).setAttribute('aria-current','page');
         else byId('settings-'+name).removeAttribute('aria-current');
       }
       if (section === 'modes') await loadModes();
-      else if (section === 'malware') await loadStaticModules();
       else if (section === 'tools') await loadTools();
       else if (section === 'processing') {
-        await loadViewerSettings();
         const limits = await api('/api/settings/processing');
         byId('upload-limit-gib').value = limits.max_upload_bytes/1024**3;
         byId('extract-limit-tb').value = limits.max_extract_bytes/1e12;
@@ -1310,7 +828,6 @@
       byId('path-picker').close();
     }
     function selectPath(path, name) {
-      if (pickerPurpose === 'static') {if (!staticExtensions[byId('static-format').value].test(path)) {setUiText(byId('picker-error'), () => t("web.s388"), true);return;}sessionStorage.setItem('ppm-static-folder',pickerFolder || '');byId('static-path').value=path;closePicker();updateStaticForm();return;}
       if (pickerPurpose === 'workspace') {byId('workspace-folder').value = path; closePicker(); return;}
       if (pickerPurpose === 'local') {
         if (!/\.zip$/i.test(path)) {setUiText(byId('picker-error'), () => t("web.s389"), true); return;}
@@ -1332,7 +849,7 @@
       byId('picker-select-folder').disabled = true; byId('picker-select-file').hidden = true;
       byId('picker-up').disabled = true; pickerFile = null;
       try {
-        const data = await api(pickerPurpose === 'static' ? '/api/jobs/browse?workspace=malware' : pickerPurpose === 'local' ? '/api/jobs/browse?workspace=forensics' : '/api/settings/tools/browse','POST',{path:path || null,query});
+        const data = await api(pickerPurpose === 'local' ? '/api/jobs/browse' : '/api/settings/tools/browse','POST',{path:path || null,query});
         if (request !== pickerRequest || !byId('path-picker').open) return;
         pickerFolder = data.path; pickerParent = data.parent; pickerFile = data.selected_file;
         byId('picker-address').value = data.path;
@@ -1419,56 +936,27 @@
     byId('nav-overview').addEventListener('click', () => run(() => navigate('overview')));
     byId('nav-settings').addEventListener('click', () => run(() => navigate('settings')));
     byId('open-settings').addEventListener('click', () => run(async () => {await navigate('settings'); await showSettings('modes');}));
-    byId('reload-run').addEventListener('click', () => run(loadPreparation,byId('reload-run')));
     for (const id of ['run-file','run-format','run-effort','run-source-kind']) byId(id).addEventListener('change',updatePreparation);
     byId('local-zip-path').addEventListener('input',updatePreparation);
-    byId('preview-run').addEventListener('click',previewPreparation);
     function setRunBusy(busy) {
       runBusy = busy; byId('cancel-run').hidden = !busy;
       updatePreparation();
     }
-    async function refreshJob() {
-      if (!activeJobId || byId('workspace').hidden) return;
-      const ident = activeJobId, state = await api('/api/jobs/'+ident);
-      if (ident !== activeJobId) return;
-      const terminal = ['succeeded','failed','cancelled','interrupted'].includes(state.status);
-      byId('new-run').hidden = !terminal;
-      const archiving = ['queued','running'].includes(state.archive_status);
-      byId('new-run').disabled = archiving;
-      setRunBusy(!terminal || archiving);
-      setUiText(byId('run-status'), () => archiving ? t("label.x039")+(state.archive_status === 'queued' ? t("label.x040") : t("web.s406")) : state.phase, true);
-      setUiText(byId('run-total-label'), () => t('run.total',{completed:state.completed,total:state.total}), true);
-      byId('run-total-progress').max = state.total; byId('run-total-progress').value = state.completed;
-      setUiText(byId('run-command-label'), () => state.completed === state.total ? t('run.finished',{code:state.exit_code}) :
-        state.command_running === true ? t('run.current',{index:state.current_step+1,total:state.total,name:state.current_name}) : t("web.s410"), true);
-      if (state.command_running === true && !terminal) byId('run-command-progress').removeAttribute('value');
-      else byId('run-command-progress').value = state.completed === state.total ? 100 : 0;
-      renderInputInventory(state,'run-inventory');
-      setUiText(byId('run-progress-note'), () => state.error_detail?.message || state.error || (state.phase+' · '+state.filename+' · '+state.mode_name+' · '+[state.case_number,state.device_name].filter(Boolean).join(' · ')));
-      if (state.status === 'queued') {
-        const queue = await api('/api/queue');
-        if (ident !== activeJobId) return;
-        if (queue.paused) setUiText(byId('run-progress-note'), () => t("web.s411"), true);
-      }
-      byId('run-error-panel').hidden = !state.error_detail;
-      if (state.error_detail) {
-        byId('run-error-panel').open = true;
-        setUiText(byId('run-error-detail'), () => t("label.phase")+state.error_detail.phase+t("label.x085")+state.error_detail.message+
-          t("label.x086")+state.error_detail.recommendation+(state.exit_code !== null ? t("label.exitcode")+state.exit_code : '')+t("label.x087")+state.id, true);
-      }
-      setUiText(byId('run-live-command'), () => state.command);
-      const terminalOutput = byId('run-live-output'), oldPosition = terminalOutput.scrollTop;
-      if (terminalOutput.textContent !== (state.log_tail || t("web.s068"))) {
-        setUiText(terminalOutput, () => state.log_tail || t("web.s068"), true);
-        terminalOutput.scrollTop = followOutput ? terminalOutput.scrollHeight : oldPosition;
-      }
-      byId('download-evidences').disabled = !state.result_available;
-      renderArtifacts(state,'run');
-      setUiText(byId('run-download-note'), () => state.status === 'succeeded' && !state.result_available ? (state.create_zip ? t("web.s412") : t("web.s413")) : state.status === 'succeeded' ?
-        t("web.s414") :
-        t("web.s415"), true);
-      if (state.status === 'succeeded') await refreshExplorer(ident,'run', () => activeJobId === ident && !byId('workspace').hidden);
-      else resetExplorer('run');
+    async function refreshJob(){
+      if(!activeJobId||byId('workspace').hidden)return;const ident=activeJobId,state=await api('/api/jobs/'+ident);if(ident!==activeJobId)return;
+      const terminal=['succeeded','failed','cancelled','interrupted'].includes(state.status),archiving=['queued','running'].includes(state.archive_status);
+      setRunBusy(!terminal||archiving);byId('new-run').hidden=!terminal;byId('new-run').disabled=archiving;
+      setUiText(byId('run-status'),()=>archiving?t('ui040.archiving'):state.phase,true);
+      setUiText(byId('run-total-label'),()=>t('run.total',{completed:state.completed,total:state.total}),true);
+      byId('run-total-progress').max=state.total||1;byId('run-total-progress').value=state.completed;
+      setUiText(byId('run-command-label'),()=>state.completed===state.total?t('run.finished',{code:state.exit_code}):state.command_running?t('run.current',{index:state.current_step+1,total:state.total,name:state.current_name}):t('web.s410'),true);
+      if(state.command_running&&!terminal)byId('run-command-progress').removeAttribute('value');else byId('run-command-progress').value=state.completed===state.total?100:0;
+      setUiText(byId('run-progress-note'),()=>state.error_detail?.message||state.error||(state.phase+' · '+state.filename+' · '+state.mode_name));
+      byId('run-error-panel').hidden=!state.error_detail;
+      setUiText(byId('run-error-detail'),()=>state.error_detail?.recommendation||'');
+      byId('download-evidences').disabled=!state.result_available;byId('run-report').disabled=!state.report_available;
+      setUiText(byId('run-download-note'),()=>state.result_available?t('ui040.result_ready'):state.status==='succeeded'?t('ui040.no_zip'):state.archive_error||t('web.s415'),true);
+      if(currentPage==='logs'&&byId('log-job').value===ident)await loadSelectedLog();
     }
     async function watchJob() {
       eventController?.abort(); const generation = ++eventGeneration, ident = activeJobId;
@@ -1508,18 +996,18 @@
       const local = byId('run-source-kind').value === 'local';
       if (!mode || (!local && !file) || runBusy || !processingAvailable) return;
       runTouched=true;
-      const allowCompression = byId('allow-high-compression').checked;
+      const allowCompression = true;
       eventGeneration++; eventController?.abort(); activeJobId = null;
       sessionStorage.removeItem('ppm-job-id'); setRunBusy(true);
-      followOutput = true; updateFollowButton();
+
       byId('run-error-panel').hidden = true;
       byId('download-evidences').disabled = true; setUiText(byId('run-status'), () => local ? t("web.s418") : t("web.s026"), true);
       setUiText(byId('run-progress-note'), () => local ? t("web.s419") : t("web.s420"), true);
       byId('upload-label').hidden = local; byId('upload-progress').hidden = local; byId('upload-progress').value = 0;
       try {
-        const result = local ? await api('/api/jobs/local','POST',{case_number:byId('run-case').value,device_name:byId('run-device').value,mode_id:mode.id,path:byId('local-zip-path').value.trim(),allow_high_compression:allowCompression,create_zip:byId('create-result-zip').checked}) : await new Promise((resolve,reject) => {
+        const result = local ? await api('/api/jobs/local','POST',{case_number:byId('run-case').value,device_name:byId('run-device').value,mode_id:mode.id,path:byId('local-zip-path').value.trim(),allow_high_compression:allowCompression,create_zip:true}) : await new Promise((resolve,reject) => {
           const xhr = new XMLHttpRequest(); uploadRequest = xhr;
-          xhr.open('POST','/api/jobs?case_number='+encodeURIComponent(byId('run-case').value)+'&device_name='+encodeURIComponent(byId('run-device').value)+'&mode_id='+encodeURIComponent(mode.id)+'&filename='+encodeURIComponent(file.name)+'&allow_high_compression='+allowCompression+'&create_zip='+byId('create-result-zip').checked);
+          xhr.open('POST','/api/jobs?case_number='+encodeURIComponent(byId('run-case').value)+'&device_name='+encodeURIComponent(byId('run-device').value)+'&mode_id='+encodeURIComponent(mode.id)+'&filename='+encodeURIComponent(file.name)+'&allow_high_compression='+allowCompression+'&create_zip='+true);
           xhr.setRequestHeader('Authorization','Bearer '+token); xhr.setRequestHeader('Content-Type','application/zip');
           xhr.upload.onprogress = event => {if (event.lengthComputable) byId('upload-progress').value = 100*event.loaded/event.total;};
           xhr.onerror = () => reject(new Error(t("web.s421")));
@@ -1546,17 +1034,9 @@
       if (uploadRequest) uploadRequest.abort();
       else if (activeJobId) {await api('/api/jobs/'+activeJobId+'/cancel','POST'); setUiText(byId('run-progress-note'), () => t("web.s427"), true);}
     }));
-    byId('new-run').addEventListener('click', () => {
-      resetExplorer('run');
-      eventGeneration++; eventController?.abort(); clearTimeout(eventRefreshTimer); eventRefreshTimer = null;
-      activeJobId = null; runTouched=false; sessionStorage.removeItem('ppm-job-id'); setRunBusy(false);
-      byId('run-error-panel').hidden = true; byId('new-run').hidden = true;
-      byId('run-inventory').replaceChildren(); byId('log-inventory').replaceChildren(); resetCSV(null);
-      setUiText(byId('run-status'), () => t("web.s058"), true); setUiText(byId('run-progress-note'), () => t("web.s428"), true);
-      byId('run-total-progress').value = 0; byId('run-command-progress').value = 0;
-      setUiText(byId('run-command-label'), () => t("web.s060"), true);
-      setUiText(byId('run-live-command'), () => t("web.s065"), true); setUiText(byId('run-live-output'), () => t("web.s068"), true);
-      byId('download-evidences').disabled = true; byId('run-archive').disabled = true; byId('run-report').disabled = true;
+    byId('new-run').addEventListener('click',()=>{
+      eventGeneration++;eventController?.abort();clearTimeout(eventRefreshTimer);activeJobId=null;runTouched=false;sessionStorage.removeItem('ppm-job-id');setRunBusy(false);
+      byId('run-error-panel').hidden=true;byId('new-run').hidden=true;byId('download-evidences').disabled=true;byId('run-report').disabled=true;
     });
     byId('download-evidences').addEventListener('click', () => run(async () => {
       if (!activeJobId) return;
@@ -1569,233 +1049,8 @@
       await api('/api/system/stop','POST'); token = ''; sessionStorage.removeItem('ppm-token'); hideWorkspace();
       message(t("web.s430"));
     }));
-    function resetExplorer(prefix) {
-      byId(prefix+'-explorer').hidden = true;
-      byId(prefix+'-explorer').disabled = true;
-      setUiText(byId(prefix+'-explorer-note'), () => '');
-    }
-    async function refreshExplorer(ident, prefix, isCurrent) {
-      const info = await api('/api/jobs/'+ident+'/explorer');
-      if (!isCurrent()) return;
-      byId(prefix+'-explorer').hidden = !info.local;
-      byId(prefix+'-explorer').disabled = !info.available;
-      setUiText(byId(prefix+'-explorer-note'), () => info.local ? info.reason : '');
-    }
-    for (const prefix of ['run','log']) byId(prefix+'-explorer').addEventListener('click', () => run(async () => {
-      const ident = prefix === 'run' ? activeJobId : byId('log-job').value;
-      if (!ident) return;
-      const result = await api('/api/jobs/'+ident+'/explorer','POST');
-      const current = prefix === 'run' ? activeJobId : byId('log-job').value;
-      if (current === ident) setUiText(byId(prefix+'-explorer-note'), () => result.message+' '+result.path);
-    },byId(prefix+'-explorer')));
-    function renderArtifacts(state,prefix) {
-      const busy = ['queued','running'].includes(state.archive_status);
-      byId(prefix+'-archive').disabled = !state.output_available || state.result_available || busy || !!state.storage_error;
-      setUiText(byId(prefix+'-archive'), () => busy ? t("label.x041")+(state.archive_status === 'queued' ? t("label.x040") : t("web.s431")) : t("web.s071"), true);
-      byId(prefix+'-report').disabled = !state.report_available;
-      if (prefix === 'log') {
-        byId('log-download').disabled = !state.result_available;
-        byId('log-report-json').disabled = !state.report_available;
-        byId('log-cancel-archive').hidden = !busy;
-        byId('log-cleanup').disabled = !['succeeded','failed','cancelled','interrupted'].includes(state.status) || busy;
-        setUiText(byId('log-artifacts-note'), () => t("label.x042")+state.data_root+(state.result_available ? t("label.x043") : t("web.s432"))+
-          (state.archive_error ? t("label.x044")+state.archive_error : '')+(state.storage_error ? ' · '+state.storage_error : ''), true);
-      } else if (state.archive_error) setUiText(byId('run-progress-note'), () => state.archive_error);
-    }
-    for (const prefix of ['run','log']) {
-      const selectedJob = () => prefix === 'run' ? activeJobId : byId('log-job').value;
-      byId(prefix+'-archive').addEventListener('click',() => run(async () => {
-        const ident = selectedJob(); if (!ident) return;
-        await api('/api/jobs/'+ident+'/archive','POST');
-        do {
-          if (selectedJob() !== ident || byId('workspace').hidden) return;
-          if (prefix === 'run') await refreshJob(); else await loadSelectedLog();
-          const state = await api('/api/jobs/'+ident);
-          if (!['queued','running'].includes(state.archive_status)) break;
-          await new Promise(resolve => setTimeout(resolve,1500));
-        } while (true);
-        if (prefix === 'run') await refreshJob(); else await loadSelectedLog();
-      },byId(prefix+'-archive')).finally(() => run(prefix === 'run' ? refreshJob : loadSelectedLog)));
-      byId(prefix+'-report').addEventListener('click',() => run(() => downloadLogFile('/api/jobs/'+selectedJob()+'/report','Abschlussbericht-'+selectedJob()+'.html')));
-    }
-    byId('log-cancel-archive').addEventListener('click',() => run(async () => {
-      await api('/api/jobs/'+byId('log-job').value+'/cancel','POST'); await loadSelectedLog();
-    }));
-    byId('log-cleanup').addEventListener('click',() => run(async () => {
-      const ident = byId('log-job').value, state = await api('/api/jobs/'+ident);
-      await navigate('settings'); await showSettings('processing');
-      if (![...byId('cleanup-scope').options].some(option => option.value === ident)) byId('cleanup-scope').append(new Option(state.filename+' · '+state.created_at,ident));
-      byId('cleanup-scope').value = ident; byId('cleanup-scope').scrollIntoView({block:'center'});
-    }));
-    byId('log-download').addEventListener('click',() => run(async () => {
-      const ident = byId('log-job').value; if (!ident) return;
-      const ticket = await api('/api/jobs/'+ident+'/download-ticket','POST');
-      const link = document.createElement('a'); link.href = ticket.url; link.download = 'PostMortem-'+ident+'.zip';
-      document.body.append(link); link.click(); link.remove();
-    }));
-    byId('log-report-json').addEventListener('click',() => run(() => downloadLogFile('/api/jobs/'+byId('log-job').value+'/report?format=json','Abschlussbericht.json')));
-    function renderInputInventory(state,target) {
-      const box=byId(target); box.replaceChildren();
-      if (state.workspace==='malware') return;
-      const inventory=state.input_inventory, heading=document.createElement('h3'), note=document.createElement('p');
-      setUiText(heading, () => t("label.x045"), true); box.append(heading,note);
-      if (!inventory) { setUiText(note, () => t("web.s433"), true); return; }
-      setUiText(note, () => inventory.scope_note+' '+(inventory.complete?t("web.s434"):t("label.x046")+inventory.partial_reasons.join(', ')), true);
-      const table=document.createElement('table');table.className='result-preview-table';const header=document.createElement('tr');
-      for (const value of [t("label.x047"),t("label.x048"),t("web.s435"),t("web.s436")]) {const cell=document.createElement('th');setUiText(cell, () => value);header.append(cell);} table.append(header);
-      for (const group of Object.values(inventory.groups)) {const row=document.createElement('tr');for (const value of [group.label,group.files,group.bytes,group.samples.join('; ')]) {const cell=document.createElement('td');setUiText(cell, () => String(value));row.append(cell);}table.append(row);}
-      const scroll=document.createElement('div');scroll.style.overflowX='auto';scroll.append(table);box.append(scroll);
-    }
-    let csvJob=null, csvGeneration=0, csvNext=null, resultJobsGeneration=0, viewerGeneration=0;
-    let resultFormat='csv', resultSortColumn=null, resultDescending=false, resultColumnKinds={}, resultInferredKinds=[];
-    function resetResultSort(){resultSortColumn=null;resultDescending=false;resultColumnKinds={};resultInferredKinds=[];}
-    const viewerKind=()=>byId('csv-file').value.toLowerCase().endsWith('.xlsx')?'ezviewer':'timeline';
-    async function loadViewerSettings(){const data=await api('/api/settings/viewers');byId('viewer-settings').replaceChildren();for(const viewer of data.viewers){const label=document.createElement('label');setUiText(label, () => viewer.name);const input=document.createElement('input');input.id='viewer-path-'+viewer.kind;label.htmlFor=input.id;input.value=viewer.tool?.path || viewer.proposal;input.maxLength=4096;input.spellcheck=false;const button=document.createElement('button');setUiText(button, () => t("web.s437"), true);button.type='button';const note=document.createElement('p');setUiText(note, () => viewer.tool?t("web.s438"):t("web.s439"), true);button.addEventListener('click',()=>run(async()=>{const payload={name:viewer.name,path:input.value};const saved=await api('/api/settings/tools'+(viewer.tool?'/'+viewer.tool.id:''),viewer.tool?'PUT':'POST',payload);viewer.tool=saved;setUiText(note, () => t("web.s440"), true);},button));byId('viewer-settings').append(label,input,button,note);}}
-    async function refreshResultViewer(){const ident=csvJob,path=byId('csv-file').value,generation=++viewerGeneration;byId('result-viewer').disabled=true;if(!ident||!path)return;const kind=viewerKind();setUiText(byId('result-viewer'), () => kind==='ezviewer'?t("web.s441"):t("web.s442"), true);const state=await api('/api/jobs/'+ident+'/viewer?'+new URLSearchParams({path,kind}));if(generation!==viewerGeneration||ident!==csvJob||path!==byId('csv-file').value)return;byId('result-viewer').disabled=!state.available;setUiText(byId('result-viewer-note'), () => state.reason);}
-    function resetCSV(state) {
-      viewerGeneration++;byId('result-viewer').disabled=true;setUiText(byId('result-viewer-note'), () => t("web.s443"), true);
-      csvGeneration++; csvJob=state?.id || null; csvNext=null;
-      for(const id of ['csv-file','csv-table','result-sheet']) byId(id).replaceChildren();
-      resetResultSort();
-      byId('csv-search').value='';setUiText(byId('csv-note'), () => '');byId('result-sheet').disabled=true;
-      byId('csv-load').disabled=state?.status!=='succeeded';byId('csv-search-button').disabled=true;byId('csv-next').disabled=true;
-    }
-    async function loadResultJobs() {
-      const generation=++resultJobsGeneration, area=workspaceArea;
-      resetCSV(null);byId('result-job').replaceChildren();setUiText(byId('result-job-note'), () => t("web.s444"), true);
-      const data=await api('/api/jobs?status=succeeded&limit=50&workspace='+area);
-      if(generation!==resultJobsGeneration || area!==workspaceArea)return;
-      byId('result-job').replaceChildren(...data.jobs.map(item=>new Option(item.created_at+' · '+item.filename+' · '+item.id,item.id)));
-      setUiText(byId('result-job-note'), () => data.jobs.length?t("web.s445"):t("web.s446"), true);
-      if(data.jobs.length) {resetCSV(data.jobs[0]);await loadResultFiles();}
-    }
-    async function showCSV(offset=0, focusColumn=null) {
-      const ident=csvJob, path=byId('csv-file').value;
-      if (!ident || !path) return;
-      const generation=++csvGeneration;
-      byId('csv-next').disabled=true;byId('csv-table').replaceChildren();setUiText(byId('csv-note'), () => t("web.s447"), true);
-      const params=new URLSearchParams({path,format:resultFormat,search:byId('csv-search').value,offset:String(offset),sort_kind:resultColumnKinds[resultSortColumn] || resultInferredKinds[resultSortColumn] || 'text',descending:String(resultDescending)});
-      if(resultSortColumn!==null)params.set('sort_column',String(resultSortColumn));
-      if(byId('result-sheet').value)params.set('sheet_id',byId('result-sheet').value);
-      const result=await api('/api/jobs/'+ident+'/preview?'+params);
-      if (generation!==csvGeneration || ident!==csvJob) return;
-      resultInferredKinds=result.column_types || [];
-      byId('result-sheet').replaceChildren(...(result.sheets || []).map(item=>new Option(item.name+' · '+item.state,item.id)));
-      byId('result-sheet').disabled=!result.sheets;if(result.sheet_id)byId('result-sheet').value=result.sheet_id;
-      const table=document.createElement('table');table.className='result-preview-table';const head=document.createElement('tr');
-      const sourceHeader=document.createElement('th');sourceHeader.scope='col';setUiText(sourceHeader, () => t("label.x049"), true);head.append(sourceHeader);
-      result.columns.forEach((title,index)=>{
-        const cell=document.createElement('th');cell.scope='col';cell.setAttribute('aria-sort',resultSortColumn===index?(resultDescending?'descending':'ascending'):'none');
-        const button=document.createElement('button');button.type='button';button.className='result-header-sort';button.dataset.column=String(index);setUiText(button, () => (title || t("label.x050")+(index+1))+(resultSortColumn===index?(resultDescending?' ▼':' ▲'):' ↕'), true);
-        button.setAttribute('aria-label',(title || t("label.x050")+(index+1))+': '+(resultSortColumn===index&&!resultDescending?t("label.x051"):t("label.x052"))+t("label.x053"));
-        button.addEventListener('click',()=>run(async()=>{resultDescending=resultSortColumn===index?!resultDescending:false;resultSortColumn=index;await showCSV(0,index);}));
-        const kinds=['text','number','time'], labels={text:'Text',number:t("label.x054"),time:t("label.x055")};
-        const currentKind=resultColumnKinds[index] || resultInferredKinds[index] || 'text';
-        const kind=document.createElement('button');kind.type='button';kind.className='result-header-kind';setUiText(kind, () => t("label.x056")+labels[currentKind]+(resultColumnKinds[index]?t("label.x057"):''), true);
-        kind.setAttribute('aria-label',t("web.s448")+(index+1)+' '+title+': '+labels[currentKind]+t("web.s449")+labels[kinds[(kinds.indexOf(currentKind)+1)%3]]);kind.title=t("web.s450");
-        kind.addEventListener('click',()=>run(async()=>{resultColumnKinds[index]=kinds[(kinds.indexOf(currentKind)+1)%3];await showCSV(0,index);}));
-        cell.append(button,kind);head.append(cell);
-      });
-      const thead=document.createElement('thead');thead.append(head);table.append(thead);
-      for (const item of result.rows) {const row=document.createElement('tr');for(const [i,value] of [item.line,...item.values].entries()) {const cell=document.createElement('td');setUiText(cell, () => String(value));if(i>0 && item.formula_cells?.includes(i-1)){cell.title=t("web.s451");cell.append(document.createTextNode(t("label.x058")));}row.append(cell);}table.append(row);}
-      byId('csv-table').replaceChildren(table);if(focusColumn!==null)table.querySelector('[data-column="'+focusColumn+'"]')?.focus({preventScroll:true});csvNext=result.next_offset;byId('csv-next').disabled=!result.has_more;
-      setUiText(byId('csv-note'), () => result.note+t("web.s452")+result.scanned_rows+'. '+(result.partial?t("web.s453")+result.partial_reason:t("web.s454")), true);
-    }
-    async function loadResultFiles() {
-      const ident=csvJob,generation=++csvGeneration;if(!ident)return;
-      const result=await api('/api/jobs/'+ident+'/preview?format='+resultFormat);if(generation!==csvGeneration || ident!==csvJob)return;
-      byId('csv-file').replaceChildren(...result.files.map(path=>new Option(path,path)));
-      byId('csv-search-button').disabled=!result.files.length;
-      setUiText(byId('csv-note'), () => result.files.length?result.note:t("label.x059")+resultFormat.toUpperCase()+t("web.s455"), true);
-      if(result.files.length){await refreshResultViewer();if(generation===csvGeneration && ident===csvJob)await showCSV();}
-    }
-    async function switchResultFormat(format){
-      if(format===resultFormat)return;
-      resultFormat=format;
-      for(const item of ['csv','xlsx']){const active=item===format;byId('results-'+item).setAttribute('aria-selected',String(active));byId('results-'+item).tabIndex=active?0:-1;}
-      byId('result-format-panel').setAttribute('aria-labelledby','results-'+format);
-      setUiText(byId('result-file-label'), () => format.toUpperCase()+t("label.x060"), true);byId('result-sheet-fields').hidden=format!=='xlsx';
-      const ident=csvJob;resetCSV(ident?{id:ident,status:'succeeded'}:null);
-      if(ident)await loadResultFiles();
-    }
-    for(const format of ['csv','xlsx']){
-      byId('results-'+format).addEventListener('click',()=>run(()=>switchResultFormat(format)));
-      byId('results-'+format).addEventListener('keydown',event=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){event.preventDefault();const next=event.key==='Home'?'csv':event.key==='End'?'xlsx':format==='csv'?'xlsx':'csv';byId('results-'+next).focus();run(()=>switchResultFormat(next));}});
-    }
-    byId('result-source-order').addEventListener('click',()=>run(()=>{resultSortColumn=null;resultDescending=false;return showCSV();}));
-    byId('csv-load').addEventListener('click',()=>run(loadResultFiles,byId('csv-load')));
-    byId('csv-search-button').addEventListener('click',()=>run(()=>showCSV()));
-    byId('csv-file').addEventListener('change',()=>run(async()=>{byId('result-sheet').replaceChildren();resetResultSort();byId('csv-search').value='';byId('result-viewer').disabled=true;await refreshResultViewer();await showCSV();}));
-    byId('result-sheet').addEventListener('change',()=>run(()=>{resetResultSort();return showCSV();}));
-    byId('csv-next').addEventListener('click',()=>run(()=>showCSV(csvNext ?? 0)));
-    byId('result-viewer').addEventListener('click',()=>run(async()=>{if(!confirm(t("web.s456")))return;const state=await api('/api/jobs/'+csvJob+'/viewer','POST',{kind:viewerKind(),path:byId('csv-file').value});setUiText(byId('result-viewer-note'), () => state.message);},byId('result-viewer')));
-    byId('result-first').addEventListener('click',()=>run(()=>showCSV()));
-    byId('result-job').addEventListener('change',()=>run(async()=>{resetCSV({id:byId('result-job').value,status:'succeeded'});await loadResultFiles();}));
+    byId('run-report').addEventListener('click',()=>run(()=>downloadLogFile('/api/jobs/'+activeJobId+'/report','Abschlussbericht-'+activeJobId+'.html')));
     byId('nav-results').addEventListener('click',()=>run(()=>navigate('results')));
-    byId('results-maximize').addEventListener('click',()=>{const full=byId('result-workplace').classList.toggle('maximized');setUiText(byId('results-maximize'), () => full?t("web.s457"):t("web.s245"), true);});
-    function renderLogState(state) {
-      renderInputInventory(state,'log-inventory');
-      setUiText(byId('log-job-status'), () => state.phase+' · '+state.created_at+' · '+state.filename+' · '+state.id+' · '+[state.case_number,state.device_name].filter(Boolean).join(' · '));
-      byId('log-job-error').hidden = !state.error_detail;
-      setUiText(byId('log-job-error'), () => state.error_detail ? JSON.stringify(state.error_detail,null,2) : '');
-      setUiText(byId('log-job-command'), () => state.command);
-      setUiText(byId('log-job-output'), () => state.log_tail || t("web.s458"), true);
-      byId('download-diagnostics').disabled = false; byId('download-job-log').disabled = false;
-    }
-    async function loadSelectedLog() {
-      const id = byId('log-job').value, generation = ++logsRequest;
-      for (const card of byId('job-results').children) card.classList.toggle('selected',card.dataset.job === id);
-      resetExplorer('log'); byId('log-inventory').replaceChildren();
-      if (!id) return;
-      const state = await api('/api/jobs/'+id);
-      if (generation === logsRequest) {
-        renderLogState(state); renderArtifacts(state,'log');
-        if (state.status === 'succeeded') await refreshExplorer(id,'log', () => generation === logsRequest && !byId('workspace').hidden);
-      }
-    }
-    let jobsOffset = 0, jobsSearchRequest = 0;
-    async function loadJobLogs(preferredId) {
-      const generation = ++jobsSearchRequest;
-      const previous = preferredId || byId('log-job').value || activeJobId;
-      const params = new URLSearchParams({limit:'50',offset:String(jobsOffset),workspace:workspaceArea});
-      for (const [key,id] of [['q','job-query'],['status','job-status-filter'],['mode_id','job-mode-filter'],['date_from','job-date-from'],['date_to','job-date-to']]) {
-        if (byId(id).value) params.set(key,byId(id).value);
-      }
-      const data = await api('/api/jobs?'+params);
-      if (generation !== jobsSearchRequest || byId('workspace').hidden) return;
-      jobsOffset = data.offset;
-      logsRequest++; resetExplorer('log');
-      const selectedMode = byId('job-mode-filter').value;
-      byId('job-mode-filter').replaceChildren(new Option(t("web.s229"),''));
-      for (const mode of data.modes) byId('job-mode-filter').append(new Option(mode.name,mode.id));
-      byId('job-mode-filter').value = selectedMode;
-      setUiText(byId('job-search-count'), () => data.total ? t('logs.matches',{first:data.offset+1,last:Math.min(data.offset+data.jobs.length,data.total),total:data.total}) : t("web.s459"), true);
-      byId('jobs-prev').disabled = data.offset === 0;
-      byId('jobs-next').disabled = data.offset+data.jobs.length >= data.total;
-      byId('log-job').replaceChildren();
-      byId('job-results').replaceChildren();
-      for (const state of data.jobs) {
-        byId('log-job').append(new Option(state.created_at+' · '+state.filename+' · '+state.phase,state.id));
-        const card = document.createElement('div'); card.className = 'result-card'; card.dataset.job = state.id;
-        const info = document.createElement('div'), title = document.createElement('strong'), details = document.createElement('p');
-        setUiText(title, () => state.filename); setUiText(details, () => state.phase+' · '+state.mode_name+' · '+state.created_at+' · '+[state.case_number,state.device_name].filter(Boolean).join(' · '));
-        info.append(title,details);
-        const button = document.createElement('button'); button.className = 'secondary'; setUiText(button, () => 'Anzeigen');
-        button.addEventListener('click',() => run(async () => {byId('log-job').value = state.id; await loadSelectedLog(); byId('log-job-status').scrollIntoView({block:'center'});}));
-        card.append(info,button); byId('job-results').append(card);
-      }
-      if (data.jobs.some(state => state.id === previous)) byId('log-job').value = previous;
-      if (!data.jobs.length) {
-        resetExplorer('log'); byId('log-inventory').replaceChildren();
-        setUiText(byId('log-job-status'), () => t("web.s460"), true);
-        for (const id of ['log-job-error','log-job-command','log-job-output']) setUiText(byId(id), () => '');
-        byId('log-job-error').hidden = true;
-        byId('download-diagnostics').disabled = true; byId('download-job-log').disabled = true;
-        for (const id of ['log-report','log-report-json','log-archive','log-cleanup','log-download']) byId(id).disabled = true; byId('log-cancel-archive').hidden = true;
-        return;
-      }
-      await loadSelectedLog();
-    }
     async function downloadLogFile(path, name) {
       const response = await fetch(path,{headers:{Authorization:'Bearer '+token}});
       if (!response.ok) throw new Error(t("web.s461"));
@@ -1850,21 +1105,10 @@
       } catch (error) {diagnosticsTicket = null; setUiText(byId('diagnostics-message'), () => error.message);}
     },byId('export-diagnostics')).finally(() => {byId('export-diagnostics').disabled = !diagnosticsTicket;}));
     byId('nav-logs').addEventListener('click', () => run(() => navigate('logs')));
-    byId('job-search').addEventListener('submit',event => {event.preventDefault(); jobsOffset = 0; run(() => loadJobLogs());});
-    byId('clear-job-search').addEventListener('click',() => {byId('job-search').reset(); jobsOffset = 0; run(() => loadJobLogs());});
-    byId('jobs-prev').addEventListener('click',() => {jobsOffset = Math.max(0,jobsOffset-50); run(() => loadJobLogs());});
-    byId('jobs-next').addEventListener('click',() => {jobsOffset += 50; run(() => loadJobLogs());});
-    byId('log-job').addEventListener('change', () => run(loadSelectedLog));
-    byId('reload-job-logs').addEventListener('click', () => run(() => loadJobLogs()));
-    byId('open-job-logs').addEventListener('click', () => run(async () => {
-      byId('job-search').reset(); jobsOffset = 0;
-      await navigate('logs'); await loadJobLogs(activeJobId);
-    }));
-    byId('download-diagnostics').addEventListener('click', () => run(() => downloadLogFile('/api/jobs/'+byId('log-job').value+'/diagnostics','Diagnose-'+byId('log-job').value+'.txt')));
-    byId('download-job-log').addEventListener('click', () => run(() => downloadLogFile('/api/jobs/'+byId('log-job').value+'/log','KAPE-'+byId('log-job').value+'.log')));
+    byId('open-job-logs').addEventListener('click',()=>run(async()=>{await navigate('logs');await loadJobLogs(activeJobId);}));
     byId('reload-tools').addEventListener('click', () => run(loadTools));
     byId('cancel-edit').addEventListener('click', resetEditor);
-    for (const section of ['tools','modes','malware','transfer','processing']) byId('settings-'+section).addEventListener('click', () => run(() => showSettings(section)));
+    for (const section of ['tools','modes','transfer','processing']) byId('settings-'+section).addEventListener('click', () => run(() => showSettings(section)));
     byId('limits-form').addEventListener('submit', event => {
       event.preventDefault(); run(async () => {
         const result = await api('/api/settings/processing','PUT',{
@@ -1874,15 +1118,6 @@
         byId('upload-limit-gib').value = result.max_upload_bytes/1024**3;
         byId('extract-limit-tb').value = result.max_extract_bytes/1e12;
       },byId('save-limits'));
-    });
-    function updateFollowButton() {setUiText(byId('follow-output'), () => followOutput ? t("web.s067") : t("web.s467"), true);}
-    byId('run-live-output').addEventListener('scroll', () => {
-      const output = byId('run-live-output'); followOutput = output.scrollHeight-output.scrollTop-output.clientHeight < 32;
-      updateFollowButton();
-    });
-    byId('follow-output').addEventListener('click', () => {followOutput = true; byId('run-live-output').scrollTop = byId('run-live-output').scrollHeight; updateFollowButton();});
-    byId('run-terminal').addEventListener('toggle', () => {
-      if (byId('run-terminal').open && followOutput) byId('run-live-output').scrollTop = byId('run-live-output').scrollHeight;
     });
     byId('new-mode').addEventListener('click', () => editMode(null));
     byId('reload-modes').addEventListener('click', () => run(loadModes));
@@ -1967,23 +1202,23 @@
     function invalidateImport() {
       importTicket = null; importGeneration++;
       byId('config-preview').hidden = true; byId('apply-config').disabled = true;
-      byId('replace-confirm').checked = false;
+      byId('replace-confirm').checked = false;byId('legacy-confirm').checked=false;byId('legacy-confirm-label').hidden=true;
       for (const id of ['config-preview-changes','config-preview-errors','config-preview-warnings']) byId(id).replaceChildren();
     }
     function updateImportButton() {
       byId('apply-config').disabled = !importTicket ||
-        byId('import-strategy').value === 'replace' && !byId('replace-confirm').checked;
+        byId('import-strategy').value === 'replace' && !byId('replace-confirm').checked || !byId('legacy-confirm-label').hidden && !byId('legacy-confirm').checked;
     }
     byId('config-file').addEventListener('change', () => {invalidateImport(); setUiText(byId('config-message'), () => '');});
     byId('import-strategy').addEventListener('change',invalidateImport);
-    byId('replace-confirm').addEventListener('change',updateImportButton);
+    byId('replace-confirm').addEventListener('change',updateImportButton);byId('legacy-confirm').addEventListener('change',updateImportButton);
     byId('export-config').addEventListener('click', () => run(async () => {
       const data = await api('/api/settings/configuration/export');
       const url = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'}));
       const link = document.createElement('a'); link.href = url;
       link.download = 'PostProcessingMagic-config-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
       document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url),1000);
-      setUiText(byId('config-message'), () => t("web.s474")+data.tools.length+t("label.x065")+data.modes.length+t("web.s475")+data.malware_modes.length+t("label.x066"), true);
+      setUiText(byId('config-message'), () => t("web.s474")+data.tools.length+t("label.x065")+data.modes.length+t("web.s475"), true);
     },byId('export-config')));
     byId('preview-config').addEventListener('click', () => run(async () => {
       invalidateImport(); const generation = importGeneration;
@@ -1998,14 +1233,14 @@
       if (generation !== importGeneration || byId('workspace').hidden) return;
       byId('config-preview').hidden = false;
       setUiText(byId('config-preview-summary'), () => (result.valid ? t("web.s479") : t("web.s480"))+
-        t("web.s481")+result.total_tools+t("label.x065")+result.total_modes+t("web.s475")+result.total_malware_modes+t("label.x066"), true);
+        t("web.s481")+result.total_tools+t("label.x065")+result.total_modes+t("web.s475"), true);
       if (result.limits) {
         const limits = document.createElement('p'); limits.className = 'help';
         setUiText(limits, () => t('label.processing_limits')+(result.limits.changed ? t("web.s482") : t("web.s483"))+
           result.limits.after.max_upload_bytes+t("web.s484")+result.limits.after.max_extract_bytes+t("web.s485"), true);
         byId('config-preview-changes').append(limits);
       }
-      for (const [kind,title] of [['tools',t("web.s105")],['modes',t("web.s109")],['malware_modes',t("web.s110")]]) {
+      for (const [kind,title] of [['tools',t("web.s105")],['modes',t("ui040.modes")]]) {
         const change = result.changes[kind] || {added:[],updated:[],removed:[],unchanged:0}, paragraph = document.createElement('p');
         setUiText(paragraph, () => title+': '+change.added.length+t("label.x067")+change.updated.length+t("web.s486")+
           change.removed.length+t("label.x068")+change.unchanged+t("web.s487"), true);
@@ -2019,7 +1254,7 @@
       for (const [id,items] of [['config-preview-errors',result.errors],['config-preview-warnings',result.warnings]]) {
         for (const item of items) {const li = document.createElement('li'); setUiText(li, () => item); byId(id).append(li);}
       }
-      importTicket = result.ticket || null;
+      importTicket = result.ticket || null;byId('legacy-confirm-label').hidden=!result.requires_legacy_confirmation;
       byId('replace-confirm-label').hidden = result.strategy !== 'replace';
       updateImportButton(); setUiText(byId('config-message'), () => t("web.s490"), true);
     },byId('preview-config')));
@@ -2028,11 +1263,10 @@
         if (!importTicket) throw new Error(t("web.s491"));
         try {
           const result = await api('/api/settings/configuration/apply','POST',{
-            ticket:importTicket,confirm_replace:byId('replace-confirm').checked});
+            ticket:importTicket,confirm_replace:byId('replace-confirm').checked,confirm_legacy_fields:byId('legacy-confirm').checked});
           invalidateImport(); resetEditor(); resetModeEditor(); savedModes = [];
-          byId('static-editor').hidden=true; staticEditId=null; staticSteps=[]; staticModules=[];
           setUiText(byId('config-message'), () => t("web.s492")+result.total_tools+t("label.tools_count")+
-            result.total_modes+t("web.s475")+result.total_malware_modes+t("web.s493")+result.backup_file, true);
+            result.total_modes+t("web.s475")+result.backup_file, true);
         } catch (error) {
           invalidateImport(); setUiText(byId('config-message'), () => error.message); throw error;
         }
@@ -2041,31 +1275,19 @@
     byId('logout').addEventListener('click', () => {
       token = ''; sessionStorage.removeItem('ppm-token'); hideWorkspace(); message('Abgemeldet.');
     });
-    byId('onboarding-close').addEventListener('click',() => run(async () => {
-      await api('/api/settings/interface','PUT',{onboarding_dismissed:true}); onboardingDismissed=true; byId('onboarding').hidden=true;
-    }));
-    for (const [id,section] of [['onboarding-tools','tools'],['onboarding-modes','modes'],['onboarding-processing','processing'],['onboarding-malware','malware']]) byId(id).addEventListener('click',() => run(async () => {
-      await navigate('settings'); await showSettings(section);
-      const heading=byId(section==='malware'?'malware-settings':section==='processing'?'processing-settings':section==='modes'?'mode-settings':'tool-settings').querySelector('h2');
-      heading?.setAttribute('tabindex','-1'); heading?.focus();
-    }));
     byId('interface-locale').addEventListener('change',() => run(async () => {
       const previous=I18n.locale, choice=byId('interface-locale').value;
       try {
         if (token && !byId('workspace').hidden) await api('/api/settings/interface','PUT',{locale:choice});
         await I18n.setLocale(choice); refreshUiText();
-        if (typeof updateWorkspacePresentation === 'function') updateWorkspacePresentation();
+        updateWorkspaceStatus();
         if (!token || byId('workspace').hidden) return;
         await connect();
         if (currentPage==='logs') await loadJobLogs();
-        else if (currentPage==='results' && csvJob && byId('csv-file').value) await showCSV();
-        else if (currentPage==='overview') {
-          if (workspaceArea==='malware') {await loadStaticPreparation(); if(staticJobId) await refreshStaticJob();}
-          else {const preview=!byId('run-plan').hidden; await loadPreparation(); if(activeJobId) await refreshJob(); else if(preview) previewPreparation();}
-        } else if (currentPage==='settings') {
+        else if (currentPage==='results') await loadResultJobs();
+        else if (currentPage==='overview') {await loadPreparation();if(activeJobId)await refreshJob();        } else if (currentPage==='settings') {
           if(currentSettingsSection==='tools') await loadTools();
           else if(currentSettingsSection==='modes') {await loadModes(); if(!byId('mode-editor').hidden) renderModeSteps();}
-          else if(currentSettingsSection==='malware') {await loadStaticModules(); if(!byId('static-editor').hidden) renderStaticSteps();}
           else if(currentSettingsSection==='processing') {await loadQueue(); await loadStorage(); await loadWorkspaces(true);}
           else if(currentSettingsSection==='transfer' && !byId('config-preview').hidden) {invalidateImport();setUiText(byId('config-message'),()=>t('interface.preview_again'),true);}
         }
@@ -2075,8 +1297,7 @@
     }));
     I18n.ready.then(() => {if (token) run(async () => {await connect(); await navigate('overview');});}).catch(error => message(error.message,true));
   </script>
-  <script src="/evidence-details.js"></script>
-  <script src="/malware.js"></script>
-  <script src="/presentation.js"></script>
+  <script src="/workspace.js"></script>
+  <script src="/job-views.js"></script>
 </body>
 </html>
