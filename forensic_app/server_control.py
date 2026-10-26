@@ -13,15 +13,22 @@ logger = logging.getLogger(__name__)
 
 
 def accepting(connection):
+    """Raise HTTP 409 when drain has closed admission, using the caller transaction."""
     if connection.execute('SELECT stopping FROM server_control WHERE id=1').fetchone()[0]:
         raise HTTPException(409,ErrorText('error.80584b31b1b6'))
 
 
 def draining(connection):
+    """Read the persistent drain flag through the supplied SQLite connection."""
     return bool(connection.execute('SELECT stopping FROM server_control WHERE id=1').fetchone()[0])
 
 
 class ServerControl:
+    """Coordinate graceful shutdown after active forensic work and cleanup complete.
+
+    The drain flag blocks new admission and claims. Waiting jobs remain queued; this
+    controller does not force-stop tools or replay interrupted work.
+    """
     def __init__(self,storage,jobs,on_shutdown):
         self.storage,self.jobs,self.on_shutdown = storage,jobs,on_shutdown
         self.closed = threading.Event()
@@ -29,10 +36,12 @@ class ServerControl:
         self.lock = threading.Lock()
 
     def reset(self):
+        """Clear a previous drain flag when the owning server starts."""
         with closing(sqlite3.connect(self.storage.database)) as c,c:
             c.execute('UPDATE server_control SET stopping=0 WHERE id=1')
 
     def status(self):
+        """Read drain state, active forensic jobs/archives and cleanup status consistently."""
         with closing(sqlite3.connect(self.storage.database)) as c:
             c.execute('BEGIN')
             return {'stopping':draining(c),
@@ -41,6 +50,11 @@ class ServerControl:
                     'cleanup':bool(c.execute('SELECT active FROM cleanup_state WHERE id=1').fetchone()[0])}
 
     def request(self):
+        """Persist drain admission and start at most one shutdown-wait thread.
+
+        A configured shutdown callback is required. Repeated requests return draining
+        state rather than starting additional wait threads.
+        """
         if self.on_shutdown is None:
             raise HTTPException(409,ErrorText('error.00ebc3025f62'))
         with self.lock:
@@ -54,6 +68,7 @@ class ServerControl:
         return {'stopping':True}
 
     def _wait(self):
+        """Poll active work until idle, then invoke the shutdown callback; retry status failures."""
         while not self.closed.wait(.2):
             try:
                 state = self.status()
@@ -65,6 +80,7 @@ class ServerControl:
                 logger.exception('Stopstatus konnte nicht geprüft werden; erneuter Versuch folgt.')
 
     def close(self):
+        """Signal the wait thread to exit and wait up to two seconds for it."""
         self.closed.set()
         if self.thread:
             self.thread.join(timeout=2)

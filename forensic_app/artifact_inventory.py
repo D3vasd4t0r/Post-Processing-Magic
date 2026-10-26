@@ -17,6 +17,7 @@ MAX_SECONDS = 10.0
 MAX_FILE_PATHS = 20_000
 MAX_PATH_LENGTH = 4096
 def _is_link_or_reparse(info):
+    """Recognize observed symbolic-link or Windows reparse-point metadata."""
     return stat.S_ISLNK(info.st_mode) or bool(
         getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
     )
@@ -30,11 +31,12 @@ def collect_inventory(
     max_seconds: float = MAX_SECONDS,
     max_file_paths: int = MAX_FILE_PATHS,
 ):
-    """Return a JSON-ready snapshot of regular files under ``extracted_root``.
+    """Record bounded paths, sizes and counts from one extracted ZIP tree.
 
-    ``check`` is the worker's optional cancellation callback. Its exception is
-    propagated so cancellation cannot be misreported as a partial inventory.
-    A skipped link, unreadable entry, or budget limit makes ``complete`` false.
+    No contents, formats or forensic categories are inspected. The optional check
+    callback propagates cancellation. Skipped/unreadable/special entries, scan
+    budgets and truncated path lists are recorded explicitly; list limits differ
+    from scanned entry/count totals.
     """
     root = Path(extracted_root)
     if max_entries < 1 or max_seconds <= 0 or max_file_paths < 0:

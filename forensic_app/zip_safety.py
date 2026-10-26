@@ -1,4 +1,9 @@
-"""Bounded Windows ZIP extraction. Never use archive names as host paths unchecked."""
+"""Preflight Windows ZIP paths and limits before bounded extraction.
+
+Extraction creates a fresh destination; nested archive files remain data. High
+compression changes the ratio gate only, retaining name, entry-count, expanded
+byte and initial free-space checks.
+"""
 
 import os
 import shutil
@@ -16,6 +21,7 @@ DISK_RESERVE = 512 * 1024**2
 
 
 def ensure_space(root: Path, size: int = 0):
+    """Require free bytes for the requested size plus the fixed application reserve."""
     free = shutil.disk_usage(root).free
     if free < size + DISK_RESERVE:
         raise AppValueError('error.316c93db774f', p0=f'{root.anchor}', p1=f'{free / 1024 ** 3:.2f}', p2=f'{(size + DISK_RESERVE) / 1024 ** 3:.2f}')
@@ -23,6 +29,11 @@ def ensure_space(root: Path, size: int = 0):
 
 def bounded_directory(path: Path):
     # Bound ZipFile's initial central-directory allocation, including ZIP64.
+    """Inspect end records before ZipFile allocates its central directory.
+
+    Bound advertised entry count and directory bytes, including ZIP64, and reject
+    unsupported multi-disk/end-record layouts. Member contents are not read here.
+    """
     with path.open("rb") as source:
         source.seek(0, 2)
         length = source.tell()
@@ -56,6 +67,12 @@ def bounded_directory(path: Path):
 
 
 def safe_name(info) -> Path:
+    """Return a host-relative path for a permitted Windows ZIP member name.
+
+    Reject rooted/traversal/ADS/reserved names, excessive depth/length, unsupported
+    entry kinds and encrypted members. This validates an archive member rather
+    than an existing host filesystem location.
+    """
     name = info.orig_filename
     path = PureWindowsPath(name)
     if ("\x00" in name or path.drive or path.root or not path.parts or
@@ -76,6 +93,13 @@ def safe_name(info) -> Path:
 
 
 def extract_checked(archive: Path, target: Path, check, report, *, allow_high_compression: bool = False, max_extract_bytes: int = MAX_EXTRACTED):
+    """Preflight every member before creating a fresh extraction tree.
+
+    Check case-insensitive duplicates, file/directory collisions, sizes, ratio and
+    initial disk space. Stream bounded chunks and verify actual byte counts;
+    callbacks provide cancellation and real status. Input ZIP and member names
+    remain unchanged; nested archives are not recursively extracted.
+    """
     bounded_directory(archive)
     with ZipFile(archive) as zip_file:
         entries, names, files, total = [], set(), set(), 0
@@ -134,6 +158,12 @@ def extract_checked(archive: Path, target: Path, check, report, *, allow_high_co
 
 
 def output_files(folder: Path, *, max_bytes: int = MAX_EXTRACTED):
+    """List nonempty regular result files within the configured output tree.
+
+    Reject observed symbolic links/junctions, escaped paths, special files and
+    count/byte-budget overruns. Enumeration does not validate result semantics or
+    forensic completeness.
+    """
     if not folder.is_dir() or folder.is_symlink() or folder.is_junction():
         raise AppValueError('error.67607a262e85')
     found, size = [], 0

@@ -7,7 +7,13 @@ from forensic_app.desktop_i18n import DesktopTranslations
 
 
 class TrayIcon:
+    """Own a native notification icon and hidden window on a dedicated daemon thread.
+
+    The dispatch callback receives action names on that native thread; callers must
+    marshal UI work themselves. ready signals successful creation or a captured
+    startup failure, so it must be interpreted together with error and hwnd."""
     def __init__(self,icon_path,dispatch,*,translate=None):
+        """Start native icon creation asynchronously; no Tk operations are performed here."""
         self.icon_path,self.dispatch = str(icon_path),dispatch
         self.translate = translate or DesktopTranslations().t
         self.ready = threading.Event()
@@ -17,6 +23,7 @@ class TrayIcon:
         self.thread.start()
 
     def _run(self):
+        """Run the native loop and expose supported startup failures through error and ready."""
         try:
             self._loop()
         except (OSError,RuntimeError,ValueError) as exc:
@@ -24,6 +31,10 @@ class TrayIcon:
             self.ready.set()
 
     def _loop(self):
+        """Create the Win32 callback/window, register the icon and pump its message queue.
+
+        The callback object is retained for the window lifetime. Finalization removes
+        the icon and unregisters the class; taskbar recreation re-adds the same icon."""
         user = ctypes.WinDLL('user32',use_last_error=True)
         shell = ctypes.WinDLL('shell32',use_last_error=True)
         kernel = ctypes.WinDLL('kernel32',use_last_error=True)
@@ -69,6 +80,7 @@ class TrayIcon:
         data = NotifyData()
 
         def proc(hwnd,message,wp,lp):
+            """Translate native window messages into queued owner actions or icon lifecycle operations."""
             if message == 0x8002:
                 data.tip = self.translate('tray.tooltip')
                 shell.Shell_NotifyIconW(1,ctypes.byref(data))
@@ -139,6 +151,7 @@ class TrayIcon:
             user.PostMessageW(self.hwnd,0x8002,0,0)
 
     def close(self):
+        """Post window closure to the icon thread and wait at most two seconds for it to exit."""
         if self.hwnd:
             user = ctypes.WinDLL('user32')
             user.PostMessageW.argtypes = [w.HWND,w.UINT,w.WPARAM,w.LPARAM]

@@ -1,19 +1,25 @@
-# Roadmap – aktueller Arbeitsstand 0.40
+# Roadmap – 0.40 abgenommen, 0.41 Dokumentation
 
-## Laufend: vereinfachte ZIP-Aufbereitung
+## Nutzerabnahme 0.40
 
-Auf Nutzerauftrag im PM-Chat vom 25.10.2026 ersetzt 0.40 den verworfenen 0.32-Test. Fünf Pakete: interne Malwareanalyse entfernen; schlichte blaue Aufbereitung; vier Einstellungskategorien und Forensik-Konfigurationsdatei; auftragsbezogene Logs/Downloads/Metadatenberichte; geprüfter Windows-Build und GitHub-/Drive-Bereitstellung.
+Am 26.10.2026 bestätigt der Nutzer den erfolgreichen Test von 0.40 und bezeichnet den Release als stabil. Die Anwendung wird zunächst im Berufsalltag erprobt. Der reduzierte Umfang ohne Tabellen-/Inhaltsvorschauen und interne Evidenzauswertungen bleibt verbindlich.
 
-Technische Umsetzung abgeschlossen: lokal 317 Tests bestanden, zwei Symlink-Berechtigungsskips, Ruff/JavaScript und sieben EXE-Prüfgruppen erfolgreich. Eigene synthetische Browserläufe und schmale Darstellung geprüft. GitHub-/Drive-Bereitstellung und großer Nutzertest folgen; keine Nutzerabnahme vorwegnehmen.
+0.40 ist auf GitHub veröffentlicht und technisch geprüft: lokal 317 Tests bestanden / zwei Symlink-Berechtigungsskips, in GitHub-CI 319 Tests bestanden sowie Ruff und sieben EXE-Prüfgruppen erfolgreich. Alte Nutzerinstanzen und Daten bleiben erhalten.
 
-Nutzer bestätigt am 26.10.2026 im PM-Chat ausdrücklich: „Ja, 0.40 ohne Tabellenvorschauen umsetzen“. Keine CSV-/XLSX-Vorschauen oder internen Evidenzauswertungen; ältere Erweiterungswünsche hierfür sind durch die aktuelle Entscheidung ersetzt.
+## Aktueller Auftrag: ausschließlich Dokumentation 0.41.0
 
-Bestehende Nutzerinstanzen, Evidenzen und historische Daten bleiben erhalten. Neue automatische Tests nur mit selbst erzeugten synthetischen Daten. Keine weitere Toolzuordnung oder Analyseprofile eigenmächtig anlegen.
+Englische Docstrings und Kommentare in den Skriptdateien, verständliche Codedokumentation und ein statisches lokales HTML-Code-Wiki unter docs/code-wiki. Wiki und verlinkte Projektdokumente kommen als Dokumentationspayload ins Release-ZIP. README und Releasehinweise werden aktualisiert.
 
-## Nach dem neuen großen Nutzertest
+Keine Funktionsänderungen, Refactorings, Fehler-/Sicherheitskorrekturen, Abhängigkeiten oder neuen API-/UI-Abläufe. Python-AST gegen 0.40 nach Docstringentfernung vergleichen; nur Versionskonstante und ausdrücklich freigegebener Dokumentationspayload des Packagers abweichend. JS/PowerShell nur Kommentare/Versionen. Bestehende Nutzer-, Hilfe- und Fehlertexte sowie Daten/Snapshots unverändert.
 
-1. Feedback bearbeiten und gemeinsames Scrum zu Prioritäten/Zielen.
-2. Vereinbartes Code-/Patterns-/Sicherheitsreview, Codedokumentation und lokale HTML-Code-Wiki; noch keine automatische Ausweitung dieses Sprints.
-3. Spätere Formate, generische Toolrunner und parallele Aufbereitungen nur nach gesonderter Abstimmung. Aktuell ZIP und serieller Worker.
+Bestehende Tests, Ruff, JS und tatsächliche EXE-/Browser-/Offline-Wikiprüfungen vor Veröffentlichung. Noch keine neue Nutzerabnahme oder Sicherheits-Auditabnahme behaupten.
 
-Die historische Versionsentwicklung bleibt in den vorhandenen Releasebeschreibungen nachvollziehbar; alte Featurefreigaben erweitern den aktuellen Vereinfachungsumfang nicht automatisch.
+## Später gesondert abstimmen
+
+1. Rückmeldungen aus dem beruflichen Einsatz und gemeinsames Scrum.
+2. Code-/Patterns-/Sicherheitsreview mit reproduzierbaren Befunden und bewusst abgestimmten Änderungen; 0.41 ist reine Dokumentation.
+3. Weitere Evidenzformate, generische Toolrunner und parallele Aufbereitungen nur nach eigener Freigabe. Derzeit ZIP und serieller Worker.
+
+## Bereitstellung
+
+Seit 26.10.2026 auf ausdrücklichen Nutzerwunsch neue Releases und Testpakete ausschließlich auf GitHub. Keine weiteren Google-Drive-Uploads. Bereits vorhandene Drive-Dateien unverändert lassen. Keine bestehende Nutzerinstanz für einen Dokumentationsrelease stoppen.

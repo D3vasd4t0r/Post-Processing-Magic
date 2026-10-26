@@ -1,3 +1,4 @@
+"""Own application storage paths, shared SQLite tables, tool metadata and the instance lock."""
 
 import json
 import os
@@ -12,19 +13,27 @@ from forensic_app.app_errors import AppValueError
 
 
 def default_data_dir() -> Path:
+    """Choose the application folder under LOCALAPPDATA, with a home-directory fallback."""
     base = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local" / "share"))
     return base / "PostProcessingMagic"
 
 
 @dataclass(frozen=True)
 class Storage:
+    """Locate persistent application data and provide transaction-scoped tool configuration access.
+
+    Separate services initialize their own tables. Tool records contain locations only;
+    these methods do not read evidence or launch configured programs.
+    """
     root: Path
 
     @property
     def database(self) -> Path:
+        """Return the SQLite database path beneath this data root."""
         return self.root / "state.sqlite3"
 
     def initialize(self) -> None:
+        """Create writable application areas and shared tables without removing existing records."""
         for name in ("config", "evidence", "work", "results", "logs"):
             (self.root / name).mkdir(parents=True, exist_ok=True)
         with closing(sqlite3.connect(self.database)) as connection, connection:
@@ -72,6 +81,7 @@ class Storage:
             connection.execute('INSERT OR IGNORE INTO workspace_settings(id,path,owner) VALUES (1,NULL,?)',(str(uuid4()),))
 
     def record_start(self, version: str) -> None:
+        """Append an application version and SQLite UTC timestamp to startup history."""
         with closing(sqlite3.connect(self.database)) as connection, connection:
             connection.execute(
                 "INSERT INTO startup_events(occurred_at, version) "
@@ -80,6 +90,7 @@ class Storage:
             )
 
     def list_tools(self) -> list[dict]:
+        """Return stored tool IDs, names and paths ordered case-insensitively by name."""
         with closing(sqlite3.connect(self.database)) as connection:
             connection.row_factory = sqlite3.Row
             return [dict(row) for row in connection.execute(
@@ -87,6 +98,11 @@ class Storage:
             )]
 
     def save_tool(self, tool_id: str, name: str, path: str, *, create: bool) -> None:
+        """Create or update a tool and its before/after audit record in one serialized write.
+
+        Updates require an existing ID. Database constraints enforce tool-name uniqueness;
+        filesystem availability is a separate metadata check.
+        """
         with closing(sqlite3.connect(self.database)) as connection, connection:
             connection.row_factory = sqlite3.Row
             connection.execute("BEGIN IMMEDIATE")
@@ -115,6 +131,7 @@ class Storage:
             )
 
     def tool_usage(self, tool_id: str) -> list[dict]:
+        """List forensic drafts whose steps reference this tool ID; ignore passive legacy tables."""
         with closing(sqlite3.connect(self.database)) as connection:
             result = []
             for table in ('mode_drafts',):
@@ -125,6 +142,11 @@ class Storage:
 
 
     def delete_tool(self, tool_id: str) -> None:
+        """Delete and audit an unused tool in one write transaction.
+
+        References in active forensic drafts block deletion with the affected mode names;
+        neither the drafts nor their references are changed by this operation.
+        """
         with closing(sqlite3.connect(self.database)) as connection, connection:
             connection.row_factory = sqlite3.Row
             connection.execute("BEGIN IMMEDIATE")
@@ -150,13 +172,18 @@ class Storage:
 
 
 class InstanceLock:
-    """OS-owned lock; released even after a crash. A stale filename is harmless."""
+    """Hold an OS-owned byte-range/file lock for one application data root.
+
+    The file can survive a crash; ownership is determined by the OS lock, not its
+    existence. The lock is released when the stream closes or the process exits.
+    """
 
     def __init__(self, root: Path):
         self.path = root / ".instance.lock"
         self.stream: BinaryIO | None = None
 
     def __enter__(self):
+        """Open the lock file and acquire a nonblocking exclusive lock, or raise on contention."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
         stream = self.path.open("a+b")
         try:
@@ -180,6 +207,7 @@ class InstanceLock:
         return self
 
     def __exit__(self, *_):
+        """Close the lock stream and thereby release the OS lock."""
         if self.stream is not None:
             self.stream.close()
             self.stream = None

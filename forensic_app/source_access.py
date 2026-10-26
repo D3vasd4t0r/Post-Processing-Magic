@@ -1,4 +1,8 @@
-"""Metadata-only source references and bounded, leased upload-original streams."""
+"""Expose source metadata and one-use streams of retained upload originals.
+
+Local originals are references only. Streams hold a read handle and persisted
+cleanup lease; renewal is independent of a slow client requesting more chunks.
+"""
 
 import os
 import secrets
@@ -22,15 +26,18 @@ CHUNK_BYTES = 1024 * 1024
 
 
 def initialize_sources(connection):
+    """Create the persisted lease table in the caller-owned SQLite transaction."""
     connection.execute("CREATE TABLE IF NOT EXISTS source_streams (id TEXT PRIMARY KEY, job_id TEXT NOT NULL, expires REAL NOT NULL)")
 
 
 def check_cleanup(connection):
+    """Reject source access while application cleanup holds its active gate."""
     if connection.execute('SELECT active FROM cleanup_state WHERE id=1').fetchone()[0]:
         raise HTTPException(409, 'Data cleanup is in progress. Retry afterwards.')
 
 
 def checked_file(path):
+    """Check ancestor links/reparse points and require an independent regular file."""
     no_links(path)
     info = path.lstat()
     if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
@@ -39,18 +46,31 @@ def checked_file(path):
 
 
 class SourceAccess:
+    """Manage stat-only source metadata and process-local upload download capabilities.
+
+    JobStore checks supported IDs; registered roots resolve upload paths. Tickets
+    capture identity, expire and are consumed on first use.
+    """
     def __init__(self, store):
+        """Bind the job store and initialize the lock-protected, process-local ticket map."""
         self.store = store
         self.tickets = {}
         self.lock = threading.Lock()
 
     def _path(self, ident):
+        """Resolve the stored local reference or fixed application-owned upload path."""
         plan = self.store.plan(ident)
         if plan.get('source_kind', 'upload') == 'local':
             return plan, Path(plan['local_input']['path'])
         return plan, self.store.paths(ident)[0]/'evidence'/ident/'Evidence.zip'
 
     def metadata(self, ident):
+        """Return source kind, name, size and availability without reading contents.
+
+        Serialize observation with cleanup admission. Local references must match their
+        stored identity; missing/unsafe originals retain a reason instead of causing
+        a copy or upload.
+        """
         plan, path = self._path(ident)
         local = plan.get('source_kind') == 'local'
         result = {'kind': 'local' if local else 'upload', 'filename': plan.get('filename', 'Evidence.zip'),
@@ -76,6 +96,11 @@ class SourceAccess:
         return result
 
     def ticket(self, ident):
+        """Mint a bounded, 120-second one-use capability for an available upload original.
+
+        Reject local references and capture stat identity for validation when consumed.
+        Minting the ticket does not open a download stream.
+        """
         meta = self.metadata(ident)
         if meta['kind'] != 'upload':
             raise HTTPException(409, 'Local sources are references and cannot be downloaded.')
@@ -97,6 +122,13 @@ class SourceAccess:
         return {'url': '/api/sources/' + token}
 
     def stream(self, ticket):
+        """Consume a capability and return a bounded native HTTP upload-original stream.
+
+        Acquire a cleanup lease before opening; compare path, handle and ticket
+        identity, then recheck links/metadata per chunk. An independent heartbeat
+        renews the lease. Iterator finalization and response background cleanup share
+        idempotent handle/lease release.
+        """
         with self.lock:
             entry = self.tickets.pop(ticket, None)
         if entry is None or entry[1] <= time.monotonic():
@@ -183,6 +215,7 @@ class SourceAccess:
 
 
 def source_router(access, authorize):
+    """Create bearer-protected source-metadata and upload-original ticket routes."""
     router = APIRouter(prefix='/api/jobs', dependencies=[Depends(authorize)])
 
     @router.get('/{ident}/source')
@@ -198,6 +231,11 @@ def source_router(access, authorize):
 
 def source_download_router(access):
     # One-use capability minted exclusively by the authenticated route above.
+    """Create native download routes authorized by one-use capabilities.
+
+    Capabilities are minted by the separate bearer-protected router. A local
+    reference never receives a stream capability.
+    """
     router = APIRouter(prefix='/api/sources')
 
     @router.get('/{ticket}')

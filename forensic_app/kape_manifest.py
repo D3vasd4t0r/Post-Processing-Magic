@@ -30,14 +30,16 @@ _REPARSE = 0x400
 
 
 class ManifestVerificationError(ValueError):
-    """A captured file or the manifest itself cannot safely be verified."""
+    """Report a malformed manifest, unavailable captured file or snapshot mismatch."""
 
 
+# Internal limitation code; callers record partial capture instead of guessing.
 class _Unavailable(ValueError):
     pass
 
 
 def _relative(value):
+    """Accept only the narrow literal relative-path grammar used for KAPE references."""
     if not isinstance(value, str) or not value or len(value) > 1024:
         raise _Unavailable("unsafe_path")
     win = PureWindowsPath(value)
@@ -53,11 +55,13 @@ def _relative(value):
 
 
 def _identity(state):
+    """Snapshot file identity and modification metadata independently of the content hash."""
     return {"device": state.st_dev, "inode": state.st_ino,
             "mtime_ns": state.st_mtime_ns, "size": state.st_size}
 
 
 def _safe_state(state, directory=False):
+    """Reject observed links/reparse points, unexpected file kinds and multi-link files."""
     if stat.S_ISLNK(state.st_mode) or getattr(state, "st_file_attributes", 0) & _REPARSE:
         raise _Unavailable("link_or_reparse")
     if directory:
@@ -71,7 +75,12 @@ def _safe_state(state, directory=False):
 
 @contextmanager
 def _windows_handle(path, directory):
-    """Pin each directory against rename; lock files against write and deletion."""
+    """Open a Win32 handle excluding deletion and detecting reparse points.
+
+    Directory handles pin ancestors against rename; file handles also exclude
+    writers and require one hard link. The yielded handle lives only inside this
+    context and is closed on all exit paths.
+    """
     from ctypes import wintypes
 
     class Info(ctypes.Structure):
@@ -111,7 +120,12 @@ def _windows_handle(path, directory):
 
 @contextmanager
 def _open_pinned(path, directory=False):
-    """Path must be absolute. Reject reparse ancestors without resolving them."""
+    """Open an absolute path while retaining handles for every ancestor.
+
+    Windows uses pinned handles and a duplicate for the Python file object; the
+    non-Windows branch uses descriptor-relative opens with O_NOFOLLOW. Directory
+    mode yields no file object and retains only the directory handles.
+    """
     with ExitStack() as stack:
         parents = list(reversed(path.parents))
         chain = parents + ([path] if directory else [])
@@ -163,6 +177,12 @@ def _open_pinned(path, directory=False):
 
 
 def _read_file(path, maximum, keep=False, budget=None):
+    """Hash a pinned regular file under size, aggregate-byte and read-count budgets.
+
+    When keep is true, also return bounded bytes for module-field inspection.
+    Compare identity before opening, on the handle and after reading; changed or
+    unsupported files become limitations rather than silently captured metadata.
+    """
     before = path.lstat()
     _safe_state(before)
     if before.st_size > maximum:
@@ -206,6 +226,7 @@ def _read_file(path, maximum, keep=False, budget=None):
 
 
 def _scalar(value):
+    """Accept the limited one-line scalar syntax, removing a matching outer quote pair."""
     if len(value) >= 2 and value[0] in "\"'" and value[-1] == value[0]:
         value = value[1:-1]
     if not value or any(c in value for c in "\"'\n\r\t#&*|>!{}[]"):
@@ -243,6 +264,11 @@ def _direct_fields(text):
 
 
 def _module_index(root, budget):
+    """Index module basenames within bounded, non-bin Modules subtrees.
+
+    A skipped/unsafe subtree invalidates the index because it may conceal duplicate
+    basenames. This scans names and metadata rather than loading YAML.
+    """
     found, reasons = {}, []
     pending = [(root / "Modules", 0)]
     while pending:
@@ -292,7 +318,12 @@ def _resolve_literal(root, relative, budget):
 
 
 def capture_manifest(executable, module_names):
-    """Capture direct known files; unresolved selections never block a workflow."""
+    """Record directly recognized module, helper and RECmd-rule hashes and identities.
+
+    Unsupported grammar, missing files and exhausted budgets become unresolved
+    entries. Capture is partial and non-executing: it neither expands compound
+    modules nor resolves arbitrary command dependencies or downloads files.
+    """
     limits = {"selected": MAX_SELECTED, "files": MAX_FILES,
               "file_bytes": MAX_FILE_BYTES, "total_bytes": MAX_TOTAL_BYTES,
               "module_bytes": MAX_MODULE_BYTES, "scan_entries": MAX_SCAN_ENTRIES,
@@ -403,10 +434,11 @@ def capture_manifest(executable, module_names):
 
 
 def verify_manifest(manifest):
-    """Verify only frozen files. None is the explicit historical-job no-op.
+    """Recheck only the files and identities frozen in a supported manifest.
 
-    Raises ManifestVerificationError on malformed manifests or any failed proof.
-    Unresolved references remain limitations; newly discovered files are not read.
+    None is the historical no-capture case. Malformed records, unavailable files
+    or changed hashes/identities raise ManifestVerificationError. Unresolved
+    references remain limitations; new files are not discovered during verification.
     """
     if manifest is None:
         return {"status": "not_captured", "verified_count": 0}

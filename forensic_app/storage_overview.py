@@ -18,12 +18,18 @@ AREAS = (("evidence", "Eingänge"), ("work", "Arbeitsordner"), ("results", "Erge
 
 
 class StorageOverview:
+    """Provide volume capacity and cache the last bounded app-data metadata scan.
+
+    The scan totals regular-file sizes, not allocated disk blocks or deduplicated
+    physical storage, and never opens evidence file contents.
+    """
     def __init__(self, storage):
         self.storage = storage
         self.lock = threading.Lock()
         self.last_scan = None
 
     def get(self):
+        """Report root capacities and the last scan without initiating a new traversal."""
         try:
             usage = shutil.disk_usage(self.storage.root)
             volume = {"total_bytes": usage.total, "used_bytes": usage.used, "free_bytes": usage.free}
@@ -40,6 +46,11 @@ class StorageOverview:
         return {"locations":locations,"path": str(self.storage.root.resolve()), "volume": volume, "scan": self.last_scan}
 
     def scan(self):
+        """Measure data-area metadata across registered roots with global time/entry limits.
+
+        Only one scan runs per service instance. Skip links/reparse points and mark errors
+        or exhausted limits as incomplete; cache the result with a UTC measurement time.
+        """
         if not self.lock.acquire(blocking=False):
             raise HTTPException(409, ErrorText('error.2877aadb8765'))
         try:
@@ -100,6 +111,7 @@ class StorageOverview:
 
 
 def storage_overview_router(overview, authorize):
+    """Expose authenticated capacity reads and explicit on-demand metadata scans."""
     router = APIRouter(prefix="/api/settings/storage", dependencies=[Depends(authorize)])
 
     @router.get("")

@@ -1,10 +1,12 @@
 /* Navigation changes presentation only; uploads and the persistent worker keep running. */
 let runTouched=false;
+// Derive presentation from the active job and page; do not start, cancel or recreate a job.
 function updateWorkspaceStatus(){
   byId('run-status-panel').hidden=!activeJobId&&!runBusy&&!runTouched;
   byId('ongoing-job').hidden=currentPage==='overview'||!runBusy;
   setUiText(byId('page-title'),()=>t('page.'+currentPage),true);
 }
+// Collapse the responsive navigation and optionally restore keyboard focus to its trigger.
 function closeWorkspaceMenu(returnFocus=false){
   document.body.classList.remove('nav-open');
   byId('menu-toggle').setAttribute('aria-expanded','false');

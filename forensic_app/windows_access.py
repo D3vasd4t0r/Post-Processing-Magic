@@ -1,4 +1,9 @@
-"""Explicit UAC startup and read-only access to referenced Windows evidence."""
+"""Windows elevation, desktop shell access and original-file read handles.
+
+Elevation uses the normal UAC flow. Read sharing controls file lifetime, not
+content validity or process isolation; other-platform reads are ordinary binary
+file contexts used by tests.
+"""
 
 import ctypes
 import os
@@ -9,10 +14,12 @@ from pathlib import Path
 
 
 def is_admin() -> bool:
+    """Return whether the current Windows process has administrator privileges."""
     return os.name == "nt" and bool(ctypes.windll.shell32.IsUserAnAdmin())
 
 
 def interactive_desktop() -> bool:
+    """Check for a non-service Windows session with an available desktop shell window."""
     if os.name != "nt":
         return False
     from ctypes import wintypes
@@ -29,6 +36,12 @@ def interactive_desktop() -> bool:
 
 def open_explorer(folder: Path):
     # Ask the desktop shell directly, rather than spawning another elevated explorer.
+    """Ask the interactive Windows shell to reveal a folder through COM shell APIs.
+
+    The caller validates authorization and folder boundaries. No result file is
+    executed here; allocated shell memory and successful COM initialization are
+    released on every return path.
+    """
     from ctypes import wintypes
     ole = ctypes.WinDLL('ole32', use_last_error=True)
     ole.CoInitializeEx.argtypes = [ctypes.c_void_p,wintypes.DWORD]
@@ -57,6 +70,11 @@ def open_explorer(folder: Path):
 
 
 def elevate(arguments: list[str]):
+    """Request UAC relaunch of the frozen EXE or Python module with supplied arguments.
+
+    Refusal or shell failure raises PermissionError. There is no silent
+    non-elevated fallback and no firewall change in this function.
+    """
     parameters = arguments if getattr(sys, "frozen", False) else ["-m", "forensic_app", *arguments]
     shell = ctypes.WinDLL("shell32", use_last_error=True)
     shell.ShellExecuteW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_wchar_p,
@@ -69,7 +87,12 @@ def elevate(arguments: list[str]):
 
 @contextmanager
 def locked_input(path: Path):
-    """Hold a read handle that disallows concurrent writes/deletion for the whole read."""
+    """Yield a binary read handle for an existing original file.
+
+    Windows FILE_SHARE_READ excludes concurrent writers and deletion while open.
+    Other platforms use an ordinary read context, not an equivalent lock. Callers
+    separately validate paths and captured file identity.
+    """
     if os.name != "nt":
         with path.open("rb") as source:
             yield source
@@ -94,5 +117,6 @@ def locked_input(path: Path):
 
 
 def input_identity(source) -> dict:
+    """Return size, mtime, device and inode from an open handle, not a content hash."""
     state = os.fstat(source.fileno())
     return {"size": state.st_size, "mtime_ns": state.st_mtime_ns, "device": state.st_dev, "inode": state.st_ino}

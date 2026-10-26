@@ -1,4 +1,4 @@
-# Architektur – ZIP-Aufbereitung 0.40
+# Architektur – ZIP-Aufbereitung 0.41 (Dokumentationsrelease)
 
 ## Prozesse und Speicher
 
@@ -10,7 +10,7 @@ SQLite hält Queue, Ereignisse, Konfiguration, Wartungsstatus und Audit. Claims,
 
 ## Verarbeitung
 
-Version 0.40 unterstützt ausschließlich ZIP/KAPE-Target. compile_plan friert Modus, Schritte, Limits, Toolhash/-version und relevante Dateinachweise ein. Pro Job ein eigener Arbeitsordner, relatives Entpackziel und relativer Ergebnisordner. KAPE startet als Programmdatei mit getrennter Argumentliste, höchstens ein Offline-Modulbefehl. Freie PowerShell ist ein ausdrücklicher Blocktyp mit eigenem relativem Arbeitsverzeichnis und eingefrorenem Zeitlimit. cd wirkt nur innerhalb des Blocks. Kein implizites Interpretieren von Toolparametern als Shellcode.
+Die unveränderte Anwendung unterstützt ausschließlich ZIP/KAPE-Target. compile_plan friert Modus, Schritte, Limits, Toolhash/-version und relevante Dateinachweise ein. Pro Job ein eigener Arbeitsordner, relatives Entpackziel und relativer Ergebnisordner. KAPE startet als Programmdatei mit getrennter Argumentliste, höchstens ein Offline-Modulbefehl. Freie PowerShell ist ein ausdrücklicher Blocktyp mit eigenem relativem Arbeitsverzeichnis und eingefrorenem Zeitlimit. cd wirkt nur innerhalb des Blocks. Kein implizites Interpretieren von Toolparametern als Shellcode.
 
 UAC-Administratorstart ist Nutzeranforderung; Worker/Tools erben Rechte. Verweigerte UAC wird nicht umgangen. --test-no-admin gilt nur für eigene synthetische automatisierte Tests. Toolausführung ist keine Sandbox.
 
@@ -42,4 +42,10 @@ Ergebnis-ZIP enthält Nutzeroutputs und aktuelle Metadatenberichte, keine App-Ko
 
 Selbstsigniertes HTTPS bei LAN, Tokenauthentifizierung, kein automatischer Firewall-/Trust-Store-Eingriff. Token nie in Export, Diagnosepaket oder Repository. Technische Logrotation betrifft nur Serverlogs. Bereinigung verlangt Vorschau und ausdrückliche Bestätigung, respektiert offene Jobs/Archive/Downloads und lokale Originalreferenzen.
 
-Lokale Hashwerte sind Integritätsmetadaten, kein alleiniger Herkunfts-/Gerichtsfestigkeitsbeweis. Code-/Sicherheitsreview und HTML-Code-Wiki sind erst nach dem neuen Nutzertest vorgesehen.
+Lokale Hashwerte sind Integritätsmetadaten, kein alleiniger Herkunfts-/Gerichtsfestigkeitsbeweis. Version 0.40 ist vom Nutzer erfolgreich abgenommen. 0.41 ergänzt englische Codedokumentation und das lokale [HTML-Code-Wiki](code-wiki/index.html), ohne die Anwendung zu refaktorieren oder zu korrigieren. Ein gesondertes Sicherheitsreview ist damit weder durchgeführt noch abgenommen.
+
+## Dokumentationsgrenze 0.41
+
+Docstrings erläutern bestehende Verträge, Zustandsänderungen, Transaktionen und Seiteneffekte. Nach Entfernung der Docstrings bleibt der Python-AST gegenüber dem akzeptierten 0.40-Commit identisch, abgesehen von der expliziten Versionskonstante. Das separate Release-Packaging nimmt ausschließlich zusätzliche Dokumentationsdateien auf. Kommentare verändern keine JS-/PowerShell-Befehle. Schema-/OpenAPI-Beschreibungen können durch Docstrings ausführlicher werden; Parameter, Handlerlogik und gespeicherte Konfigurationen ändern sich nicht.
+
+Das Wiki ist ein statischer Dateibaum mit relativen lokalen Ressourcen. Es benötigt keinen App-Endpunkt, Server, Paketmanager oder externen Dienst. Es liegt neben der EXE im entpackten Release unter docs/code-wiki. Die laufende Nutzerinstanz wird durch Öffnen der Dokumentation nicht verändert.

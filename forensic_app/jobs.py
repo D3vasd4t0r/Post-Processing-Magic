@@ -1,4 +1,9 @@
-"""Persistent upload/queue/event API. Analysis only runs in the separate worker."""
+"""Persist ZIP job snapshots, progress events and authenticated job routes.
+
+HTTP handlers admit uploads or local references; configured commands run only
+in the separate worker. Unsupported historical workspaces stay stored but
+are excluded from job views and execution.
+"""
 
 import asyncio
 import hashlib
@@ -51,10 +56,17 @@ class LocalJob(JobMetadata):
 
 
 class JobStore:
+    """Read and update persisted forensic jobs without executing their commands.
+
+    Methods generally open their own SQLite connection. Queue admission and
+    claiming belong to JobService and QueueControl rather than this read model.
+    """
     def __init__(self, storage: Storage):
+        """Bind job operations to an already selected application data root."""
         self.storage = storage
 
     def initialize(self):
+        """Create job/event tables and add missing state columns without rewriting snapshots."""
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.executescript("""
                 CREATE TABLE IF NOT EXISTS jobs (
@@ -82,6 +94,10 @@ class JobStore:
                 connection.execute("ALTER TABLE jobs ADD COLUMN current_step INTEGER NOT NULL DEFAULT 0")
 
     def recover(self, reason='Server wurde neu gestartet. Keine automatische Wiederholung.'):
+        """Mark unfinished supported jobs and archive requests interrupted after restart.
+
+        Historical unsupported rows remain untouched; no command is requeued here.
+        """
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.execute("UPDATE archive_requests SET status='interrupted',error=? WHERE status IN ('queued','running') AND job_id IN (SELECT id FROM jobs WHERE COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics')",(reason,))
             for ident, in connection.execute("SELECT id FROM jobs WHERE status NOT IN (?,?,?,?) AND COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics'", TERMINAL):
@@ -91,6 +107,11 @@ class JobStore:
                                    (ident, json.dumps({"status": "interrupted"})))
 
     def search(self, *, q='', status=None, mode_id=None, date_from=None, date_to=None, limit=50, offset=0, workspace=None):
+        """Return a paged metadata list restricted to forensic jobs.
+
+        Optional filters are internal store arguments; the simplified HTTP list
+        exposes pagination only. File contents and terminal output are not searched.
+        """
         if date_from and date_to and date_from > date_to:
             raise HTTPException(422, ErrorText('error.dbd0af04dfb6'))
         conditions, values = ["COALESCE(json_extract(config_json,'$.workspace'),'forensics')='forensics'"], []
@@ -129,17 +150,25 @@ class JobStore:
                 'modes':[dict(row) for row in modes if row['id']]}
 
     def plan(self, ident):
+        """Return the configuration snapshot after supported-job and UUID checks."""
         self.get(ident)
         with closing(sqlite3.connect(self.storage.database)) as c:
             return json.loads(c.execute('SELECT config_json FROM jobs WHERE id=?',(ident,)).fetchone()[0])
 
     def paths(self, ident):
+        """Resolve the snapshot against registered roots; translate path failures to HTTP 409."""
         try:
             return job_paths(self.storage,self.plan(ident),ident)
         except (ValueError,OSError) as exc:
             raise HTTPException(409,ErrorText('error.c51798184346', p0=error_detail(exc))) from exc
 
     def get(self, ident: str) -> dict:
+        """Build a job view from stored state and observed result availability.
+
+        The effective command may differ after drive-folder resolution. Inventory is
+        projected to metadata; availability checks neither create archives nor reread
+        an original ZIP. Unsupported historical workspaces are not exposed.
+        """
         try:
             if str(UUID(ident)) != ident:
                 raise ValueError()
@@ -198,6 +227,7 @@ class JobStore:
         return result
 
     def update(self, ident: str, **values):
+        """Persist allowed state columns and append their status event in one transaction."""
         allowed = {"status", "phase", "completed", "input_size", "input_sha256", "result_sha256", "error", "exit_code", "error_detail", "effective_json", "current_step", "input_sha1", "result_sha1", "input_inventory_json"}
         assert values.keys() <= allowed
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
@@ -208,12 +238,14 @@ class JobStore:
                                (ident, json.dumps(values, ensure_ascii=False)))
 
     def fail(self, ident: str, exc: BaseException):
+        """Record phase-specific error details and append a bounded diagnostic log entry."""
         detail = describe_error(exc, self.get(ident)["phase"])
         self.update(ident, status="failed", phase="Fehlgeschlagen", error=detail["message"],
                     error_detail=json.dumps(detail, ensure_ascii=False))
         self.log(ident, "\nFEHLER ["+detail["phase"]+"]: "+detail["message"]+"\nHinweis: "+detail["recommendation"]+"\n")
 
     def log(self, ident: str, text: str):
+        """Append one bounded log chunk and retain a separate rolling terminal tail."""
         text = text[-8192:]
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.execute("UPDATE jobs SET log_tail=substr(log_tail || ?, -65536) WHERE id=?", (text, ident))
@@ -221,11 +253,17 @@ class JobStore:
                                (ident, json.dumps({"text": text}, ensure_ascii=False)))
 
     def events(self, ident: str, after: int):
+        """Read at most 100 ordered events strictly after the supplied event cursor."""
         with closing(sqlite3.connect(self.storage.database)) as connection:
             return [{"id": row[0], "kind": row[1], "data": json.loads(row[2])} for row in connection.execute(
                 "SELECT id,kind,payload FROM job_events WHERE job_id=? AND id>? ORDER BY id LIMIT 100", (ident, after))]
 
     def cancel(self, ident: str):
+        """Request archive/tool cancellation; cancel queued jobs immediately.
+
+        Running commands observe the persisted flag through the worker check callback;
+        this method does not directly terminate a process.
+        """
         self.get(ident)
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.execute('BEGIN IMMEDIATE')
@@ -239,7 +277,13 @@ class JobStore:
 
 
 class JobService:
+    """Own the worker lifecycle and admit immutable ZIP job configurations.
+
+    Download capabilities are process-local and short-lived. Jobs and queue state
+    are persisted independently of this service object.
+    """
     def __init__(self, storage: Storage, *, test_no_admin: bool = False):
+        """Bind storage, processing limits, worker handles and result-download ticket state."""
         self.storage = storage
         self.store = JobStore(storage)
         self.process = None
@@ -250,6 +294,7 @@ class JobService:
         self.limits = ProcessingSettings(storage)
 
     def start(self):
+        """Recover unfinished jobs and spawn the worker with a multiprocessing stop event."""
         from forensic_app.worker import worker_main
         self.store.recover()
         context = multiprocessing.get_context("spawn")
@@ -258,6 +303,7 @@ class JobService:
         self.process.start()
 
     def stop(self):
+        """Signal the worker, wait briefly, then terminate it if the grace period expires."""
         if self.process:
             self.stop_event.set()
             self.process.join(timeout=6)
@@ -266,9 +312,11 @@ class JobService:
                 self.process.join(timeout=3)
 
     def available(self):
+        """Report whether this service currently owns a live worker process."""
         return self.process is not None and self.process.is_alive()
 
     def catalog(self,workspace='forensics'):
+        """Validate saved forensic modes and return worker, administrator and limit status."""
         if workspace != 'forensics':
             raise HTTPException(422, 'Only ZIP processing is supported.')
         state = ConfigurationTransfer(self.storage).current()
@@ -288,6 +336,12 @@ class JobService:
                 "modes": result, "max_upload_bytes": limits["max_upload_bytes"], "limits": limits}
 
     def begin(self, mode_id: str, filename: str, *, local_input: dict | None = None, allow_high_compression: bool = True, create_zip: bool = True, workspace='forensics', case_number='', device_name=''):
+        """Capture a selected mode and insert its uploading state under admission gates.
+
+        Tool hashes, versions, limits, locale and data root are frozen for this run.
+        New jobs always allow high compression; older snapshots are not rewritten.
+        This method does not start configured commands.
+        """
         if workspace != "forensics":
             raise HTTPException(422, "Only ZIP processing is supported.")
         metadata = JobMetadata(case_number=case_number,device_name=device_name).model_dump()
@@ -335,6 +389,11 @@ class JobService:
         return ident
 
     def local(self, value: LocalJob):
+        """Queue a server-local ZIP reference after recording its read-handle identity.
+
+        The original is not copied. The worker checks its stored identity again before
+        hashing and extracting it.
+        """
         try:
             path = Path(validate_local_path(value.path)).resolve(strict=True)
             validate_local_path(str(path))
@@ -353,6 +412,11 @@ class JobService:
 
 
 def jobs_router(service: JobService, authorize):
+    """Create bearer-protected upload, job, progress and report routes.
+
+    Command execution remains in the worker. Result capabilities are minted here
+    and consumed by the separate capability-download router.
+    """
     router = APIRouter(prefix="/api/jobs", dependencies=[Depends(authorize)])
     explorer = ResultExplorer(service.storage, service.store)
 
@@ -525,6 +589,11 @@ def jobs_router(service: JobService, authorize):
 
 
 def results_router(service: JobService):
+    """Create one-use result-ZIP capability routes minted by authenticated requests.
+
+    The native response avoids a whole-ZIP browser Blob. Tickets expire and are
+    lost when this server process exits.
+    """
     router = APIRouter(prefix="/api/results")
 
     @router.get("/{ticket}")

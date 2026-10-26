@@ -11,15 +11,21 @@ from forensic_app.server_control import draining
 
 
 class QueueChange(BaseModel):
+    """Require an explicit boolean admission-pause setting."""
     model_config = ConfigDict(extra='forbid')
     paused: bool = Field(strict=True)
 
 
 class QueueControl:
+    """Persist queue pause state and atomically claim the next forensic processing job.
+
+    Pausing prevents future claims; it does not interrupt an already running command.
+    """
     def __init__(self, storage):
         self.storage = storage
 
     def initialize(self):
+        """Create queue-control/audit tables, preserving an existing pause setting."""
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.executescript('''
                 CREATE TABLE IF NOT EXISTS queue_control(id INTEGER PRIMARY KEY CHECK(id=1),paused INTEGER NOT NULL CHECK(paused IN (0,1)));
@@ -30,6 +36,7 @@ class QueueControl:
             ''')
 
     def get(self):
+        """Read pause, drain and forensic job/archive counters from one database snapshot."""
         with closing(sqlite3.connect(self.storage.database)) as connection:
             connection.execute('BEGIN')
             paused = bool(connection.execute('SELECT paused FROM queue_control WHERE id=1').fetchone()[0])
@@ -41,6 +48,7 @@ class QueueControl:
         return {'paused':paused,'waiting':waiting,'running':running,'archive_waiting':archives,'archiving':archiving,'stopping':stopping}
 
     def set(self, paused):
+        """Serialize the pause change, audit actual changes, then read current queue status."""
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.execute('BEGIN IMMEDIATE')
             old = connection.execute('SELECT paused FROM queue_control WHERE id=1').fetchone()[0]
@@ -50,6 +58,11 @@ class QueueControl:
         return self.get()
 
     def claim(self):
+        """Claim the oldest queued forensic job and emit its status event atomically.
+
+        Drain, cleanup and pause gates are checked in the same BEGIN IMMEDIATE transaction.
+        Return the ID/configuration row, or None when admission is closed or no job waits.
+        """
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.execute('BEGIN IMMEDIATE')
             if draining(connection):
@@ -67,6 +80,7 @@ class QueueControl:
 
 
 def queue_router(control, authorize):
+    """Expose authenticated queue-status and pause controls; execution remains in the worker."""
     router = APIRouter(prefix='/api/queue',dependencies=[Depends(authorize)])
 
     @router.get('')

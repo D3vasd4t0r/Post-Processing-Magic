@@ -1,3 +1,4 @@
+"""Windows desktop/headless entry point with explicit elevation and instance ownership."""
 
 import argparse
 import json
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 def parser() -> argparse.ArgumentParser:
+    """Build launch options for desktop/headless operation, data storage, binding and TLS."""
     result = argparse.ArgumentParser(description="Post-Processing-Magic Webserver")
     result.add_argument("--data-dir", type=Path, default=default_data_dir())
     result.add_argument("--port", type=int, default=8765)
@@ -44,6 +46,7 @@ def parser() -> argparse.ArgumentParser:
 
 
 def validate(args: argparse.Namespace) -> None:
+    """Validate port range and paired TLS files, loading supplied certificates to detect errors."""
     if not 1 <= args.port <= 65535:
         raise AppValueError('error.28b81d33d4c1')
     if bool(args.tls_cert) != bool(args.tls_key):
@@ -56,6 +59,10 @@ def validate(args: argparse.Namespace) -> None:
 def open_when_ready(
     url: str, token: str, stop: threading.Event, certificate: Path | None = None
 ) -> None:
+    """Poll local health for up to 80 attempts before opening a token-fragment browser URL.
+
+    The stop event cancels polling. HTTPS trusts the supplied certificate instead
+    of disabling validation; a timeout only logs a warning and does not stop serving."""
     context = ssl.create_default_context(cafile=str(certificate)) if certificate else None
     for _ in range(80):
         if stop.wait(0.25):
@@ -72,6 +79,12 @@ def open_when_ready(
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Resolve launch preferences and run either the desktop owner or the headless server.
+
+    Normal execution requests Windows elevation before startup. Headless mode holds
+    the instance lock, initializes storage, binds one socket, writes a fresh token
+    and runs Uvicorn. Browser polling is stopped on exit; identifiable desktop-child
+    startup failures are recorded for that panel rather than silently retried."""
     args = parser().parse_args(argv)
     try:
         validate(args)

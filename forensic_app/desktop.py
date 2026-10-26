@@ -47,7 +47,15 @@ def draw_server_banner(canvas,administrator,translate=None):
 
 
 class ServerWindow:
+    """Tk-thread owner of the server panel and its dialogs.
+
+    The background thread owns DesktopSession and sends snapshots through queues;
+    tray callbacks enqueue actions instead of touching widgets. Closing the window
+    normally hides it, while explicit exit waits for the managed server to stop."""
     def __init__(self,root,args):
+        """Build widgets and queues, start the tray and control threads, then enqueue startup.
+
+        The caller owns the Tk event loop; scheduled tick callbacks perform widget updates."""
         self.root,self.args = root,args
         self.interface = InterfacePreferences(Storage(args.data_dir.expanduser().resolve()))
         self.translations = DesktopTranslations(self.interface.get()['locale'])
@@ -161,21 +169,26 @@ class ServerWindow:
         root.after(100,self.tick)
 
     def bind_text(self,widget,key):
+        """Register an app-label refresh callback, retaining the widget for language changes."""
         self.bindings.append((widget,lambda: widget.configure(text=self.t(key))))
         widget.configure(text=self.t(key))
         return widget
 
     def localized_label(self,parent,key,**options):
+        """Create a label whose app-owned text participates in language refreshes."""
         return self.bind_text(self.label(parent,self.t(key),**options),key)
 
     def localized_button(self,parent,key,command):
+        """Create a translated button while preserving its supplied action callback."""
         return self.bind_text(ttk.Button(parent,command=command),key)
 
     def bind_title(self,dialog,key):
+        """Track a dialog title for locale changes until its widget is destroyed."""
         self.bindings.append((dialog,lambda: dialog.title(self.t(key))))
         dialog.title(self.t(key))
 
     def choose_language(self,event=None):
+        """Persist the selected interface locale and refresh live Tk labels on this thread."""
         try:
             self.interface.update(locale=self.language.get().lower())
             self.sync_language(force=True)
@@ -183,6 +196,7 @@ class ServerWindow:
             messagebox.showerror(self.t('error.action'),self.error_text(exc),parent=self.root)
 
     def error_text(self,exc):
+        """Localize structured app failures while leaving unknown exception details unchanged."""
         if isinstance(exc,DesktopError):
             return exc.translated(self.t)
         if isinstance(exc,AppValueError):
@@ -193,6 +207,10 @@ class ServerWindow:
         return str(exc)
 
     def sync_language(self,force=False):
+        """Refresh live label bindings from the shared interface preference at most once a second.
+
+        This updates presentation and the tray tooltip, without restarting the server or
+        rewriting raw server logs and diagnostic preview contents."""
         now = time.monotonic()
         if not force and now-self.locale_checked < 1:
             return False
@@ -219,6 +237,7 @@ class ServerWindow:
         return True
 
     def refresh_status(self,latest):
+        """Render a session snapshot, including structured failures, without calling the server."""
         alive,ready,stopping = latest['alive'],latest['ready'],latest['stopping']
         title = self.t('status.stopping') if stopping and alive else self.t('status.running') if ready else self.t('status.starting') if alive else self.t('status.stopped')
         self.server_status.configure(text=title,fg='#9ed9c8' if ready and not stopping else BLUE)
@@ -243,6 +262,10 @@ class ServerWindow:
         return tk.Label(parent,text=text,bg=bg,fg=color,font=('Segoe UI',size,'bold' if bold else 'normal'),anchor='w',justify='left')
 
     def background(self):
+        """Serialize server-control commands and publish polled state without Tk calls.
+
+        A bounded state queue may drop a snapshot when the UI lags. Task completions use
+        a separate queue; finalization closes only this session's process guard."""
         session = DesktopSession(self.args)
         try:
             while not self.closed.is_set():
@@ -276,6 +299,10 @@ class ServerWindow:
                 session.guard.close()
 
     def tick(self):
+        """Drain task, tray and status queues on the Tk thread and schedule the next refresh.
+
+        Only the latest pending session snapshot is rendered. A requested exit destroys
+        the panel after a snapshot confirms that its server process is no longer alive."""
         if self.closed.is_set():
             return
         self.sync_language()
@@ -319,19 +346,26 @@ class ServerWindow:
         self.root.after(150,self.tick)
 
     def pause_follow(self,event):
+        """Stop automatic log following when the user scrolls upward with the mouse wheel."""
         if event.delta > 0:
             self.follow.set(False)
 
     def copy(self,value):
+        """Copy a nonempty displayed value, including the token, to the Windows clipboard."""
         if value.get():
             self.root.clipboard_clear()
             self.root.clipboard_append(value.get())
 
     def preview_diagnostics(self):
+        """Disable duplicate preview requests and enqueue snapshot generation off the Tk thread."""
         self.diagnose_button.configure(state='disabled')
         self.commands.put('diagnose')
 
     def diagnosis_dialog(self,preview):
+        """Display the exact diagnostic snapshot associated with a one-use export ticket.
+
+        Saving consumes that ticket and replaces the selected destination using a
+        same-directory temporary file; it does not regenerate or send the snapshot."""
         dialog = tk.Toplevel(self.root,bg=BG)
         self.bind_title(dialog,'diagnostics.title')
         dialog.geometry('850x650')
@@ -377,6 +411,10 @@ class ServerWindow:
         self.localized_button(actions,'action.close',dialog.destroy).pack(side='right')
 
     def settings_dialog(self):
+        """Edit persisted server preferences without restarting the current server.
+
+        Validated values are queued to the control thread. An uninitialized preference
+        record displays the active launch port and access mode as initial values."""
         preferences,revision = PreferenceStore(Storage(self.args.data_dir.expanduser().resolve())).get()
         if not revision:
             preferences = preferences.model_copy(update={'port':self.args.port,'lan':self.args.lan})
@@ -414,6 +452,10 @@ class ServerWindow:
         self.localized_button(row,'action.cancel',dialog.destroy).pack(side='right')
 
     def action(self,action):
+        """Open the verified browser URL or enqueue a server-control action.
+
+        Force shutdown requires a UI confirmation here; the process-tree boundary is
+        enforced by DesktopSession rather than by the button callback."""
         if action == 'browser':
             if self.latest['ready']:
                 webbrowser.open(self.latest['url']+'/#token='+self.latest['token'])
@@ -424,6 +466,7 @@ class ServerWindow:
         self.commands.put(action)
 
     def hide(self):
+        """Hide to the tray when its icon is ready, otherwise minimize to the taskbar."""
         if self.tray.ready.is_set() and not self.tray.error and self.tray.hwnd:
             self.root.withdraw()
         else:
@@ -431,10 +474,12 @@ class ServerWindow:
             self.root.iconify()
 
     def show(self):
+        """Restore and raise the existing panel without creating another server session."""
         self.root.deiconify()
         self.root.lift()
 
     def exit_requested(self):
+        """Ask for orderly shutdown when the owned process is alive, or close immediately."""
         if not self.latest['alive']:
             self.close()
         elif messagebox.askyesno(self.t('exit.title'),self.t('exit.confirm'),parent=self.root):
@@ -442,6 +487,7 @@ class ServerWindow:
             self.action('stop')
 
     def close(self):
+        """Signal the control loop, close the tray, wait briefly for the thread, and destroy Tk."""
         self.closed.set()
         self.tray.close()
         self.thread.join(timeout=3)
@@ -449,6 +495,10 @@ class ServerWindow:
 
 
 def run_panel(args):
+    """Run one desktop panel under a data-directory-specific control-window lock.
+
+    Startup failures are shown in a localized dialog and returned as exit code 1;
+    server ownership and shutdown remain delegated to ServerWindow/DesktopSession."""
     root = tk.Tk()
     try:
         with InstanceLock(args.data_dir.expanduser().resolve()/'config/desktop-control'):

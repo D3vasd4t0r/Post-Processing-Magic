@@ -11,17 +11,24 @@ from forensic_app.storage import Storage
 
 
 class ProcessingLimits(BaseModel):
+    """Validate positive integer upload and extraction byte limits with bounded maxima."""
     model_config = ConfigDict(extra="forbid")
     max_upload_bytes: int = Field(default=50*1024**3, ge=1, le=2**50, strict=True)
     max_extract_bytes: int = Field(default=2_000_000_000_000, ge=1, le=2**50, strict=True)
 
 
 def read_limits(connection) -> dict:
+    """Read validated stored limits, falling back to defaults if the singleton row is absent."""
     row = connection.execute("SELECT body_json FROM processing_settings WHERE id=1").fetchone()
     return ProcessingLimits.model_validate_json(row[0]).model_dump() if row else ProcessingLimits().model_dump()
 
 
 def write_limits(connection, limits: dict):
+    """Write validated limits and record changes using the caller-owned transaction.
+
+    This changes defaults for future snapshots only; existing job configuration is
+    not loaded or rewritten here.
+    """
     before = read_limits(connection)
     normalized = ProcessingLimits.model_validate(limits).model_dump()
     connection.execute("INSERT OR REPLACE INTO processing_settings(id,body_json) VALUES (1,?)", (json.dumps(normalized),))
@@ -31,10 +38,12 @@ def write_limits(connection, limits: dict):
 
 
 class ProcessingSettings:
+    """Persist current default byte limits separately from immutable job snapshots."""
     def __init__(self, storage: Storage):
         self.storage = storage
 
     def initialize(self):
+        """Create limit/audit tables and seed defaults only when no saved row exists."""
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.executescript("""
                 CREATE TABLE IF NOT EXISTS processing_settings(id INTEGER PRIMARY KEY CHECK(id=1),body_json TEXT NOT NULL);
@@ -46,10 +55,12 @@ class ProcessingSettings:
             connection.execute("INSERT OR IGNORE INTO processing_settings VALUES (1,?)", (ProcessingLimits().model_dump_json(),))
 
     def get(self):
+        """Return validated current defaults without modifying stored jobs."""
         with closing(sqlite3.connect(self.storage.database)) as connection:
             return read_limits(connection)
 
     def save(self, limits: ProcessingLimits):
+        """Serialize a limits update and its change record in one SQLite write transaction."""
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             write_limits(connection, limits.model_dump())
@@ -57,6 +68,7 @@ class ProcessingSettings:
 
 
 def processing_settings_router(settings: ProcessingSettings, authorize):
+    """Expose authenticated reads and updates of default processing limits."""
     router = APIRouter(prefix="/api/settings/processing", dependencies=[Depends(authorize)])
 
     @router.get("")

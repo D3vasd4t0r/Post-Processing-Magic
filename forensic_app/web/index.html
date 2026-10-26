@@ -37,7 +37,7 @@
         <path d="m32 5 25 10v22c0 16-11 27-25 34C18 64 7 53 7 37V15Z" stroke="currentColor" stroke-width="2"/>
         <path d="M32 16v42M17 31h30" stroke="currentColor" stroke-opacity=".45"/><circle cx="32" cy="36" r="11" stroke="currentColor" stroke-width="1.5"/>
       </svg></span>
-      <div><div class="eyebrow" data-i18n="web.s001">Digital Forensics · Workspace 0.40.0</div>
+      <div><div class="eyebrow" data-i18n="web.s001">Digital Forensics · Workspace 0.41.0</div>
         <h1 data-i18n="web.s002">Post-Processing-Magic</h1>
         <p data-i18n="web.s003">Dein Arbeitsbereich für die forensische Nachbearbeitung.</p></div>
     </div>
@@ -416,6 +416,7 @@
       setUiText(byId('message'), () => text);
       byId('message').classList.toggle('error', error);
     }
+    // Discard authenticated view state and invalidate pending UI work on logout or expired credentials.
     function hideWorkspace() {
       clearJobViewTimers(); eventGeneration++; eventController?.abort(); uploadRequest?.abort();clearTimeout(eventRefreshTimer);
       byId('workspace').hidden=true;byId('login').hidden=false;document.body.classList.remove('authenticated');closeWorkspaceMenu();
@@ -428,6 +429,7 @@
       setUiText(byId('current-token'),()=> '');byId('current-token').hidden=true;setUiText(byId('show-token'),()=>t('web.s145'),true);
       updateWorkspaceStatus();
     }
+    // Send session-authenticated JSON requests. A 401 clears local access; raw server diagnostics stay text.
     async function api(path, method='GET', payload) {
       const response = await fetch(path, {method, headers:{Authorization:'Bearer '+token,'Accept-Language':I18n.locale,
         ...(payload ? {'Content-Type':'application/json'} : {})},
@@ -444,6 +446,7 @@
       }
       return response.status === 204 ? null : response.json();
     }
+    // Read server preferences and instance metadata before exposing the authenticated workspace.
     async function connect() {
       await I18n.ready;
       const preferences = await api('/api/settings/interface');
@@ -461,6 +464,7 @@
       }
 
     }
+    // Switch pages without aborting uploads or worker jobs; invalidate only page-specific response generations.
     async function navigate(page) {
       if(!['overview','settings','logs','results','feedback'].includes(page))return;
       clearJobViewTimers();currentPage=page;
@@ -476,6 +480,7 @@
       else await loadPreparation();
     }
     function selectedPreparationMode(){return preparationModes.find(mode=>mode.id===byId('run-effort').value);}
+    // Validate form readiness for presentation; the server still validates the selected ZIP and frozen plan.
     function updatePreparation(){
       const file=byId('run-file').files[0],local=byId('run-source-kind').value==='local';
       byId('upload-source').hidden=local;byId('local-source').hidden=!local;
@@ -487,6 +492,7 @@
       byId('open-settings').hidden=preparationModes.length>0;
       updateWorkspaceStatus();
     }
+    // Combine configured slots with worker readiness, preserving a choice until its latest catalog response arrives.
     async function loadPreparation(){
       const previous=byId('run-effort').value,request=++preparationRequest;preparationLoading=true;updatePreparation();
       try{
@@ -507,6 +513,7 @@
         if(!activeJobId&&!runBusy){const previousJob=sessionStorage.getItem('ppm-job-id');if(previousJob){activeJobId=previousJob;await refreshJob();watchJob();}}
       }finally{if(request===preparationRequest){preparationLoading=false;updatePreparation();}}
     }
+    // Open one of the four shared categories; loading configuration never executes a workflow.
     async function showSettings(section) {
       byId('tool-settings').hidden = section !== 'tools';
       currentSettingsSection=section;
@@ -534,6 +541,7 @@
       const index = value > 0 ? Math.min(Math.floor(Math.log(value)/Math.log(1024)),units.length-1) : 0;
       return new Intl.NumberFormat(I18n.numberLocale,{maximumFractionDigits:2}).format(value/1024**index)+' '+units[index];
     }
+    // Show the current server-side work destination; optionally preserve an unsaved folder edit.
     async function loadWorkspaces(preserveInput=false) {
       try {const data = await api('/api/settings/workspace');
         if (!preserveInput) byId('workspace-folder').value = data.folder;
@@ -547,6 +555,7 @@
     byId('reset-workspace').addEventListener('click',() => run(async () => {
       await api('/api/settings/workspace','PUT',{folder:null}); await loadWorkspaces(); await loadStorage();
     },byId('reset-workspace')));
+    // Offer only the jobs returned for the selected cleanup scope; deletion uses a separate preview ticket.
     async function loadCleanupScope() {
       const previous = byId('cleanup-scope').value;
       const jobs = await api('/api/jobs?limit=100');
@@ -587,6 +596,7 @@
       finally {cleanupBusy = false; cleanupTicket = null; byId('cleanup-cancel').disabled = false; byId('cleanup-confirm').disabled = false;}
     },byId('cleanup-apply')));
     let queuePaused = false;
+    // Display persistent admission pause and active work; browser navigation does not control the worker lifecycle.
     async function loadQueue() {
       const state = await api('/api/queue');
       queuePaused = state.paused;
@@ -598,6 +608,7 @@
     byId('pause-queue').addEventListener('click',() => run(async () => {
       await api('/api/queue','PUT',{paused:!queuePaused}); await loadQueue();
     },byId('pause-queue')));
+    // Render server metadata measurements and partial-scan notes without reading evidence in the browser.
     function renderStorage(data) {
       setUiText(byId('storage-volume'), () => storageSize(data.volume.free_bytes)+t("web.s331")+storageSize(data.volume.total_bytes)+
         ' · '+storageSize(data.volume.used_bytes)+t("web.s332"), true);
@@ -634,6 +645,7 @@
       setUiText(byId('mode-message'), () => ''); setUiText(byId('mode-workspace-preview'), () => '');
       modeSteps = []; byId('mode-steps').replaceChildren();
     }
+    // Construct an editor-only command preview from draft blocks; this text is never sent to a shell.
     function modePreview() {
       const root = modeWorkspacePattern || 'work\\{Aufbereitungs-ID}';
       const source = byId('mode-source').value, output = byId('mode-output').value;
@@ -642,6 +654,7 @@
         '2. '+modeSteps.length+t("web.s345")+root+t("web.s346")+
         t("web.s347")+root+'\\'+output+t("web.s348"), true);
     }
+    // Keep tool parameters separate from the registered executable; PowerShell remains an explicit block type.
     function stepCommand(step) {
       if (step.type === 'powershell') return 'PowerShell\n'+(step.script || '');
       const tool = modeTools.find(tool => tool.id === step.tool_id);
@@ -653,6 +666,7 @@
       modeSteps.splice(index,0,{id:crypto.randomUUID(),name:t("label.x021"),type:'tool',script:'',working_directory:'.',timeout_seconds:86400,tool_id:null,tool_hint:'',parameters:''});
       renderModeSteps(); modePreview();
     }
+    // Rebuild editable ordered blocks from the in-memory draft without saving or launching commands.
     function renderModeSteps() {
       const list = byId('mode-steps'); list.replaceChildren();
       if (!modeSteps.length) {
@@ -741,6 +755,7 @@
         card.append(heading,typeLabel,typeSelect,nameLabel,name,toolLabel,select,parametersLabel,parameters,scriptLabel,script,cwdLabel,cwd,timeoutLabel,timeout,timeoutHint,warning,preview,actions); list.append(card);
       });
     }
+    // Copy persisted fields into a draft; copying a mode does not implicitly claim an already occupied effort slot.
     function editMode(mode, copy=false) {
       resetModeEditor(); editingModeId = mode && !copy ? mode.id : null;
       setUiText(byId('modes-message'), () => '');
@@ -764,6 +779,7 @@
       renderModeSteps(); byId('mode-editor').hidden = false; modePreview();
       byId('mode-name').focus();
     }
+    // Refresh the mode list only for its latest request generation and retain any independently edited draft.
     async function loadModes() {
       const request = ++modesRequest;
       const [data,tools] = await Promise.all([api('/api/settings/modes'),api('/api/settings/tools')]);
@@ -797,6 +813,7 @@
       }
       if (!byId('mode-editor').hidden) updateEffortOptions();
     }
+    // Disable occupied format/effort slots while retaining the current mode own slot during editing.
     function updateEffortOptions() {
       const select = byId('mode-effort'), current = select.value, format = byId('mode-format').value;
       const own = savedModes.find(mode => mode.id === editingModeId);
@@ -827,6 +844,7 @@
       clearTimeout(searchTimer); pickerRequest++;
       byId('path-picker').close();
     }
+    // Apply the chosen server path according to picker purpose; file contents are not read by the picker.
     function selectPath(path, name) {
       if (pickerPurpose === 'workspace') {byId('workspace-folder').value = path; closePicker(); return;}
       if (pickerPurpose === 'local') {
@@ -842,6 +860,7 @@
       setUiText(byId('path-result'), () => t("web.s390"), true);
       closePicker(); byId('tool-path').focus();
     }
+    // List server-side metadata and ignore responses from older picker searches or navigation.
     async function browsePath(path, query='') {
       const request = ++pickerRequest;
       setUiText(byId('picker-error'), () => ''); setUiText(byId('picker-notice'), () => t("web.s391"), true);
@@ -890,6 +909,7 @@
       button.className = className; button.addEventListener('click', () => run(callback, button));
       return button;
     }
+    // Display registered paths and their usage; linked tools remain protected by server validation.
     async function loadTools() {
       const data = await api('/api/settings/tools'); const list = byId('tools-list'); list.replaceChildren();
       if (!data.tools.length) {
@@ -923,6 +943,7 @@
         row.append(name,path,badge,usage,actions,warning); list.append(row);
       }
     }
+    // Route asynchronous UI failures to the status area and restore the invoking button in a finally block.
     async function run(callback, button) {
       message(''); if (button) button.disabled = true;
       try { await callback(); } catch (error) { message(error.message, true); }
@@ -942,6 +963,7 @@
       runBusy = busy; byId('cancel-run').hidden = !busy;
       updatePreparation();
     }
+    // Render persisted job progress and availability. Unknown command progress is not assigned a percentage.
     async function refreshJob(){
       if(!activeJobId||byId('workspace').hidden)return;const ident=activeJobId,state=await api('/api/jobs/'+ident);if(ident!==activeJobId)return;
       const terminal=['succeeded','failed','cancelled','interrupted'].includes(state.status),archiving=['queued','running'].includes(state.archive_status);
@@ -958,6 +980,7 @@
       setUiText(byId('run-download-note'),()=>state.result_available?t('ui040.result_ready'):state.status==='succeeded'?t('ui040.no_zip'):state.archive_error||t('web.s415'),true);
       if(currentPage==='logs'&&byId('log-job').value===ident)await loadSelectedLog();
     }
+    // Consume resumable SSE events, coalesce refreshes and guard reconnects with the active event generation.
     async function watchJob() {
       eventController?.abort(); const generation = ++eventGeneration, ident = activeJobId;
       let cursor = 0;
@@ -1051,6 +1074,7 @@
     }));
     byId('run-report').addEventListener('click',()=>run(()=>downloadLogFile('/api/jobs/'+activeJobId+'/report','Abschlussbericht-'+activeJobId+'.html')));
     byId('nav-results').addEventListener('click',()=>run(()=>navigate('results')));
+    // Buffer only bounded log/report responses; large result and original ZIPs use ticket anchors elsewhere.
     async function downloadLogFile(path, name) {
       const response = await fetch(path,{headers:{Authorization:'Bearer '+token}});
       if (!response.ok) throw new Error(t("web.s461"));
@@ -1059,6 +1083,7 @@
       setTimeout(() => URL.revokeObjectURL(url),1000);
     }
     let diagnosticsTicket = null;
+    // Render locally stored text with textContent; this view does not send feedback to an external service.
     async function loadFeedback() {
       const requestToken = token, data = await api('/api/feedback');
       if (requestToken !== token || byId('workspace').hidden) return;
@@ -1199,12 +1224,14 @@
       setUiText(byId('current-token'), () => show ? token : '');
       setUiText(byId('show-token'), () => show ? t("web.s473") : t("web.s145"), true);
     });
+    // Discard the preview capability when import inputs change so an older proposal cannot be applied.
     function invalidateImport() {
       importTicket = null; importGeneration++;
       byId('config-preview').hidden = true; byId('apply-config').disabled = true;
       byId('replace-confirm').checked = false;byId('legacy-confirm').checked=false;byId('legacy-confirm-label').hidden=true;
       for (const id of ['config-preview-changes','config-preview-errors','config-preview-warnings']) byId(id).replaceChildren();
     }
+    // Require the preview ticket plus any replace/legacy acknowledgements before enabling Apply.
     function updateImportButton() {
       byId('apply-config').disabled = !importTicket ||
         byId('import-strategy').value === 'replace' && !byId('replace-confirm').checked || !byId('legacy-confirm-label').hidden && !byId('legacy-confirm').checked;

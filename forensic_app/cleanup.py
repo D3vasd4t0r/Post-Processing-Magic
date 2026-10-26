@@ -24,12 +24,14 @@ TERMINAL = ('succeeded','failed','cancelled','interrupted')
 
 
 class Preview(BaseModel):
+    """Choose one cleanup category and optionally restrict it to a single job."""
     model_config = ConfigDict(extra='forbid')
     category: Literal['cache','evidence','results']
     job_id: str | None = None
 
 
 class Apply(BaseModel):
+    """Require a preview ticket and an explicit true confirmation before deletion."""
     model_config = ConfigDict(extra='forbid')
     ticket: str
     confirmed: StrictBool
@@ -43,17 +45,28 @@ class Apply(BaseModel):
 
 
 class Cleanup:
+    """Preview and remove selected app-owned data using expiring manifest-bound tickets.
+
+    Job history/configuration remain. Local original references and category-specific
+    protected outputs are excluded; deletion is not a reversible database transaction.
+    """
     def __init__(self, storage, overview):
         self.storage, self.overview = storage, overview
         self.lock = threading.Lock()
         self.tickets = {}
 
     def initialize(self):
+        """Mark prior running cleanup events interrupted and clear the admission flag on startup."""
         with closing(sqlite3.connect(self.storage.database)) as c, c:
             c.execute("UPDATE cleanup_events SET status='interrupted' WHERE status='running'")
             c.execute('UPDATE cleanup_state SET active=0 WHERE id=1')
 
     def idle(self, c):
+        """Check drain, download leases, cleanup, pending archives and active forensic jobs.
+
+        Callers choose transaction scope; apply repeats these gates while acquiring the
+        persistent cleanup flag before filesystem deletion.
+        """
         from forensic_app.server_control import accepting
         accepting(c)
         if c.execute("SELECT 1 FROM source_streams WHERE expires>? LIMIT 1", (time.time(),)).fetchone():
@@ -66,6 +79,7 @@ class Cleanup:
             raise HTTPException(409,ErrorText('error.da5a487eb1b1'))
 
     def checked(self, path, root=None):
+        """Check an absolute descendant path and reject linked components before returning metadata."""
         root = Path(root) if root is not None else self.storage.root.resolve()
         if not path.is_absolute() or not path.is_relative_to(root):
             raise AppValueError('error.601b0357277b')
@@ -80,6 +94,12 @@ class Cleanup:
         return path.lstat()
 
     def manifest(self, category, job_id=None):
+        """Build a bounded postorder deletion manifest and its metadata fingerprint.
+
+        Protect all recorded local originals, skip non-forensic job targets, links and
+        special files, and retain result directories during cache cleanup. File contents
+        are not read; limits abort the preview rather than approving an incomplete list.
+        """
         root = self.storage.root.resolve()
         with closing(sqlite3.connect(self.storage.database)) as c:
             rows = c.execute('SELECT id,config_json FROM jobs').fetchall()
@@ -145,6 +165,11 @@ class Cleanup:
         return records, digest, skipped
 
     def preview(self, category, job_id=None):
+        """Check idle state and issue a ten-minute ticket for the current manifest fingerprint.
+
+        Return counts and category scope without deleting anything. Apply must regenerate
+        the manifest and reject changes before acting.
+        """
         if job_id:
             from forensic_app.jobs import JobStore
             JobStore(self.storage).get(job_id)
@@ -167,6 +192,12 @@ class Cleanup:
                      'Ergebnisordner, Ergebnis-ZIPs UND Abschlussberichte werden entfernt; Explorer/Download stehen danach dafür nicht mehr bereit.')}
 
     def apply(self, ticket):
+        """Consume the ticket, close admission, recheck its manifest, and remove listed entries.
+
+        Revalidate roots, paths and file metadata before each removal; collect up to twenty
+        errors and audit partial results. Always release the cleanup flag. Earlier
+        filesystem deletions cannot be rolled back if later entries fail.
+        """
         with self.lock:
             value = self.tickets.pop(ticket,None)
         if not value or value[0] < time.monotonic():
@@ -213,6 +244,7 @@ class Cleanup:
 
 
 def cleanup_router(cleaner, authorize):
+    """Expose authenticated preview and explicitly confirmed cleanup application endpoints."""
     router = APIRouter(prefix='/api/settings/cleanup',dependencies=[Depends(authorize)])
 
     @router.post('/preview')

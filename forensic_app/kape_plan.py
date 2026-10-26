@@ -1,4 +1,9 @@
-"""Conservative first execution profile: one offline KAPE module command."""
+"""Compile saved workflows into explicit Windows argument lists without execution.
+
+Support at most one offline KAPE tool block plus explicit PowerShell blocks.
+Capture mode records binary hashes/versions and limited direct KAPE dependency
+metadata for the immutable run snapshot.
+"""
 
 import base64
 import ctypes
@@ -13,6 +18,11 @@ from forensic_app.modes import ModeDraft
 
 
 def windows_arguments(parameters: str) -> list[str]:
+    """Split parameters using Windows CommandLineToArgvW rules, without a shell.
+
+    A dummy executable anchors parsing and is discarded. The native argument
+    allocation is freed before returning the remaining argument list.
+    """
     if os.name != "nt":
         raise AppValueError('error.27bf8611e0e8')
     shell = ctypes.WinDLL("shell32", use_last_error=True)
@@ -31,12 +41,18 @@ def windows_arguments(parameters: str) -> list[str]:
 
 
 def sha256_file(path: Path) -> str:
+    """Read a configured tool file and return its SHA-256 digest without executing it."""
     with path.open("rb") as source:
         return hashlib.file_digest(source, "sha256").hexdigest()
 
 
 def file_version(path: str) -> str:
     # Read PE version resources without starting the configured executable.
+    """Read the executable fixed PE file-version resource through Win32.
+
+    Return the existing descriptive fallback when metadata is absent or unreadable.
+    This reads version resources; it does not validate a digital signature.
+    """
     class FixedInfo(ctypes.Structure):
         _fields_ = [(key, ctypes.c_uint32) for key in (
             "signature", "structure", "version_ms", "version_ls", "product_ms", "product_ls",
@@ -63,6 +79,12 @@ def file_version(path: str) -> str:
 
 
 def compile_kape(mode: dict, tools: list[dict], *, capture: bool = False) -> dict:
+    """Validate and compile exactly one supported offline KAPE tool block.
+
+    Accept only the enumerated switches, a source under the extraction folder and
+    the configured output folder. Capture adds binary metadata and a limited
+    manifest, not a complete dependency resolution.
+    """
     draft = ModeDraft.model_validate({key: value for key, value in mode.items()
                                     if key not in ("id", "status", "executable", "slot_conflict")})
     if len(draft.steps) != 1:
@@ -112,6 +134,12 @@ def compile_kape(mode: dict, tools: list[dict], *, capture: bool = False) -> dic
 
 
 def compile_plan(mode: dict, tools: list[dict], *, capture: bool = False) -> dict:
+    """Compile ordered PowerShell blocks and at most one supported KAPE block.
+
+    PowerShell uses UTF-16LE EncodedCommand with explicit error/encoding handling;
+    that encoding is argument transport, not isolation. Display commands and argv
+    lists are separate; compilation launches neither scripts nor tools.
+    """
     draft = ModeDraft.model_validate({key: value for key, value in mode.items()
                                     if key not in ("id", "status", "executable", "slot_conflict")})
     if not draft.steps:

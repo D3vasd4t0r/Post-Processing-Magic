@@ -14,6 +14,7 @@ from forensic_app.storage import Storage
 
 
 class ToolLocation(BaseModel):
+    """Validate a display name and absolute local server path without probing or executing it."""
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
     name: str = Field(min_length=1, max_length=100)
     path: str = Field(min_length=1, max_length=4096)
@@ -32,6 +33,10 @@ class ToolLocation(BaseModel):
 
 
 def inspect_path(value: str) -> dict:
+    """Classify filesystem presence as file, directory, missing or inaccessible.
+
+    This metadata probe does not verify tool format, version or execution readiness.
+    """
     try:
         path = Path(value)
         if path.is_file():
@@ -44,6 +49,11 @@ def inspect_path(value: str) -> dict:
 
 
 def settings_router(storage: Storage, authorize) -> APIRouter:
+    """Build authenticated tool CRUD, path-check and server filesystem-picker endpoints.
+
+    Saving or browsing a path does not execute a program. Storage enforces references
+    and audits writes; route handlers translate expected storage failures.
+    """
     router = APIRouter(prefix="/api/settings/tools", dependencies=[Depends(authorize)])
 
     @router.get("")

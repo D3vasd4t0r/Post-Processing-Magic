@@ -1,3 +1,4 @@
+"""Module entry point with multiprocessing bootstrap guarded for frozen workers."""
 from multiprocessing import freeze_support
 
 from forensic_app.launcher import main

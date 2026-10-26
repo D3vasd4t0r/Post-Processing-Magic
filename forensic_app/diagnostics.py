@@ -39,6 +39,7 @@ STATIC = {
 
 
 def technical_event(message):
+    """Map recognized technical log lines to fixed event text; omit unknown message content."""
     if message in STATIC:
         return STATIC[message]
     if re.fullmatch(r'(Started|Finished) server process \[[0-9]+\]',message):
@@ -53,12 +54,21 @@ def technical_event(message):
 
 
 class Diagnostics:
+    """Build local technical snapshots with bounded one-use export tickets.
+
+    A lock protects the in-memory ticket map. Each ticket stores the exact ZIP bytes
+    shown by its preview rather than reopening source logs during export."""
     def __init__(self,storage,status=dict):
         self.storage,self.status = storage,status
         self.lock = threading.Lock()
         self.tickets = {}
 
     def preview(self):
+        """Capture allowlisted status and normalized events into an immutable preview ZIP.
+
+        Queue counts use a read-only database connection. Up to four technical log tails
+        of 64 KiB are considered and at most 800 mapped events are exported; unknown
+        lines are omitted. The ticket expires after ten minutes and at most four are kept."""
         now = datetime.now(UTC).isoformat()
         current = self.status()
         prefs,_ = PreferenceStore(self.storage).get()
@@ -136,6 +146,7 @@ class Diagnostics:
                 'message':'Vorschau entspricht exakt dem Export. Unbekannte Logdetails werden ausgelassen; kein automatischer Versand.'}
 
     def export(self,ticket):
+        """Consume a preview ticket once and return its saved ZIP bytes, or raise HTTP 410."""
         with self.lock:
             record = self.tickets.pop(ticket,None)
         if not record or record[0] <= time.monotonic():
@@ -149,6 +160,7 @@ class ExportRequest(BaseModel):
 
 
 def diagnostics_router(service,authorize):
+    """Mount authenticated preview/export endpoints around a shared diagnostic ticket service."""
     router = APIRouter(prefix='/api/diagnostics',dependencies=[Depends(authorize)])
     @router.post('/preview')
     def preview():

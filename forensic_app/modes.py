@@ -1,4 +1,7 @@
-"""Persisted mode drafts and a user-requested KAPE reference; deliberately no runner."""
+"""Persist editable ZIP workflow drafts and the once-only KAPE template.
+
+Validation and persistence do not execute commands or approve a runnable profile.
+"""
 
 import json
 import sqlite3
@@ -19,10 +22,12 @@ MAX_COMMAND_TIMEOUT_SECONDS = 7 * 24 * 60 * 60
 
 
 def canonical_effort(value: str) -> str:
+    """Match known effort labels case-insensitively, leaving unknown legacy values unchanged."""
     return next((effort for effort in EFFORTS if effort.casefold() == value.casefold()), value)
 
 
 class SlotConflict(ValueError):
+    # Another saved mode already occupies the requested format/effort slot.
     pass
 
 
@@ -41,6 +46,11 @@ KAPE_COMMAND = (
 
 
 class CommandStep(BaseModel):
+    """Describe one ordered tool reference or explicit PowerShell block.
+
+    The working directory is relative to the job workspace. A step stores configuration,
+    not a started process; command timeout limits are validated with the other fields.
+    """
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
     id: str = Field(default_factory=lambda: str(uuid4()), min_length=1, max_length=80)
     name: str = Field(default="Tool-Aufruf", min_length=1, max_length=120)
@@ -80,6 +90,11 @@ class CommandStep(BaseModel):
 
 
 class ModeDraft(BaseModel):
+    """Validate a ZIP workflow and its job-relative extraction and output directories.
+
+    Input/extraction and output paths must not overlap. Tool existence and slot conflicts
+    are checked by ModeStore.save rather than by model construction.
+    """
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
     name: str = Field(min_length=1, max_length=120)
     description: str = Field(default="", max_length=4000)
@@ -113,6 +128,7 @@ class ModeDraft(BaseModel):
     @field_validator("source_folder", "extract_folder", "output_folder")
     @classmethod
     def job_relative_folder(cls, value: str) -> str:
+        """Return a Windows-relative folder spelling after rejecting traversal and reserved parts."""
         path = PureWindowsPath(value)
         if path.drive or path.root or not path.parts or ".." in path.parts:
             raise AppValueError('error.96afd1b7e254')
@@ -152,10 +168,20 @@ KAPE_TEMPLATE = ModeDraft(
 
 
 class ModeStore:
+    """Persist workflow drafts, audit changes, and expose configuration completeness.
+
+    SQLite write transactions serialize slot checks with updates. Saving a draft does
+    not execute it; the job service separately decides whether a mode can run.
+    """
     def __init__(self, storage: Storage):
         self.storage = storage
 
     def initialize(self) -> None:
+        """Create configuration tables and seed the requested KAPE template only once.
+
+        Existing bodies are not rewritten. The applied-template marker prevents a deleted
+        or edited template from being restored on subsequent starts.
+        """
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.executescript("""
                 CREATE TABLE IF NOT EXISTS mode_drafts (
@@ -200,6 +226,7 @@ class ModeStore:
         )
 
     def list_modes(self) -> list[dict]:
+        """Load validated drafts and annotate duplicate format/effort slots without resolving them."""
         with closing(sqlite3.connect(self.storage.database)) as connection:
             modes = [{"id": row[0], **ModeDraft.model_validate_json(row[1]).model_dump(),
                       "status": "draft", "executable": False}
@@ -216,6 +243,7 @@ class ModeStore:
 
     def configuration(self) -> dict:
         # Presence checks are configuration diagnostics, not a claim that the runner exists.
+        """Describe slot availability and configured tool paths without granting execution approval."""
         modes = self.list_modes()
         tools = {tool["id"]: tool for tool in self.storage.list_tools()}
         availability = []
@@ -246,6 +274,11 @@ class ModeStore:
                 "workspace_pattern": str(self.storage.root / "work" / "{Aufbereitungs-ID}")}
 
     def save(self, mode_id: str, draft: ModeDraft, *, create: bool) -> dict:
+        """Check slot ownership and tool references, then write the draft and audit atomically.
+
+        An existing mode can retain its own slot, including a historical unknown effort.
+        New modes must use a supported effort; referenced tool IDs must already exist.
+        """
         body = draft.model_dump_json()
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -288,6 +321,7 @@ class ModeStore:
         return {"id": mode_id, **draft.model_dump(), "status": "draft", "executable": False}
 
     def delete(self, mode_id: str) -> None:
+        """Delete one draft and record its previous body in the same write transaction."""
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             old = connection.execute(
@@ -300,6 +334,7 @@ class ModeStore:
 
 
 def modes_router(store: ModeStore, authorize) -> APIRouter:
+    """Build authenticated draft CRUD endpoints, mapping storage and validation failures to HTTP errors."""
     router = APIRouter(prefix="/api/settings/modes", dependencies=[Depends(authorize)])
 
     @router.get("")

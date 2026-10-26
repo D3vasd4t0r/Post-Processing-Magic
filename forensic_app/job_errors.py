@@ -6,6 +6,11 @@ from forensic_app.app_errors import AppValueError
 
 
 def describe_error(exc: BaseException, stage: str) -> dict:
+    """Capture a job failure's stage, canonical detail, recommendation and bounded traceback.
+
+    Known failure classes/message patterns choose app-owned hints. Structured app
+    codes are retained for UI translation; raw exception text is not translated or
+    claimed to be a forensic finding."""
     original = str(exc).strip()
     kind = "ValueError" if isinstance(exc, AppValueError) else type(exc).__name__
     message = original or ("Upload-Verbindung wurde vor Abschluss getrennt." if kind == "ClientDisconnect"

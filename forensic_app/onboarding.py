@@ -1,4 +1,4 @@
-"""Configuration guidance only: no installation, program start, or profile approval."""
+"""Offer bounded forensic tool-assignment guidance without installing or starting programs."""
 from pathlib import Path
 
 from forensic_app.interface_preferences import InterfacePreferences
@@ -6,6 +6,12 @@ from forensic_app.modes import ModeStore
 
 
 def tool_guidance(storage):
+    """Report missing assignments, records or program files in supported forensic drafts.
+
+    Skip drafts with multiple tool blocks and bound returned requirements to 100.
+    Presence checks are metadata only; this hint neither approves execution nor
+    changes the saved dismissal preference.
+    """
     tools={tool['id']:tool for tool in storage.list_tools()}
     required=[]
     skipped=0

@@ -1,4 +1,8 @@
-"""Versioned configuration exchange, with immutable preview tickets and atomic application."""
+"""Exchange versioned forensic configuration using preview tickets and atomic database updates.
+
+Schema 4 exports tools, modes and limits only. Legacy malware fields are accepted
+solely as import compatibility data and require explicit confirmation of omission.
+"""
 
 import hashlib
 import json
@@ -28,14 +32,21 @@ TICKET_TTL = 600
 
 
 class ExportTool(ToolLocation):
+    """Add a portable identifier to a validated server-local tool location."""
     id: str = Field(min_length=1, max_length=80, pattern=r"^[A-Za-z0-9_-]+$")
 
 
 class ExportMode(ModeDraft):
+    """Add a portable identifier to a validated ZIP workflow draft."""
     id: str = Field(min_length=1, max_length=80, pattern=r"^[A-Za-z0-9_-]+$")
 
 
 class ConfigurationFile(BaseModel):
+    """Validate schemas 1 through 4 without interpreting legacy malware payloads.
+
+    Presence of the legacy field is tracked separately from its value. Schema 4 forbids
+    that field; older schemas require a confirmed omission before application.
+    """
     model_config = ConfigDict(extra="forbid")
     format: Literal["post-processing-magic.configuration"]
     schema_version: Literal[1, 2, 3, 4]
@@ -54,12 +65,14 @@ class ConfigurationFile(BaseModel):
 
 
 class PreviewRequest(BaseModel):
+    """Select merge or replacement semantics for a validated configuration document."""
     model_config = ConfigDict(extra="forbid")
     strategy: Literal["merge", "replace"] = "merge"
     document: ConfigurationFile
 
 
 class ApplyRequest(BaseModel):
+    """Present a preview ticket and any required replacement or legacy-omission confirmations."""
     model_config = ConfigDict(extra="forbid")
     ticket: str = Field(min_length=1, max_length=100)
     confirm_replace: bool = False
@@ -67,10 +80,15 @@ class ApplyRequest(BaseModel):
 
 
 def dump(value) -> str:
+    """Serialize configuration deterministically for comparison, fingerprints and database records."""
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
 def snapshot(connection) -> dict:
+    """Read only tools, forensic drafts and limits using the caller-owned connection.
+
+    The caller controls transaction scope. Passive legacy tables are not inspected.
+    """
     tools = [{"id": row[0], "name": row[1], "path": row[2]} for row in connection.execute(
         "SELECT id, name, path FROM tool_locations ORDER BY id"
     )]
@@ -81,6 +99,7 @@ def snapshot(connection) -> dict:
 
 
 def document(state: dict) -> dict:
+    """Project configuration onto the schema-4 export fields and add version/time metadata."""
     return {"format": "post-processing-magic.configuration", "schema_version": 4,
             "app_version": __version__, "exported_at": datetime.now(UTC).isoformat(),
             **{key: state[key] for key in ("tools", "modes", "limits")}}
@@ -88,10 +107,12 @@ def document(state: dict) -> dict:
 
 
 def fingerprint(state: dict) -> str:
+    """Hash the deterministic configuration representation for stale-preview detection."""
     return hashlib.sha256(dump(state).encode("utf-8")).hexdigest()
 
 
 def validate_state(state: dict) -> list[str]:
+    """Report duplicate IDs/names, conflicting slots, unknown efforts and missing tool references."""
     errors = []
     for kind in ("tools", "modes"):
         ids, names = set(), set()
@@ -119,6 +140,7 @@ def validate_state(state: dict) -> list[str]:
 
 
 def changes(before: list[dict], after: list[dict]) -> dict:
+    """Compare records by ID and return names of additions, edits and removals plus unchanged count."""
     old, new = {item["id"]: item for item in before}, {item["id"]: item for item in after}
     return {
         "added": [new[key]["name"] for key in new.keys() - old.keys()],
@@ -129,12 +151,18 @@ def changes(before: list[dict], after: list[dict]) -> dict:
 
 
 class ConfigurationTransfer:
+    """Manage bounded, expiring in-memory import previews for one server process.
+
+    Tickets contain the proposed state and a fingerprint of the observed configuration.
+    They are not durable across restart and never represent permission to execute tools.
+    """
     def __init__(self, storage: Storage):
         self.storage = storage
         self.lock = threading.Lock()
         self.tickets = {}
 
     def initialize(self):
+        """Create the import audit table without initializing or loading passive legacy tables."""
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.execute("""
                 CREATE TABLE IF NOT EXISTS configuration_import_events (
@@ -144,14 +172,21 @@ class ConfigurationTransfer:
             """)
 
     def current(self) -> dict:
+        """Read a consistent forensic configuration snapshot in one SQLite read transaction."""
         with closing(sqlite3.connect(self.storage.database)) as connection, connection:
             connection.execute("BEGIN")
             return snapshot(connection)
 
     def export(self) -> dict:
+        """Return the current forensic configuration in the portable schema-4 envelope."""
         return document(self.current())
 
     def preview(self, request: PreviewRequest) -> dict:
+        """Validate the combined state and issue a ticket without modifying configuration.
+
+        Path/completeness warnings do not execute tools. Even an empty explicitly present
+        legacy field requires confirmation; tickets expire and are bounded per process.
+        """
         before = self.current()
         incoming = {"tools": [tool.model_dump() for tool in request.document.tools],
                     "modes": [mode.model_dump() for mode in request.document.modes]}
@@ -193,6 +228,12 @@ class ConfigurationTransfer:
         return result
 
     def apply(self, request: ApplyRequest) -> dict:
+        """Recheck confirmations and the configuration fingerprint under a write transaction.
+
+        Write a configuration-only JSON backup before replacing tools, drafts and limits
+        and recording the import. Database changes roll back on failure; a written backup
+        can remain. Passive legacy tables are untouched and no analysis is started.
+        """
         with self.lock:
             preview = self.tickets.get(request.ticket)
             if preview is None or preview["expires"] <= time.monotonic():
@@ -235,6 +276,10 @@ class ConfigurationTransfer:
 
 
 async def read_payload(request: Request, model):
+    """Bound streamed request bytes and parse the requested Pydantic model.
+
+    Validation responses omit supplied input values and localize structured app errors.
+    """
     body = bytearray()
     async for chunk in request.stream():
         body.extend(chunk)
@@ -251,6 +296,7 @@ async def read_payload(request: Request, model):
 
 
 def configuration_router(service: ConfigurationTransfer, authorize) -> APIRouter:
+    """Expose authenticated export, preview and apply routes; offload synchronous import work."""
     router = APIRouter(prefix="/api/settings/configuration", dependencies=[Depends(authorize)])
 
     @router.get("/export")

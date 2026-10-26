@@ -4,11 +4,13 @@ const I18n = (() => {
   let locale = 'de';
   try { if (localStorage.getItem('ppm-locale') === 'en') locale = 'en'; } catch { /* storage may be disabled */ }
   const rendered = new WeakMap();
+  // Substitute named placeholders in an explicit catalog key; return plain text to the caller.
   function t(key, params = {}) {
     const value = catalogs[locale][key] ?? catalogs.de[key] ?? key;
     return value.replace(/\{([a-zA-Z][a-zA-Z0-9_]*)\}/g, (match, name) =>
       Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match);
   }
+  // Translate only marked labels. Preserve text already replaced by a live or raw-data renderer.
   function apply(root = document) {
     for (const node of root.querySelectorAll('[data-i18n],[data-i18n-aria-label],[data-i18n-placeholder],[data-i18n-title]')) {
       for (const attribute of ['textContent', 'aria-label', 'placeholder', 'title']) {
@@ -28,6 +30,7 @@ const I18n = (() => {
     const selector = document.getElementById('interface-locale');
     if (selector) selector.value = locale;
   }
+  // Wait for both bundled catalogs, remember the browser choice and refresh explicit bindings.
   async function setLocale(value) {
     if (!['de', 'en'].includes(value)) throw new Error('Unsupported locale');
     await ready;
@@ -46,11 +49,13 @@ const I18n = (() => {
 const t = (key, params) => I18n.t(key, params);
 // Explicit app render bindings; no text lookup, DOM observer, HTML rewriting or raw-data translation.
 const uiTextBindings = new Map();
+// Use textContent for raw and localized values; retain only explicitly localized render callbacks.
 function setUiText(node, render, localized = false) {
   node.textContent = render();
   if (localized) uiTextBindings.set(node, render);
   else uiTextBindings.delete(node);
 }
+// Refresh connected localized nodes and discard detached bindings without scanning user output.
 function refreshUiText() {
   for (const [node, render] of uiTextBindings) {
     if (node.isConnected) node.textContent = render();

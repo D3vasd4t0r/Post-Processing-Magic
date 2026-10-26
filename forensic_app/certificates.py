@@ -13,6 +13,7 @@ from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
 
 def local_names() -> list[x509.GeneralName]:
+    """Collect localhost, host DNS name and resolvable local IP addresses for certificate SANs."""
     names: set[str] = {"localhost", socket.gethostname().lower()}
     addresses = {"127.0.0.1", "::1"}
     try:
@@ -26,6 +27,12 @@ def local_names() -> list[x509.GeneralName]:
 
 
 def ensure_certificate(directory: Path) -> tuple[Path, Path]:
+    """Return an existing usable TLS identity or generate a local EC self-signed pair.
+
+    An existing pair is reused only if it covers current local names and remains
+    valid beyond seven days. Malformed or mismatched files raise instead of silently
+    being replaced; generated files replace their targets through temporary paths.
+    No system or browser trust store is changed."""
     directory.mkdir(parents=True, exist_ok=True)
     cert_path, key_path = directory / "server.crt", directory / "server.key"
     now = datetime.now(UTC)

@@ -2,21 +2,20 @@
 
 Lokale, konfigurierbare Nachbearbeitung von ZIP-Evidencen unter Windows.
 
-**Version 0.40.0:** vereinfachte Forensik-Aufbereitung. Frühere Releases bleiben separat verfügbar.
+**Version 0.41.0:** Dokumentationsrelease auf Basis der vom Nutzer erfolgreich getesteten Version 0.40.0. Die Aufbereitungsfunktionen bleiben unverändert. Frühere Releases bleiben separat verfügbar.
 
-[Windows-Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.40](docs/releases/0.40.0.md) · [Architektur](docs/ARCHITECTURE.md) · [Konfiguration](docs/CONFIGURATION.md)
+[Windows-Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.41](docs/releases/0.41.0.md) · [Code-Wiki (offline)](docs/code-wiki/index.html) · [Architektur](docs/ARCHITECTURE.md) · [Konfiguration](docs/CONFIGURATION.md)
 
-## Neu in 0.40
+## Neu in 0.41
 
-- Eine blaue Aufbereitungsoberfläche mit fünf Seiten: Aufbereitung, Einstellungen, Logs, Ergebnisse und Feedback. Quelle, ZIP-Format, Aufwand, Fallnummer und Gerätename direkt im Formular; kein Einfach/Fortgeschritten-Umschalter.
-- Vier Einstellungskategorien: Tools, Modi, Allgemein und Konfiguration. Der bestehende Baukasten mit Toolreferenzen, Parametern und freien PowerShell-Blöcken bleibt erhalten.
-- Logs über einen Auftragsdropdown, Status, Arbeitsordner und scrollbares Terminal. Auf der Hauptseite bleiben Fortschritt, Fehler und Abbruch erreichbar.
-- Ergebnisse nach Auftrag mit Fall/Gerät, Datum und kurzer ID. Ergebnis-ZIP, HTML-/JSON-Bericht und hochgeladenes Original bleiben eindeutig zugeordnet. Lokale ZIPs erscheinen ausschließlich als geprüfte Referenz oder als nicht verfügbar.
-- Berichte enthalten Verarbeitungsmetadaten, Eingangs-/Ausgangs-SHA-1/SHA-256 sowie begrenzte Datei-/Pfadlisten und Ordner-/Dateianzahlen. Keine Toolausgaben, Kommandozeilen oder internen Inhaltsbefunde in Berichten.
-- Portabler Forensik-Konfigurationsexport als Schema 4. Frühere Konfigurationen werden mit Vorschau eingelesen; entfallene Bereiche erfordern eine zusätzliche ausdrückliche Bestätigung. Speichern und Import starten keine Befehle.
-- Die interne Malware-Analyse wurde entfernt; historische Daten bleiben passiv erhalten. Keine automatische Wiederaufnahme alter Analysejobs.
+- Englische Modul-, Klassen- und Funktionsdokumentation zu Schnittstellen, Datenverträgen, Transaktionen, Seiteneffekten und Prozess-/Dateilebenszyklen.
+- Erklärende englische Kommentare in der Weblogik und im PowerShell-Buildskript; keine Übersetzung bestehender Nutzer-, Hilfe- oder Fehlertexte.
+- Ein englisches [HTML-Code-Wiki](docs/code-wiki/index.html) zu Architektur, Quellmodulen, Verarbeitung, Konfiguration, API, Oberfläche und Entwicklung. Es öffnet direkt von der Festplatte, ohne Server oder Internet.
+- Das Windows-ZIP enthält das Wiki unter **docs/code-wiki/index.html** zusammen mit README und den verlinkten Projektdokumenten. ZIP vollständig entpacken und die HTML-Datei doppelklicken.
 
-CSV-/XLSX-Inhaltsvorschauen, externe Ergebnis-Viewer und interne Evidenzauswertungen wurden auf ausdrücklichen Nutzerwunsch entfernt. Nutzererzeugte Toolausgaben bleiben im Ergebnisarchiv erhalten, auch bei gleichnamigen Dateien in verschiedenen Ordnern.
+0.41 fügt keine Funktionen, Sicherheitskorrekturen, Refactorings oder Abhängigkeiten hinzu. Python-Syntaxbäume werden nach Entfernen der Docstrings gegen 0.40 verglichen; freigegebene Ausnahmen sind die Versionsnummer und der zusätzliche Dokumentationsinhalt des Release-ZIPs. JS-/PowerShell-Änderungen sind Kommentare beziehungsweise Versionsangaben. Pydantic-/API-Docstrings können beschreibende Schema-Metadaten ergänzen.
+
+Die Dokumentation beschreibt den vorhandenen Code. Sie ist kein Sicherheitsgutachten und erweitert keine Unterstützung für Evidenzformate oder Toolrunner. Version 0.40 wurde vom Nutzer abgenommen und wird im Berufsalltag erprobt.
 
 ## Funktionsumfang
 
@@ -60,4 +59,8 @@ Ein erfolgreicher Python-Test ersetzt keine EXE-Abnahme. Die Releaseprüfung sta
 
 ## Prüfung dieses Releases
 
-Lokal 317 Tests bestanden, zwei Symlink-Berechtigungstests übersprungen; Ruff und JavaScript-Syntax erfolgreich. Sieben Prüfgruppen mit der gebauten Windows-EXE erfolgreich: Start, Workflow/Archive/Bereinigung, Stop/Abbruch, Wartung/HTTPS, KAPE-Dateinachweise, Konfiguration sowie Quellen/Metadatenberichte. Eigene synthetische Browserläufe, DE/EN und 390-px-Darstellung geprüft. Das ersetzt keine fachliche Nutzerabnahme echter KAPE-Ergebnisse oder einen Test mit tatsächlich 2 TB Daten.
+Der Dokumentationsstand wird mit Syntaxbaum-/Kommentarvergleich, bestehenden Tests, Ruff, JavaScript-Prüfung, Windows-EXE-Prüfgruppen sowie Offline-Link- und Browserprüfung des Wikis geprüft. Die konkreten Abschlussbelege stehen in der Releasebeschreibung und [Validierung 0.41](docs/VALIDATION_041.md).
+
+Die erfolgreiche Nutzerabnahme von 0.40 bleibt die funktionale Basis. Automatisierte Prüfungen verwenden eigene synthetische Daten; sie ersetzen keine fachliche Bewertung echter KAPE-Ergebnisse und keinen tatsächlichen 2-TB-Praxistest.
+
+Künftige Releases und Testpakete werden ausschließlich auf GitHub veröffentlicht.

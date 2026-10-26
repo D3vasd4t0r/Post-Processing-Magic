@@ -1,3 +1,4 @@
+# Build from the repository root with its isolated Python environment; never package runtime data.
 param(
     [string]$Python = "$PSScriptRoot\.venv\Scripts\python.exe",
     [string]$OutputDirectory = "$PSScriptRoot\dist"
@@ -8,6 +9,7 @@ try {
     if (-not (Test-Path -LiteralPath $Python)) {
         throw 'Zuerst eine .venv mit Python 3.12+ und pip install -e .[dev] einrichten.'
     }
+    # Reject a release before packaging if the existing regression suite fails.
     & $Python -m pytest
     if ($LASTEXITCODE -ne 0) { throw 'Tests fehlgeschlagen.' }
     & $Python -m ruff check .
@@ -19,13 +21,16 @@ try {
     $sslPolicy = & $Python -c "import pathlib, ssl; p=pathlib.Path(ssl.__file__).with_name('codex-rejected-cas.pem'); print(p if p.is_file() else '')"
     $sslData = @()
     if ($sslPolicy) { $sslData = @('--add-data', ($sslPolicy.Trim() + ';.')) }
+    # Bundle only application code, local UI/catalog assets and the frozen entry point.
     & $Python -m PyInstaller @sslData --noconfirm --noupx --onefile --windowed --icon 'forensic_app/assets/shield.ico' --name PostProcessingMagic --distpath $OutputDirectory --workpath $buildDirectory --add-data 'forensic_app/web:forensic_app/web' --add-data 'forensic_app/assets:forensic_app/assets' --add-data 'forensic_app/locales:forensic_app/locales' --collect-submodules uvicorn run_app.py
     if ($LASTEXITCODE -ne 0) { throw 'PyInstaller-Build fehlgeschlagen.' }
+    # Record the build environment beside the EXE; distribution ZIP assembly is a separate step.
     & $Python -m pip freeze | Set-Content -LiteralPath (Join-Path $OutputDirectory 'build-environment.txt') -Encoding utf8
     if ($LASTEXITCODE -ne 0) { throw 'Paketinventar fehlgeschlagen.' }
     & $Python -c "from forensic_app import __version__; print(__version__)" | Set-Content -LiteralPath (Join-Path $OutputDirectory 'app-version.txt') -Encoding utf8
     if ($LASTEXITCODE -ne 0) { throw 'App-Version konnte nicht erfasst werden.' }
     Write-Host "Erstellt: $OutputDirectory\PostProcessingMagic.exe (EXE-Abnahme separat ausführen)."
+# Restore the caller directory even when validation or packaging raises.
 } finally {
     Pop-Location
 }

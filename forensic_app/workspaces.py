@@ -17,6 +17,10 @@ from forensic_app.local_paths import validate_local_path
 
 
 def no_links(path):
+    """Reject symlinks or Windows reparse points along the supplied path components.
+
+    This is a metadata check at call time, not an OS isolation or ownership boundary.
+    """
     current = Path(path.anchor)
     for part in path.parts[1:]:
         current /= part
@@ -26,6 +30,7 @@ def no_links(path):
 
 
 def registered_root(storage, value=None):
+    """Resolve the default root or validate a registered custom root and its owner marker."""
     root = Path(value) if value else storage.root
     default = storage.root.resolve()
     if root == default or root == storage.root:
@@ -43,10 +48,12 @@ def registered_root(storage, value=None):
 
 
 def job_root(storage, plan):
+    """Select the registered root frozen in a job plan, falling back for older plans."""
     return registered_root(storage, plan.get('data_root'))
 
 
 def job_paths(storage, plan, ident):
+    """Validate a canonical job UUID and data-area paths, then derive work and result-ZIP paths."""
     if str(UUID(ident)) != ident:
         raise AppValueError('error.2f50ad74f414')
     root = job_root(storage,plan)
@@ -56,20 +63,24 @@ def job_paths(storage, plan, ident):
 
 
 def all_roots(storage):
+    """Return the default and recorded custom roots; callers validate each before filesystem use."""
     with closing(sqlite3.connect(storage.database)) as c:
         return [storage.root.resolve(),*[Path(row[0]) for row in c.execute('SELECT path FROM workspace_roots')]]
 
 
 class Destination(BaseModel):
+    """Accept a server-local parent folder, or None to restore the default for future jobs."""
     model_config = ConfigDict(extra='forbid')
     folder: str | None = None
 
 
 class Workspaces:
+    """Manage registered destinations for new job snapshots without migrating previous jobs."""
     def __init__(self, storage):
         self.storage = storage
 
     def get(self):
+        """Report the selected/default root, free space and future-jobs-only setting scope."""
         with closing(sqlite3.connect(self.storage.database)) as c:
             value = c.execute('SELECT path FROM workspace_settings WHERE id=1').fetchone()[0]
         root = registered_root(self.storage,value)
@@ -78,6 +89,11 @@ class Workspaces:
                 'note':'Gilt nur für neue Aufträge. Vorhandene Daten werden nicht verschoben. Serverlokale Einstellung, nicht im Konfigurationsexport.'}
 
     def save(self, folder):
+        """Prepare a marked app-owned subfolder and persist the destination for future jobs.
+
+        Reject protected data-area parents and unsuitable locations, probe writability,
+        and record the setting. Existing job files stay at their recorded roots.
+        """
         selected = None
         if folder is not None:
             base = Path(validate_local_path(folder))
@@ -119,6 +135,7 @@ class Workspaces:
 
 
 def workspace_router(workspaces, authorize):
+    """Expose authenticated destination settings with filesystem/validation error mapping."""
     router = APIRouter(prefix='/api/settings/workspace',dependencies=[Depends(authorize)])
     @router.get('')
     def get():

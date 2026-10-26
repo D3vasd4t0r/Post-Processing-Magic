@@ -16,6 +16,7 @@ from forensic_app.workspaces import job_root
 
 
 def local_client(host: str | None) -> bool:
+    """Recognize numeric loopback peers, including IPv4-mapped IPv6; unknown hosts are not local."""
     try:
         address = ipaddress.ip_address(host or "")
         return address.is_loopback or bool(getattr(address, "ipv4_mapped", None) and address.ipv4_mapped.is_loopback)
@@ -24,11 +25,16 @@ def local_client(host: str | None) -> bool:
 
 
 class ResultExplorer:
+    """Resolve completed output folders and request Explorer display for an authenticated local caller."""
     def __init__(self, storage, store):
         self.storage = storage
         self.store = store
 
     def folder(self, ident):
+        """Resolve the persisted job output folder inside its registered work root.
+
+        The job must have succeeded. Each traversed component is checked for reparse
+        points, and missing or invalid folders become explicit HTTP failures."""
         if self.store.get(ident)["status"] != "succeeded":
             raise HTTPException(409, ErrorText('error.8e1771fb3ebc'))
         with closing(sqlite3.connect(self.storage.database)) as connection:
@@ -57,6 +63,7 @@ class ResultExplorer:
             raise HTTPException(409, ErrorText('error.88f86f2c9a70', p0=error_detail(exc))) from exc
 
     def checked_folder(self, ident, host):
+        """Require a loopback caller, validated output folder and interactive Windows desktop."""
         if not local_client(host):
             raise HTTPException(403, ErrorText('error.d78db0712ef2'))
         folder = self.folder(ident)
@@ -65,6 +72,7 @@ class ResultExplorer:
         return folder
 
     def availability(self, ident, host):
+        """Report display availability and its reason without launching Windows Explorer."""
         try:
             self.checked_folder(ident, host)
             return {"local": True, "available": True, "reason": "Zeigt den markierten Ergebnisordner im übergeordneten Windows-Explorer-Verzeichnis, ohne Download."}
@@ -72,6 +80,10 @@ class ResultExplorer:
             return {"local": local_client(host), "available": False, "reason": exc.detail}
 
     def open(self, ident, host):
+        """Request Explorer display of the checked folder and record an authenticated-local event.
+
+        The response confirms the request, not that the user saw or interacted with the
+        window. No result file is executed or downloaded by this operation."""
         folder = self.checked_folder(ident, host)
         try:
             open_explorer(folder)

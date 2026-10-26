@@ -36,17 +36,20 @@ def is_presentation_path(path):
 
 @lru_cache(maxsize=2)
 def catalog(locale):
+    """Cache a bundled UI-metadata catalog with German fallback for unsupported locales."""
     language=locale if locale in ('de','en') else 'de'
     return json.loads((Path(__file__).parent/'locales'/f'presentation.{language}.json').read_text(encoding='utf-8'))
 
 
 class Presentation:
+    """Localize selected fields on a copied UI response, without accessing persistent data."""
     def __init__(self,locale):
         self.locale=locale
         self.de=catalog('de')
         self.messages=catalog(locale)
 
     def exact(self,value,prefix):
+        """Translate exact known app text within one catalog prefix; retain unmatched user/raw values."""
         if not isinstance(value,str):
             return value
         for key,original in self.de.items():
@@ -55,6 +58,7 @@ class Presentation:
         return value
 
     def application_error(self,value):
+        """Translate structured errors or exact parameter-free canonical app errors only."""
         if isinstance(value,ErrorText):
             return value.localized(self.locale)
         if isinstance(value,str):
@@ -64,6 +68,7 @@ class Presentation:
         return value
 
     def phase(self,value):
+        """Translate known phases and the bounded local-hashing progress message pattern."""
         translated=self.exact(value,'phase.')
         if translated!=value or not isinstance(value,str):
             return translated
@@ -73,6 +78,7 @@ class Presentation:
         return value
 
     def job(self,job):
+        """Localize allowlisted phase and structured failure fields in the supplied response copy."""
         if not isinstance(job,dict):
             return
         if 'phase' in job:

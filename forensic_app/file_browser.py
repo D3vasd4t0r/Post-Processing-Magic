@@ -14,6 +14,7 @@ MAX_ENTRIES = 500
 
 
 class BrowseRequest(BaseModel):
+    """Validate an optional absolute server-local address and bounded name substring filter."""
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
     path: str | None = Field(default=None, max_length=4096)
     query: str = Field(default="", max_length=100)
@@ -25,12 +26,19 @@ class BrowseRequest(BaseModel):
 
 
 def roots() -> list[str]:
+    """Return Windows drive roots, or the home filesystem anchor on other systems."""
     if os.name == "nt":
         return sorted(os.listdrives())
     return [str(Path.home().anchor)]
 
 
 def browse(request: BrowseRequest) -> dict:
+    """List bounded server-local filesystem metadata for a picker without reading contents.
+
+    An explicit file address selects that file and lists its parent. Explicit addresses
+    are resolved before listing; enumeration skips links/junctions, special entries
+    and unreadable children. The response reports truncation and maps path errors.
+    """
     try:
         path = Path(request.path) if request.path else Path.home()
         path = path.resolve(strict=True)

@@ -1,4 +1,9 @@
-"""Completion reports and explicitly requested serial result archives."""
+"""Create metadata completion reports and serial optional result ZIPs.
+
+Reports project old and new data through an allowlist, excluding terminal text
+and command scripts. Configured tool outputs remain ordinary results;
+archive-only requests do not repeat the workflow.
+"""
 
 import hashlib
 import html
@@ -24,10 +29,12 @@ from forensic_app.zip_safety import ensure_space, output_files
 
 
 def utc():
+    """Return the current ISO-formatted UTC timestamp for report and archive state."""
     return datetime.now(UTC).isoformat()
 
 
 def hashes(path,check):
+    """Stream SHA-1 and SHA-256 over a read-locked file, checking cancellation per chunk."""
     sha1,sha256 = hashlib.sha1(),hashlib.sha256()
     with locked_input(path) as source:
         while chunk := source.read(8*1024**2):
@@ -38,6 +45,7 @@ def hashes(path,check):
 
 
 def report_folder(store,ident):
+    """Resolve the per-job report directory under its registered results root."""
     return store.paths(ident)[0]/'results'/ident
 
 
@@ -55,7 +63,11 @@ def archive_files(output, max_bytes, *, app_artifact_paths=()):
 
 
 def directory_statistics(files, directories, limit=1000):
-    """Bounded, direct file counts per folder, computed from metadata only."""
+    """Count direct child files per folder from recorded path metadata.
+
+    Return sorted bounded rows and a truncation flag. Counts are not recursive;
+    file contents are never opened for these statistics.
+    """
     counts = {}
     for item in files:
         if isinstance(item.get('path'), str):
@@ -126,7 +138,11 @@ def metadata_report(report):
 
 
 def render_report(report):
-    """Self-contained metadata report; every value is untrusted text."""
+    """Render allowlisted metadata as escaped standalone HTML in its stored locale.
+
+    Formatting neither reads originals nor executes commands. Only the projected
+    metadata fields are rendered.
+    """
     report = metadata_report(report)
     plan = report['configuration']
     t = ReportText(plan.get('locale', 'de'))
@@ -175,6 +191,11 @@ def render_report(report):
 
 
 def save_report(store,ident,report):
+    """Project metadata and atomically replace each JSON/HTML report file.
+
+    Files are written sequentially via separate .part files, not a two-file
+    transaction. A linked report directory is rejected before writing.
+    """
     folder = report_folder(store,ident)
     folder.mkdir(exist_ok=True)
     if folder.is_symlink() or folder.is_junction():
@@ -189,6 +210,12 @@ def save_report(store,ident,report):
 
 
 def prepare_report(store,ident,plan,command_runs,*,error=None):
+    """Build and save completion metadata from stored state and current output paths.
+
+    Input hashes/inventory come from stored state, never a fresh original read.
+    Successful runs validate/enumerate outputs; failures retain available run
+    metadata without claiming a completed output inventory.
+    """
     _root,work,_ = job_paths(store.storage,plan,ident)
     output = work/Path(*PureWindowsPath(plan['mode']['output_folder']).parts)
     state = store.get(ident)
@@ -232,6 +259,12 @@ def prepare_report(store,ident,plan,command_runs,*,error=None):
 
 
 def make_archive(store,ident,plan,report,check):
+    """Stream permitted tool outputs and metadata reports into a new result ZIP.
+
+    Write a temporary ZIP, hash it, then publish by rename. Embedded reports omit
+    the archive hash to avoid self-reference; external reports receive the final
+    hashes. The finally block removes any remaining temporary archive.
+    """
     if plan.get('workspace', 'forensics') != 'forensics':
         raise ValueError('Only ZIP preparation archives are supported.')
     report = metadata_report(report)
@@ -266,11 +299,23 @@ def make_archive(store,ident,plan,report,check):
 
 
 class ArchiveQueue:
+    """Persist archive-only requests for the same serial worker as ZIP jobs.
+
+    Admission and claiming honor cleanup; claiming also honors pause and drain.
+    Unsupported historical requests remain passive rather than being migrated
+    or executed.
+    """
     def __init__(self,store):
+        """Bind archive operations to the job store and its application storage."""
         self.store = store
         self.storage = store.storage
 
     def request(self,ident):
+        """Queue ZIP creation for a completed output without rerunning its workflow.
+
+        Check output availability, request limits and admission gates; the queued
+        request and archive event share one transaction.
+        """
         state = self.store.get(ident)
         if self.store.plan(ident).get('workspace', 'forensics') != 'forensics':
             raise HTTPException(409, 'Only ZIP preparation archives are supported.')
@@ -292,6 +337,7 @@ class ArchiveQueue:
         return {'queued':True}
 
     def claim(self):
+        """Atomically claim a supported request unless drain, cleanup or pause blocks it."""
         with closing(sqlite3.connect(self.storage.database)) as c,c:
             c.execute('BEGIN IMMEDIATE')
             if draining(c):
@@ -305,6 +351,12 @@ class ArchiveQueue:
 
     def run(self,ident,stop):
         # Historical unsupported requests remain passive, even on a direct call.
+        """Reinventory output metadata and create an explicitly requested archive once.
+
+        Retain the original completion timestamp, check stop/cancel flags and persist
+        archive state/events. This method does not automatically reexecute failed or
+        interrupted requests.
+        """
         with closing(sqlite3.connect(self.storage.database)) as connection:
             row = connection.execute("SELECT COALESCE(json_extract(config_json,'$.workspace'),'forensics') FROM jobs WHERE id=?", (ident,)).fetchone()
         if row and row[0] != 'forensics':

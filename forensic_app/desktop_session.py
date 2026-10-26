@@ -19,7 +19,12 @@ from forensic_app.storage import Storage
 
 
 class DesktopSession:
+    """Own one server process tree and verify its control identity before exposing readiness.
+
+    Control methods run on the panel's background thread. A separate daemon reader
+    captures child stdout into a locked, bounded deque; this class never calls Tk."""
     def __init__(self,args,*,executable=None):
+        """Prepare process, credential and preference state without launching a server."""
         self.args = args
         self.executable = executable
         self.root = args.data_dir.expanduser().resolve()
@@ -38,10 +43,12 @@ class DesktopSession:
         self.preference_revision = self.preferences.get()[1]
 
     def set_problem(self,key,**parameters):
+        """Store a canonical desktop message plus parameters for later UI localization."""
         self.problem = DesktopTranslations().t(key,**parameters)
         self.problem_i18n = {'key':key,'parameters':parameters,'original':self.problem,'catalog':'desktop'}
 
     def set_exception(self,exc):
+        """Retain raw failure text and, when available, its structured translation metadata."""
         self.problem,self.problem_i18n = str(exc),None
         if isinstance(exc,DesktopError):
             self.set_problem(exc.key,**exc.parameters)
@@ -53,14 +60,21 @@ class DesktopSession:
 
     def problem_description(self):
         # A raw exception assigned by the owner must never inherit an older message.
+        """Return translation metadata only while it still matches the current problem text."""
         if self.problem_i18n and self.problem_i18n['original'] == self.problem:
             return {key:value for key,value in self.problem_i18n.items() if key != 'original'}
         return None
 
     def configure(self,value):
+        """Persist server preferences; changed port/access values take effect on a later start."""
         self.preferences.save(value)
 
     def start(self):
+        """Launch a headless child suspended, assign its process guard, then resume it.
+
+        A live child makes this a no-op. Each new launch clears readiness/token state and
+        uses a fresh control ID; a failed guarded launch closes the guard and kills any
+        remaining child before propagating the exception."""
         if self.process and self.process.poll() is None:
             return
         if self.guard:
@@ -102,6 +116,7 @@ class DesktopSession:
             raise
 
         def read_output():
+            """Decode child output into the bounded deque under its lock until stdout closes."""
             with self.process.stdout as stream:
                 for line in iter(stream.readline,b''):
                     with self.output_lock:
@@ -111,18 +126,25 @@ class DesktopSession:
         self.started_at = time.monotonic()
 
     def context(self):
+        """Build loopback HTTPS trust from the configured or generated server certificate."""
         if not self.url.startswith('https:'):
             return None
         certificate = self.args.tls_cert or self.root/'config/tls/server.crt'
         return ssl.create_default_context(cafile=str(certificate))
 
     def api(self,path,method='GET'):
+        """Issue a bounded loopback JSON request using the current token and certificate context."""
         request = Request(self.url+path,data=b'' if method=='POST' else None,method=method,
                           headers={'Authorization':'Bearer '+self.token})
         with urlopen(request,timeout=2,context=self.context()) as response:
             return json.load(response)
 
     def poll(self):
+        """Return process and authenticated service state without adopting another instance.
+
+        The token file is read while the child is alive. Readiness is reported only when
+        the system endpoint returns this launch's control ID; connection failures remain
+        unready and become visible startup problems after the grace period."""
         alive = self.process is not None and self.process.poll() is None
         state = {'alive':alive,'ready':False,'stopping':self.stopping,'worker':False,
                  'token':'','url':self.url,'problem':self.problem,'control':{},'queue':{},
@@ -181,12 +203,18 @@ class DesktopSession:
         return state
 
     def stop(self):
+        """Request authenticated draining shutdown; reject calls before this session is ready."""
         if not self.ready:
             raise DesktopError('problem.not_ready')
         self.api('/api/system/stop','POST')
         self.stopping = True
 
     def force(self):
+        """Terminate the guarded tree and mark incomplete jobs only after prior identity verification.
+
+        Recovery waits briefly for the instance lock released by the terminating server.
+        It does not read evidence or restart interrupted work, and never targets an
+        unrelated process by port or executable name."""
         if not self.process or self.process.poll() is not None:
             return
         # This job handle owns only the server launched by this window, including descendants.
@@ -223,10 +251,12 @@ class DesktopSession:
         self.set_problem('problem.forced')
 
     def startup_log(self):
+        """Join the bounded captured child-output lines while holding the reader lock."""
         with self.output_lock:
             return '\n'.join(list(self.output))
 
     def log_tail(self):
+        """Read at most 64 KiB of the technical server log, falling back to captured stdout."""
         path = self.root/'logs/server.log'
         try:
             with path.open('rb') as stream:

@@ -15,6 +15,7 @@ from forensic_app.app_errors import AppValueError, ErrorText
 
 
 class FeedbackDraft(BaseModel):
+    """Validate a bounded local bug, wish or general-feedback entry."""
     model_config = ConfigDict(extra='forbid',str_strip_whitespace=True)
     category: Literal['bug','wish','feedback']
     title: str = Field(min_length=1,max_length=160)
@@ -29,15 +30,22 @@ class FeedbackDraft(BaseModel):
 
 
 class FeedbackStore:
+    """Persist user feedback locally, separate from technical diagnostics and workflow exports."""
     def __init__(self,storage):
         self.storage = storage
 
     def list(self,limit=100):
+        """Read the newest feedback entries up to the supplied SQL limit."""
         with closing(sqlite3.connect(self.storage.database)) as c:
             c.row_factory = sqlite3.Row
             return [dict(row) for row in c.execute('SELECT * FROM feedback ORDER BY created_at DESC,id DESC LIMIT ?',(limit,))]
 
     def create(self,draft):
+        """Check the 1,000-entry cap and insert the versioned feedback atomically.
+
+        The record receives a new UUID and database UTC timestamp; no external message
+        is sent and no diagnostic files are attached.
+        """
         ident = str(uuid4())
         with closing(sqlite3.connect(self.storage.database)) as c,c:
             c.execute('BEGIN IMMEDIATE')
@@ -49,6 +57,10 @@ class FeedbackStore:
 
 
 def feedback_router(store,authorize):
+    """Expose authenticated list, bounded-create and explicit JSON-export endpoints.
+
+    The export contains entered feedback text; it is not a technical diagnostic package.
+    """
     router = APIRouter(prefix='/api/feedback',dependencies=[Depends(authorize)])
     @router.get('')
     def items():

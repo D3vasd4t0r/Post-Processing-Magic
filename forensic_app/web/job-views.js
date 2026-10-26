@@ -11,10 +11,12 @@ function jvText(id,value){setUiText(byId(id),()=>String(value??''));}
 function jvLabel(id,key,params={}){setUiText(byId(id),()=>t(key,params),true);}
 function jvStatus(state){return t('jobview.status.'+state.status)+(state.phase?' · '+state.phase:'');}
 function jvCaption(state){return [state.case_number||t('jobview.no_case'),state.device_name||t('jobview.no_device'),'ZIP',state.created_at,state.mode_name||'',String(state.id).slice(0,8)].filter(Boolean).join(' · ');}
+// Invalidate pending view responses as well as poll timers when navigation or authentication changes.
 function clearJobViewTimers(){
   clearTimeout(jvLogTimer);clearTimeout(jvResultTimer);jvLogTimer=jvResultTimer=null;
   jvLogListVersion++;jvLogVersion++;jvResultListVersion++;jvResultVersion++;
 }
+// Reflect the server total for the current bounded page without dropping older jobs from navigation.
 function jvPagination(prefix,offset,data){
   const total=Number(data.total)||0;
   byId(prefix+'-prev').disabled=offset===0;
@@ -22,10 +24,12 @@ function jvPagination(prefix,offset,data){
   const target=prefix==='logs'?'logs-page-note':'results-note';
   jvLabel(target,total?'jobview.page':'jobview.empty',{from:offset+1,to:Math.min(offset+jvPageSize,total),total});
 }
+// Clear the previous job immediately so its output cannot appear beneath a newly selected label.
 function jvClearLog(){
   jvText('log-job-output','');jvText('log-job-status','');jvText('log-job-error','');
   byId('log-job-error').hidden=true;jvText('log-work-directory','');
 }
+// Load one page of job metadata and preserve a selected job only when it belongs to that page.
 async function loadJobLogs(preferredId){
   clearTimeout(jvLogTimer);jvLogTimer=null;
   const generation=++jvLogListVersion, previous=preferredId||byId('log-job').value||activeJobId;
@@ -41,6 +45,7 @@ async function loadJobLogs(preferredId){
   if(!data.jobs.length){jvLogId=null;jvClearLog();jvLabel('log-job-status','jobview.empty');return;}
   await loadSelectedLog();
 }
+// Accept only the current selection generation; preserve manual scroll position while polling live work.
 async function loadSelectedLog(){
   clearTimeout(jvLogTimer);jvLogTimer=null;
   const id=byId('log-job').value,generation=++jvLogVersion;
@@ -60,12 +65,14 @@ async function loadSelectedLog(){
   terminal.scrollTop=follow?terminal.scrollHeight:previousTop;
   if(jvLive(state))jvLogTimer=setTimeout(()=>run(loadSelectedLog),1500);
 }
+// Reset job-bound availability before showing another result; source references are not downloads.
 function jvClearResult(){
   jvResultState=null;jvSourceState=null;
   for(const id of ['result-title','result-state','result-source-note','result-source-path'])jvText(id,'');
   for(const id of ['result-download','result-report','result-source-download','result-archive'])byId(id).disabled=true;
   byId('result-source-download').hidden=true;byId('result-source-path').hidden=true;
 }
+// Render one card per job, including date and short ID so identical case numbers remain distinct.
 async function loadResultJobs(){
   clearTimeout(jvResultTimer);jvResultTimer=null;
   const generation=++jvResultListVersion;
@@ -84,6 +91,7 @@ async function loadResultJobs(){
     card.append(heading,name,state,button);byId('results-list').append(card);
   }
 }
+// Fetch job and source metadata independently; stale responses cannot overwrite a different selection.
 async function loadSelectedResult(id){
   clearTimeout(jvResultTimer);jvResultTimer=null;
   const ident=id||jvResultId,generation=++jvResultVersion;
@@ -112,6 +120,7 @@ async function loadSelectedResult(id){
   for(const card of byId('results-list').children)card.classList.toggle('selected',card.dataset.job===ident);
   if(jvLive(state))jvResultTimer=setTimeout(()=>run(()=>loadSelectedResult(ident)),1500);
 }
+// Mint a short-lived capability only after a user click, then use a native anchor for bounded-memory download.
 async function jvTicketDownload(source){
   const id=jvResultId,generation=jvResultVersion;if(!id)return;
   if(source&&(!jvSourceState||jvSourceState.kind!=='upload'||!jvSourceState.available))return;

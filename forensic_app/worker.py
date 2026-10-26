@@ -1,4 +1,8 @@
-"""Single persistent-queue consumer. Never invoked from an HTTP request."""
+"""Consume the persistent ZIP queue and run snapshotted KAPE/PowerShell steps.
+
+Windows Job Objects own the worker and command descendants. Recorded progress
+reflects real command completions; interrupted work is not blindly repeated.
+"""
 
 import copy
 import hashlib
@@ -29,19 +33,29 @@ MAX_RUN_SECONDS = 24*60*60
 logger = logging.getLogger(__name__)
 
 
+# Cooperative cancellation observed from the persisted job flag.
 class Cancelled(Exception):
     pass
 
 
+# Worker shutdown preserves an interrupted status rather than requeueing.
 class Interrupted(Exception):
     pass
 
 
 def relative_path(value):
+    """Translate an already validated Windows-relative job path into host Path components."""
     return Path(*PureWindowsPath(value).parts)
 
 
 def execute(plan, work: Path, check, emit):
+    """Run one frozen command suspended, assigning its Job Object before resuming it.
+
+    Recheck the executable hash and any captured KAPE manifest before launch.
+    Drain bounded combined output while checking cancellation, elapsed time and
+    descendant activity. Closing the guard ends remaining descendants on failure;
+    process completion does not establish forensic output completeness.
+    """
     timeout_seconds = plan.get("timeout_seconds", MAX_RUN_SECONDS)
     if type(timeout_seconds) is not int or not 1 <= timeout_seconds <= MAX_COMMAND_TIMEOUT_SECONDS:
         raise AppValueError('error.9c2c0a47b7e5')
@@ -119,6 +133,12 @@ def execute(plan, work: Path, check, emit):
 
 
 def process_job(store: JobStore, ident: str, plan: dict, stop, runner=execute):
+    """Hash/extract one ZIP, run ordered steps, then report and optionally archive.
+
+    The runner argument supports synthetic tests without external tools. Each step
+    starts in its configured working directory. Unsupported historical plans return
+    untouched; failed, cancelled and interrupted jobs are not successful downloads.
+    """
     if plan.get("workspace", "forensics") != "forensics":
         return  # Historical unsupported records remain passive.
     command_runs = []
@@ -262,6 +282,11 @@ def process_job(store: JobStore, ident: str, plan: dict, stop, runner=execute):
 def worker_main(root: str, stop):
     # Assign the worker before starting any tools. Every descendant inherits this job;
     # a killed worker closes its handle and the OS terminates the entire remaining tree.
+    """Own the worker Job Object and serially claim jobs, then archive-only requests.
+
+    The claim operations enforce pause, drain and cleanup gates. Archive-only work
+    does not repeat the configured workflow.
+    """
     lifetime = ProcessGuard()
     lifetime.assign()
     store = JobStore(Storage(Path(root)))

@@ -1,4 +1,8 @@
-"""PyInstaller entry point. Keep process startup behind the main guard."""
+"""Frozen executable entry point shared by controller, server and worker modes.
+
+freeze_support handles multiprocessing bootstrap before the launcher dispatches
+normal CLI modes. The main guard prevents startup during module imports.
+"""
 
 from multiprocessing import freeze_support
 
