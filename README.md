@@ -4,7 +4,7 @@ Lokale, konfigurierbare Nachbearbeitung von ZIP-Evidencen unter Windows.
 
 **Aktuelle Version: 0.41.0** – Dokumentationsrelease auf Basis der vom Nutzer erfolgreich getesteten Version 0.40.0. Auf GitHub als Vorabversion gekennzeichnet. Die Aufbereitungsfunktionen bleiben unverändert. Frühere Releases bleiben separat verfügbar.
 
-[Windows-Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.41](https://github.com/D3vasd4t0r/Post-Processing-Magic/blob/v0.41.0/docs/releases/0.41.0.md) · [Code-Wiki (offline)](https://github.com/D3vasd4t0r/Post-Processing-Magic/blob/v0.41.0/docs/code-wiki/index.html) · [Architektur](https://github.com/D3vasd4t0r/Post-Processing-Magic/blob/v0.41.0/docs/ARCHITECTURE.md) · [Konfiguration](https://github.com/D3vasd4t0r/Post-Processing-Magic/blob/v0.41.0/docs/CONFIGURATION.md)
+[Windows-Releases](https://github.com/D3vasd4t0r/Post-Processing-Magic/releases) · [Änderungen 0.41](https://github.com/D3vasd4t0r/Post-Processing-Magic/blob/v0.41.0/docs/releases/0.41.0.md) · [GitHub-Wiki](https://github.com/D3vasd4t0r/Post-Processing-Magic/wiki) · [Code-Wiki (offline)](https://github.com/D3vasd4t0r/Post-Processing-Magic/blob/v0.41.0/docs/code-wiki/index.html) · [Architektur](https://github.com/D3vasd4t0r/Post-Processing-Magic/blob/v0.41.0/docs/ARCHITECTURE.md) · [Konfiguration](https://github.com/D3vasd4t0r/Post-Processing-Magic/blob/v0.41.0/docs/CONFIGURATION.md)
 
 Die folgenden Funktionen beziehen sich auf das veröffentlichte **0.41.0-Paket**. Den zugehörigen Quellstand findest du unter [v0.41.0](https://github.com/D3vasd4t0r/Post-Processing-Magic/tree/v0.41.0); zum Entwickeln diesen Versionsstand auschecken. Die Dokumentationslinks führen ebenfalls zur passenden Version.
 
