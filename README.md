@@ -19,6 +19,12 @@ Die folgenden Funktionen beziehen sich auf das veröffentlichte **0.41.0-Paket**
 
 Die Dokumentation beschreibt den vorhandenen Code. Sie ist kein Sicherheitsgutachten und erweitert keine Unterstützung für Evidenzformate oder Toolrunner. Version 0.40 wurde vom Nutzer abgenommen und wird im Berufsalltag erprobt.
 
+## Oberfläche
+
+![Post-Processing-Magic: ZIP-Aufbereitung mit lokaler Dateiauswahl, Aufwand, Fallnummer und Gerätename](docs/images/zip-processing.png)
+
+Die vereinfachte Aufbereitungsseite, unverändert in 0.41. Aufnahme aus einem synthetischen Entwicklertest; alle gezeigten Fall- und Dateiangaben sind Testdaten.
+
 ## Funktionsumfang
 
 **Oberfläche:** Minimalistischer blauer Arbeitsplatz mit Aufbereitung als Startseite. Die Seitenleiste führt zu Aufbereitung, Einstellungen, Logs, Ergebnissen und Feedback. Eine gemeinsame Ansicht zeigt Upload oder lokale ZIP-Auswahl, Format, Aufwand, Fallnummer und Gerätename; kein Einfach-/Fortgeschritten-Umschalter.
